@@ -62,7 +62,7 @@ Provide your analysis as JSON."""
         client = get_claude_client()
 
         message = client.messages.create(
-            model="claude-opus-4-1",
+            model="claude-haiku-4-5-20251001",
             max_tokens=500,
             system=system_prompt,
             messages=[
