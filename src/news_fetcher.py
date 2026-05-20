@@ -2,6 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 import logging
+from src.news_analyzer import analyze_article, format_analysis, ClaudeAnalysisError
 
 load_dotenv()
 
@@ -55,22 +56,43 @@ def fetch_news(category=None, language=None, page_size=None):
     except requests.exceptions.RequestException as e:
         raise NewsAPIError(f"Request failed: {e}")
 
-def print_articles(articles):
+def analyze_and_display_articles(articles, use_claude=True):
     if not articles:
         print("No articles found.")
         return
 
     for i, article in enumerate(articles, 1):
-        print(f"\n[{i}] {article['title']}")
-        print(f"    URL: {article['url']}")
-        print(f"    Source: {article['source']['name']}")
-        print(f"    Published: {article['publishedAt']}")
-        print("    " + "-" * 60)
+        print(f"\n{'#'*70}")
+        print(f"Article {i} of {len(articles)}")
+        print(f"{'#'*70}")
+
+        if use_claude:
+            try:
+                analysis = analyze_article(article)
+                print(format_analysis(article, analysis))
+            except ClaudeAnalysisError as e:
+                logger.error(f"Failed to analyze article {i}: {e}")
+                print(f"\n[{i}] {article['title']}")
+                print(f"    URL: {article['url']}")
+                print(f"    Source: {article['source']['name']}")
+                print(f"    Published: {article['publishedAt']}")
+                print("    " + "-" * 60)
+        else:
+            print(f"\n[{i}] {article['title']}")
+            print(f"    URL: {article['url']}")
+            print(f"    Source: {article['source']['name']}")
+            print(f"    Published: {article['publishedAt']}")
+            print("    " + "-" * 60)
+
+def print_articles(articles):
+    """Deprecated: use analyze_and_display_articles instead."""
+    analyze_and_display_articles(articles, use_claude=False)
 
 if __name__ == "__main__":
     try:
         articles = fetch_news()
-        print_articles(articles)
+        print("\n🤖 Fetching Claude AI analysis for each article...\n")
+        analyze_and_display_articles(articles, use_claude=True)
     except NewsAPIError as e:
         logger.error(f"Error: {e}")
     except Exception as e:
