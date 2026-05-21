@@ -3,6 +3,7 @@ import json
 import logging
 from dotenv import load_dotenv
 from anthropic import Anthropic
+import httpx
 
 load_dotenv()
 
@@ -15,7 +16,8 @@ def get_claude_client():
     api_key = os.getenv("CLAUDE_API_KEY")
     if not api_key:
         raise ClaudeAnalysisError("CLAUDE_API_KEY not found in environment variables. Check your .env file.")
-    return Anthropic(api_key=api_key)
+    http_client = httpx.Client()
+    return Anthropic(api_key=api_key, http_client=http_client)
 
 def analyze_article(article):
     """
