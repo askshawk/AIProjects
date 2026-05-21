@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 import logging
 from src.news_analyzer import analyze_article, format_analysis, ClaudeAnalysisError
+from src.database import init_db, article_exists, save_article, save_analysis, DatabaseError
 
 load_dotenv()
 
@@ -56,20 +57,41 @@ def fetch_news(category=None, language=None, page_size=None):
     except requests.exceptions.RequestException as e:
         raise NewsAPIError(f"Request failed: {e}")
 
-def analyze_and_display_articles(articles, use_claude=True):
+def analyze_and_display_articles(articles, use_claude=True, save_to_db=True):
     if not articles:
         print("No articles found.")
         return
 
+    if save_to_db:
+        try:
+            init_db()
+        except DatabaseError as e:
+            logger.error(f"Database initialization failed: {e}")
+            save_to_db = False
+
+    skipped_count = 0
     for i, article in enumerate(articles, 1):
         print(f"\n{'#'*70}")
         print(f"Article {i} of {len(articles)}")
         print(f"{'#'*70}")
 
+        if save_to_db and article_exists(article.get('url')):
+            print(f"[{i}] {article['title']} (already in database)")
+            skipped_count += 1
+            continue
+
         if use_claude:
             try:
                 analysis = analyze_article(article)
                 print(format_analysis(article, analysis))
+
+                if save_to_db:
+                    try:
+                        article_id = save_article(article)
+                        save_analysis(article_id, analysis)
+                        print(f"\n✅ Saved to database (ID: {article_id})")
+                    except DatabaseError as e:
+                        logger.error(f"Failed to save to database: {e}")
             except ClaudeAnalysisError as e:
                 logger.error(f"Failed to analyze article {i}: {e}")
                 print(f"\n[{i}] {article['title']}")
@@ -83,6 +105,15 @@ def analyze_and_display_articles(articles, use_claude=True):
             print(f"    Source: {article['source']['name']}")
             print(f"    Published: {article['publishedAt']}")
             print("    " + "-" * 60)
+
+            if save_to_db:
+                try:
+                    save_article(article)
+                except DatabaseError as e:
+                    logger.error(f"Failed to save article: {e}")
+
+    if skipped_count > 0:
+        print(f"\n⏭️  Skipped {skipped_count} article(s) already in database")
 
 def print_articles(articles):
     """Deprecated: use analyze_and_display_articles instead."""
