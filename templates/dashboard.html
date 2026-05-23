@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - News Analysis AI Agent{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>📊 Dashboard</h1>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_articles }}</div>
+            <div class="stat-label">Total Articles</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.analyzed_articles }}</div>
+            <div class="stat-label">Analyzed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "%.1f" | format(stats.avg_significance_score) }}/10</div>
+            <div class="stat-label">Avg Significance</div>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h2>Geopolitical Relevance Distribution</h2>
+            <canvas id="relevanceChart"></canvas>
+        </div>
+    </div>
+
+    <div class="actions">
+        <a href="/articles" class="btn btn-primary">📰 View All Articles</a>
+        <a href="/fetch" class="btn btn-success">📥 Fetch News</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get stats and create chart
+    const stats = {
+        relevance_breakdown: {{ stats.relevance_breakdown | tojson }}
+    };
+
+    if (Object.keys(stats.relevance_breakdown).length > 0) {
+        const ctx = document.getElementById('relevanceChart').getContext('2d');
+        const colors = {
+            'HIGH': '#DC2626',
+            'MEDIUM': '#F59E0B',
+            'LOW': '#10B981'
+        };
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(stats.relevance_breakdown),
+                datasets: [{
+                    data: Object.values(stats.relevance_breakdown),
+                    backgroundColor: Object.keys(stats.relevance_breakdown).map(k => colors[k] || '#6B7280')
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    } else {
+        document.querySelector('.charts-grid').innerHTML = '<p class="empty-state">No data yet. <a href="/fetch">Fetch some articles!</a></p>';
+    }
+});
+</script>
+{% endblock %}

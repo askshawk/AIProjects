@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Fetch News - News Analysis AI Agent{% endblock %}
+
+{% block content %}
+<div class="fetch-page">
+    <h1>📥 Fetch & Analyze News</h1>
+
+    <div class="fetch-form-container">
+        <form id="fetchForm" class="fetch-form">
+            <div class="form-group">
+                <label for="category">Category:</label>
+                <select id="category" name="category" required>
+                    <option value="business">💼 Business</option>
+                    <option value="technology">💻 Technology</option>
+                    <option value="health">🏥 Health</option>
+                    <option value="science">🔬 Science</option>
+                    <option value="sports">⚽ Sports</option>
+                    <option value="general">📰 General</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language" name="language">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="count">Number of Articles:</label>
+                <input type="number" id="count" name="count" min="1" max="100" value="5">
+            </div>
+
+            <button type="submit" class="btn btn-success btn-large" id="fetchBtn">
+                🚀 Fetch & Analyze
+            </button>
+        </form>
+    </div>
+
+    <div id="statusContainer" class="status-container" style="display: none;">
+        <div class="status-message">
+            <div class="spinner"></div>
+            <p id="statusText">Fetching and analyzing articles with Claude AI...</p>
+        </div>
+    </div>
+
+    <div id="resultContainer" class="result-container" style="display: none;">
+        <div id="resultMessage"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('fetchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const category = document.getElementById('category').value;
+    const language = document.getElementById('language').value;
+    const count = document.getElementById('count').value;
+
+    // Show status
+    document.getElementById('statusContainer').style.display = 'block';
+    document.getElementById('resultContainer').style.display = 'none';
+    document.getElementById('fetchBtn').disabled = true;
+
+    try {
+        const response = await fetch('/api/fetch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                category: category,
+                language: language,
+                count: count
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('statusContainer').style.display = 'none';
+        document.getElementById('resultContainer').style.display = 'block';
+
+        if (response.ok) {
+            document.getElementById('resultMessage').innerHTML = `
+                <div class="success-message">
+                    <h3>✅ Success!</h3>
+                    <p>${data.message}</p>
+                    <p>Fetched and analyzed <strong>${data.count} articles</strong> from <strong>${category}</strong>.</p>
+                    <a href="/articles" class="btn btn-primary">View Articles</a>
+                </div>
+            `;
+        } else {
+            document.getElementById('resultMessage').innerHTML = `
+                <div class="error-message">
+                    <h3>❌ Error</h3>
+                    <p>${data.error || 'Failed to fetch articles'}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('statusContainer').style.display = 'none';
+        document.getElementById('resultContainer').style.display = 'block';
+        document.getElementById('resultMessage').innerHTML = `
+            <div class="error-message">
+                <h3>❌ Error</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    } finally {
+        document.getElementById('fetchBtn').disabled = false;
+    }
+});
+</script>
+{% endblock %}
