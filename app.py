@@ -45,6 +45,11 @@ def fetch_page():
     """Fetch articles page."""
     return render_template('fetch.html')
 
+@app.route('/focus')
+def focus():
+    """Focus/Pomodoro timer page."""
+    return render_template('focus.html')
+
 @app.route('/api/articles')
 def api_articles():
     """API endpoint to get articles with filtering."""
