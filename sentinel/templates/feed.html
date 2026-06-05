@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Signal Feed - Sentinel{% endblock %}
+
+{% block content %}
+<div class="feed-page">
+    <h1>📊 Signal Feed</h1>
+    <p class="subtitle">Real-time intelligence signals from news and market data</p>
+
+    <div class="feed-header">
+        <button id="collectBtn" class="btn btn-primary btn-large">⚡ Collect New Signals</button>
+        <div class="filter-group">
+            <button class="filter-btn active" data-threat="all">All</button>
+            <button class="filter-btn" data-threat="critical">🔴 Critical</button>
+            <button class="filter-btn" data-threat="high">🟠 High</button>
+            <button class="filter-btn" data-threat="medium">🟡 Medium</button>
+            <button class="filter-btn" data-threat="low">🟢 Low</button>
+        </div>
+    </div>
+
+    <div id="statusContainer" class="status-container" style="display: none;">
+        <div class="status-message">
+            <div class="spinner"></div>
+            <p id="statusText">Collecting and analyzing signals...</p>
+        </div>
+    </div>
+
+    <div id="signalsList" class="signals-list">
+        <p class="empty-message">No signals yet. Click "Collect New Signals" to begin.</p>
+    </div>
+</div>
+
+<style>
+.feed-page {
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.feed-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.feed-header {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.6rem 1.2rem;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.filter-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.signals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.signal-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #2563eb;
+    transition: all 0.2s ease;
+}
+
+.signal-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.signal-card.critical {
+    border-left-color: #dc2626;
+}
+
+.signal-card.high {
+    border-left-color: #f59e0b;
+}
+
+.signal-card.medium {
+    border-left-color: #eab308;
+}
+
+.signal-card.low {
+    border-left-color: #10b981;
+}
+
+.signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.signal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+    flex: 1;
+}
+
+.signal-badges {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.badge-threat {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-threat.high {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.badge-threat.medium {
+    background: #fef3c7;
+    color: #78350f;
+}
+
+.badge-threat.low {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge-score {
+    background: #dbeafe;
+    color: #0c4a6e;
+}
+
+.signal-content {
+    color: #4b5563;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.signal-summary {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.signal-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+.signal-source {
+    padding: 0.3rem 0.6rem;
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.empty-message {
+    text-align: center;
+    color: #9ca3af;
+    padding: 2rem;
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f4f6;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .feed-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-large {
+        width: 100%;
+    }
+
+    .signal-header {
+        flex-direction: column;
+    }
+
+    .signal-badges {
+        margin-top: 0.5rem;
+    }
+}
+</style>
+
+<script>
+document.getElementById('collectBtn').addEventListener('click', async function() {
+    const statusContainer = document.getElementById('statusContainer');
+    const signalsList = document.getElementById('signalsList');
+
+    statusContainer.style.display = 'block';
+    this.disabled = true;
+
+    try {
+        const response = await fetch('/api/collect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: 'general' })
+        });
+
+        const data = await response.json();
+        statusContainer.style.display = 'none';
+
+        if (response.ok) {
+            alert(`✅ Successfully collected ${data.count} new signals`);
+            loadSignals();
+        } else {
+            alert(`❌ Error: ${data.error}`);
+        }
+    } catch (error) {
+        statusContainer.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    } finally {
+        this.disabled = false;
+    }
+});
+
+async function loadSignals(threatLevel = 'all') {
+    try {
+        const url = threatLevel === 'all' ? '/api/signals' : `/api/signals?threat_level=${threatLevel}`;
+        const response = await fetch(url);
+        const signals = await response.json();
+
+        const signalsList = document.getElementById('signalsList');
+
+        if (signals.length === 0) {
+            signalsList.innerHTML = '<p class="empty-message">No signals found.</p>';
+            return;
+        }
+
+        signalsList.innerHTML = signals.map(signal => `
+            <div class="signal-card ${signal.threat_level || 'low'}">
+                <div class="signal-header">
+                    <h3 class="signal-title">${escapeHtml(signal.title)}</h3>
+                    <div class="signal-badges">
+                        ${signal.threat_level ? `<span class="badge badge-threat ${signal.threat_level}">${signal.threat_level.toUpperCase()}</span>` : ''}
+                        ${signal.significance_score ? `<span class="badge badge-score">${signal.significance_score}/10</span>` : ''}
+                    </div>
+                </div>
+                ${signal.content ? `<p class="signal-content">${escapeHtml(signal.content)}</p>` : ''}
+                ${signal.summary ? `<div class="signal-summary">${escapeHtml(signal.summary)}</div>` : ''}
+                <div class="signal-meta">
+                    <span class="signal-source">${signal.source_type === 'market' ? '📈 Market' : '📰 News'}</span>
+                    <span>${new Date(signal.fetched_at).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading signals:', error);
+    }
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        loadSignals(this.dataset.threat);
+    });
+});
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load initial signals
+loadSignals();
+</script>
+{% endblock %}

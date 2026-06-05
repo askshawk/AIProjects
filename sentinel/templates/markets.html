@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Markets - Sentinel{% endblock %}
+
+{% block content %}
+<div class="markets-page">
+    <h1>📈 Market Dashboard</h1>
+    <p class="subtitle">Live market data and sector analysis (Coming soon)</p>
+
+    <div class="placeholder-content">
+        <p>Market visualization will display tracked tickers, price charts, and sector heatmaps.</p>
+    </div>
+</div>
+
+<style>
+.markets-page {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.markets-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.placeholder-content {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #9ca3af;
+}
+</style>
+{% endblock %}

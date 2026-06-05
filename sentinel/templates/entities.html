@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Entities - Sentinel{% endblock %}
+
+{% block content %}
+<div class="entities-page">
+    <h1>🕸️ Entity Network</h1>
+    <p class="subtitle">Relationship graph of entities mentioned in signals</p>
+
+    <div class="placeholder-content">
+        <p>D3.js force-directed graph will display entity relationships in Phase 5.</p>
+    </div>
+</div>
+
+<style>
+.entities-page {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.entities-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.placeholder-content {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #9ca3af;
+}
+</style>
+{% endblock %}
