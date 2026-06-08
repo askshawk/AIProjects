@@ -228,6 +228,20 @@ def api_search():
         logger.error(f"Search error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/market-data')
+def api_market_data():
+    """Get current market data for tracked tickers."""
+    try:
+        from src.market import fetch_market_data
+
+        tickers = ['SPY', 'QQQ', 'BTC-USD', 'XLV', 'XLK', 'XLF', 'XLE']
+        market_data = fetch_market_data(tickers)
+
+        return jsonify(market_data)
+    except Exception as e:
+        logger.error(f"Market data error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('error.html', error='Page not found'), 404
