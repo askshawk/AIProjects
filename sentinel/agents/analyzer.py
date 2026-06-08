@@ -10,7 +10,8 @@ def get_claude_client():
     api_key = os.getenv('CLAUDE_API_KEY')
     if not api_key:
         raise ClaudeAnalysisError("CLAUDE_API_KEY not set in environment")
-    return Anthropic(api_key=api_key)
+    os.environ['ANTHROPIC_API_KEY'] = api_key
+    return Anthropic()
 
 def analyze_signal(signal_dict):
     """
