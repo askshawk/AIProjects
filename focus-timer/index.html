@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Focus Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #7c3aed;
+            --primary-light: #8b5cf6;
+            --primary-dark: #6d28d9;
+            --break-color: #059669;
+            --break-light: #10b981;
+            --surface: #ffffff;
+            --bg: #f5f3ff;
+            --text: #1e1b4b;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 4px 24px rgba(124, 58, 237, 0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .header-stat strong {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            gap: 1.5rem;
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Mode selector */
+        .mode-selector {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: var(--shadow);
+            width: 100%;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: var(--text-muted);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+        }
+
+        .mode-btn.active.break-active {
+            background: linear-gradient(135deg, var(--break-color), var(--break-light));
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+        }
+
+        /* Timer card */
+        .timer-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            box-shadow: var(--shadow);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        /* Ring timer */
+        .ring-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+        }
+
+        .ring-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: #f3f4f6;
+            stroke-width: 10;
+        }
+
+        .ring-progress {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 691.15;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+        }
+
+        .ring-progress.break-mode {
+            stroke: var(--break-color);
+        }
+
+        .ring-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .timer-display {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .timer-mode-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-primary.break-mode {
+            background: linear-gradient(135deg, var(--break-color), var(--break-light));
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: var(--text-muted);
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* Duration settings */
+        .settings {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .setting-item {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 0.875rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .setting-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stepper-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: white;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            color: var(--primary);
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .stepper-btn:active {
+            transform: scale(0.9);
+        }
+
+        .setting-value {
+            flex: 1;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Today's stats */
+        .stats-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem 0.75rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-num {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* Session history */
+        .history-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            width: 100%;
+        }
+
+        .history-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .session-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .session-item.break-session {
+            border-left-color: var(--break-color);
+        }
+
+        .session-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .session-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Notification toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 999;
+            text-align: center;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.break-toast {
+            background: var(--break-color);
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-stats {
+                gap: 1rem;
+            }
+
+            .ring-container {
+                width: 200px;
+                height: 200px;
+            }
+
+            .ring-bg, .ring-progress {
+                stroke-width: 8;
+            }
+
+            .ring-svg {
+                /* Recalculate: circumference for r=96 = 2*pi*96 = 603.19 */
+            }
+
+            .timer-display {
+                font-size: 2.75rem;
+            }
+
+            .timer-card {
+                padding: 1.75rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">⏱ Focus Timer</div>
+    <div class="header-stats">
+        <div class="header-stat"><strong id="headerSessions">0</strong> sessions</div>
+        <div class="header-stat"><strong id="headerStreak">0</strong> 🔥 streak</div>
+    </div>
+</header>
+
+<main>
+    <!-- Mode selector -->
+    <div class="mode-selector">
+        <button class="mode-btn active" id="workModeBtn" onclick="switchMode('work')">🎯 Work</button>
+        <button class="mode-btn" id="breakModeBtn" onclick="switchMode('break')">☕ Break</button>
+    </div>
+
+    <!-- Timer card -->
+    <div class="timer-card">
+        <div class="ring-container">
+            <svg class="ring-svg" viewBox="0 0 240 240">
+                <circle class="ring-bg" cx="120" cy="120" r="110"/>
+                <circle class="ring-progress" id="ringProgress" cx="120" cy="120" r="110"/>
+            </svg>
+            <div class="ring-center">
+                <div class="timer-display" id="timerDisplay">25:00</div>
+                <div class="timer-mode-label" id="modeLabel">Work Session</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="mainBtn" onclick="toggleTimer()">▶ Start</button>
+            <button class="btn btn-secondary" onclick="resetTimer()">↺ Reset</button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-item">
+                <div class="setting-label">Work</div>
+                <div class="setting-control">
+                    <button class="stepper-btn" onclick="adjustDuration('work', -1)">−</button>
+                    <div class="setting-value" id="workVal">25</div>
+                    <button class="stepper-btn" onclick="adjustDuration('work', 1)">+</button>
+                </div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-label">Break</div>
+                <div class="setting-control">
+                    <button class="stepper-btn" onclick="adjustDuration('break', -1)">−</button>
+                    <div class="setting-value" id="breakVal">5</div>
+                    <button class="stepper-btn" onclick="adjustDuration('break', 1)">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num" id="statSessions">0</div>
+            <div class="stat-label">Sessions Today</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num" id="statStreak">0</div>
+            <div class="stat-label">Streak 🔥</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num" id="statMinutes">0</div>
+            <div class="stat-label">Mins Focused</div>
+        </div>
+    </div>
+
+    <!-- Session history -->
+    <div class="history-card">
+        <div class="history-title">📋 Today's Sessions</div>
+        <div class="session-list" id="sessionList">
+            <div class="empty-state">No sessions yet — start focusing!</div>
+        </div>
+    </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CIRCUMFERENCE = 2 * Math.PI * 110; // 691.15
+
+const state = {
+    mode: 'work',
+    workDuration: 25,
+    breakDuration: 5,
+    timeRemaining: 25 * 60,
+    totalTime: 25 * 60,
+    isRunning: false,
+    interval: null,
+    sessionsToday: 0,
+    streak: 0,
+    minutesToday: 0,
+    sessions: [],
+    todayDate: new Date().toDateString()
+};
+
+// Load saved data
+function loadStorage() {
+    const saved = localStorage.getItem('focusTimer_v2');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    const today = new Date().toDateString();
+
+    state.workDuration = data.workDuration || 25;
+    state.breakDuration = data.breakDuration || 5;
+    state.streak = data.streak || 0;
+
+    if (data.todayDate === today) {
+        state.sessionsToday = data.sessionsToday || 0;
+        state.minutesToday = data.minutesToday || 0;
+        state.sessions = data.sessions || [];
+    } else {
+        // New day — reset daily stats but keep streak if yesterday
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (data.todayDate !== yesterday.toDateString()) {
+            state.streak = 0; // broke the streak
+        }
+    }
+
+    document.getElementById('workVal').textContent = state.workDuration;
+    document.getElementById('breakVal').textContent = state.breakDuration;
+}
+
+function saveStorage() {
+    localStorage.setItem('focusTimer_v2', JSON.stringify({
+        workDuration: state.workDuration,
+        breakDuration: state.breakDuration,
+        streak: state.streak,
+        sessionsToday: state.sessionsToday,
+        minutesToday: state.minutesToday,
+        sessions: state.sessions,
+        todayDate: new Date().toDateString()
+    }));
+}
+
+function updateRing() {
+    const progress = (state.totalTime - state.timeRemaining) / state.totalTime;
+    const offset = CIRCUMFERENCE * (1 - progress);
+    const ring = document.getElementById('ringProgress');
+    ring.style.strokeDashoffset = offset;
+    ring.style.strokeDasharray = CIRCUMFERENCE;
+    ring.classList.toggle('break-mode', state.mode === 'break');
+}
+
+function updateDisplay() {
+    const mins = Math.floor(state.timeRemaining / 60);
+    const secs = state.timeRemaining % 60;
+    document.getElementById('timerDisplay').textContent =
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    document.title = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} — Focus Timer`;
+    updateRing();
+}
+
+function updateStats() {
+    document.getElementById('statSessions').textContent = state.sessionsToday;
+    document.getElementById('statStreak').textContent = state.streak;
+    document.getElementById('statMinutes').textContent = state.minutesToday;
+    document.getElementById('headerSessions').textContent = state.sessionsToday;
+    document.getElementById('headerStreak').textContent = state.streak;
+    renderHistory();
+}
+
+function renderHistory() {
+    const list = document.getElementById('sessionList');
+    if (state.sessions.length === 0) {
+        list.innerHTML = '<div class="empty-state">No sessions yet — start focusing!</div>';
+        return;
+    }
+    list.innerHTML = [...state.sessions].reverse().map((s, i) => `
+        <div class="session-item ${s.type === 'break' ? 'break-session' : ''}">
+            <div class="session-name">${s.type === 'work' ? '🎯' : '☕'} ${s.type === 'work' ? 'Work' : 'Break'} Session</div>
+            <div class="session-meta">${s.duration} min · ${s.time}</div>
+        </div>
+    `).join('');
+}
+
+function switchMode(mode) {
+    if (state.isRunning) return;
+    state.mode = mode;
+
+    const isBreak = mode === 'break';
+    document.getElementById('workModeBtn').classList.toggle('active', !isBreak);
+    document.getElementById('breakModeBtn').classList.toggle('active', isBreak);
+    document.getElementById('breakModeBtn').classList.toggle('break-active', isBreak);
+    document.getElementById('modeLabel').textContent = isBreak ? 'Break Time' : 'Work Session';
+
+    const mainBtn = document.getElementById('mainBtn');
+    mainBtn.classList.toggle('break-mode', isBreak);
+
+    state.timeRemaining = (isBreak ? state.breakDuration : state.workDuration) * 60;
+    state.totalTime = state.timeRemaining;
+    updateDisplay();
+}
+
+function toggleTimer() {
+    if (state.isRunning) {
+        pauseTimer();
+    } else {
+        startTimer();
+    }
+}
+
+function startTimer() {
+    state.isRunning = true;
+    document.getElementById('mainBtn').textContent = '⏸ Pause';
+
+    state.interval = setInterval(() => {
+        state.timeRemaining--;
+        updateDisplay();
+        if (state.timeRemaining <= 0) {
+            completeSession();
+        }
+    }, 1000);
+}
+
+function pauseTimer() {
+    state.isRunning = false;
+    clearInterval(state.interval);
+    document.getElementById('mainBtn').textContent = '▶ Resume';
+}
+
+function resetTimer() {
+    state.isRunning = false;
+    clearInterval(state.interval);
+    state.timeRemaining = (state.mode === 'work' ? state.workDuration : state.breakDuration) * 60;
+    state.totalTime = state.timeRemaining;
+    document.getElementById('mainBtn').textContent = '▶ Start';
+    updateDisplay();
+}
+
+function completeSession() {
+    clearInterval(state.interval);
+    state.isRunning = false;
+
+    const completedMode = state.mode;
+    const duration = completedMode === 'work' ? state.workDuration : state.breakDuration;
+
+    state.sessions.push({
+        type: completedMode,
+        duration,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+
+    if (completedMode === 'work') {
+        state.sessionsToday++;
+        state.minutesToday += state.workDuration;
+        state.streak++;
+        showToast('✅ Session complete! Take a break.', false);
+        switchMode('break');
+    } else {
+        showToast('☕ Break over! Ready to focus?', true);
+        switchMode('work');
+    }
+
+    playSound(completedMode === 'work');
+    updateStats();
+    saveStorage();
+}
+
+function adjustDuration(type, delta) {
+    if (state.isRunning) return;
+    if (type === 'work') {
+        state.workDuration = Math.min(60, Math.max(1, state.workDuration + delta));
+        document.getElementById('workVal').textContent = state.workDuration;
+        if (state.mode === 'work') {
+            state.timeRemaining = state.workDuration * 60;
+            state.totalTime = state.timeRemaining;
+            updateDisplay();
+        }
+    } else {
+        state.breakDuration = Math.min(30, Math.max(1, state.breakDuration + delta));
+        document.getElementById('breakVal').textContent = state.breakDuration;
+        if (state.mode === 'break') {
+            state.timeRemaining = state.breakDuration * 60;
+            state.totalTime = state.timeRemaining;
+            updateDisplay();
+        }
+    }
+    saveStorage();
+}
+
+function showToast(msg, isWork) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = `toast ${isWork ? '' : 'break-toast'} show`;
+    setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+function playSound(isWorkComplete) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const frequencies = isWorkComplete ? [523, 659, 784] : [784, 659, 523];
+        frequencies.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            const start = ctx.currentTime + i * 0.15;
+            gain.gain.setValueAtTime(0.25, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+            osc.start(start);
+            osc.stop(start + 0.3);
+        });
+    } catch (e) {}
+}
+
+// Init
+loadStorage();
+state.timeRemaining = state.workDuration * 60;
+state.totalTime = state.timeRemaining;
+updateDisplay();
+updateStats();
+</script>
+</body>
+</html>

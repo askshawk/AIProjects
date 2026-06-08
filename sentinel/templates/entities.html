@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Entities - Sentinel{% endblock %}
+
+{% block content %}
+<div class="entities-page">
+    <h1>🕸️ Entity Network</h1>
+    <p class="subtitle">Entities that co-appear across signals. Drag nodes to explore, scroll to zoom. Bigger circle = more mentions.</p>
+
+    <div id="graphContainer" class="graph-container">
+        <div class="placeholder-content"><p>Loading entity network...</p></div>
+    </div>
+</div>
+
+<style>
+.entities-page {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.entities-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.graph-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+    min-height: 600px;
+}
+
+.graph-container svg {
+    display: block;
+    width: 100%;
+    cursor: grab;
+}
+
+.graph-container svg:active {
+    cursor: grabbing;
+}
+
+.placeholder-content {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #9ca3af;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='entity_graph.js') }}"></script>
+{% endblock %}
