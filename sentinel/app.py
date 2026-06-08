@@ -11,6 +11,8 @@ from src.database import (
 )
 from agents.collector import collect_all_signals, CollectorError
 from agents.analyzer import analyze_signal, ClaudeAnalysisError
+from agents.synthesizer import generate_brief, SynthesizerError
+from agents.embedder import embed_signal, search_signals, EmbedderError
 import logging
 import os
 
@@ -83,7 +85,7 @@ def api_signals():
 
 @app.route('/api/collect', methods=['POST'])
 def api_collect():
-    """Trigger signal collection and analysis."""
+    """Trigger signal collection, analysis, embedding, and brief generation."""
     try:
         news_category = request.json.get('category', 'general') if request.json else 'general'
 
@@ -96,8 +98,11 @@ def api_collect():
         if not signals:
             return jsonify({'error': 'No signals collected'}), 400
 
-        # Step 2: Analyze each signal
+        # Step 2: Analyze each signal, embed, and track for brief
         analyzed_count = 0
+        analyzed_signals = []
+        signal_ids_for_brief = []
+
         for signal in signals:
             try:
                 # Skip duplicates
@@ -115,7 +120,17 @@ def api_collect():
 
                 # Save analysis
                 save_signal_analysis(signal_id, analysis)
+
+                # Step 3: Embed signal into ChromaDB
+                signal_with_analysis = {**signal, **analysis}
+                try:
+                    embed_signal(signal_id, signal_with_analysis)
+                except EmbedderError as e:
+                    logger.warning(f"Embedding failed for signal {signal_id}: {e}")
+
                 analyzed_count += 1
+                analyzed_signals.append(signal_with_analysis)
+                signal_ids_for_brief.append(signal_id)
 
             except ClaudeAnalysisError as e:
                 logger.error(f"Analysis failed for signal '{signal.get('title')}': {e}")
@@ -124,9 +139,24 @@ def api_collect():
                 logger.error(f"Database error: {e}")
                 continue
 
+        # Step 4: Generate daily brief from top signals
+        try:
+            if analyzed_signals:
+                sorted_signals = sorted(
+                    analyzed_signals,
+                    key=lambda x: x.get('significance_score', 0),
+                    reverse=True
+                )
+                brief_content = generate_brief(sorted_signals, max_signals=5)
+                from src.database import save_brief
+                save_brief(brief_content, signal_ids_for_brief)
+                logger.info(f"Generated brief from {len(signal_ids_for_brief)} signals")
+        except (SynthesizerError, DatabaseError) as e:
+            logger.warning(f"Brief generation failed: {e}")
+
         return jsonify({
             'success': True,
-            'message': f'Collected and analyzed {analyzed_count} new signals',
+            'message': f'Collected, analyzed, and embedded {analyzed_count} new signals',
             'count': analyzed_count
         })
 
@@ -155,6 +185,47 @@ def api_briefs():
         return jsonify(result)
     except DatabaseError as e:
         logger.error(f"Error fetching briefs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/search')
+def api_search():
+    """Semantic search across signals."""
+    try:
+        query = request.args.get('q', '')
+        limit = int(request.args.get('limit', 20))
+
+        if not query:
+            return jsonify({'error': 'Query required'}), 400
+
+        # Semantic search in ChromaDB
+        search_results = search_signals(query, num_results=limit)
+
+        if not search_results:
+            return jsonify([])
+
+        # Fetch full signal data from database
+        result = []
+        for search_result in search_results:
+            signal_id = search_result['id']
+            signal = get_all_signals(limit=1)
+            for s in signal:
+                if s['id'] == signal_id:
+                    result.append({
+                        'id': s['id'],
+                        'title': s['title'],
+                        'content': s['content'],
+                        'source_type': s['source_type'],
+                        'threat_level': s['threat_level'],
+                        'significance_score': s['significance_score'],
+                        'summary': s['summary'],
+                        'fetched_at': s['fetched_at'],
+                        'similarity': search_result['similarity']
+                    })
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Search error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.errorhandler(404)

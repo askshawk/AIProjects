@@ -7,9 +7,17 @@
     <h1>🔍 Semantic Search</h1>
     <p class="subtitle">Search signals by meaning, not just keywords</p>
 
-    <div class="placeholder-content">
-        <p>Semantic search across all signals will be implemented in Phase 3.</p>
+    <div class="search-box">
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="e.g., 'supply chain disruptions', 'geopolitical tensions', 'cyber attacks'"
+            class="search-input"
+        />
+        <button onclick="performSearch()" class="search-button">Search</button>
     </div>
+
+    <div id="resultsContainer" class="results-container"></div>
 </div>
 
 <style>
@@ -30,6 +38,49 @@
     font-size: 1.1rem;
 }
 
+.search-box {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.search-button {
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-button:hover {
+    background: #1d4ed8;
+}
+
+.results-container {
+    min-height: 2rem;
+}
+
 .placeholder-content {
     background: white;
     border-radius: 12px;
@@ -37,5 +88,130 @@
     text-align: center;
     color: #9ca3af;
 }
+
+.signal-card {
+    background: white;
+    border-left: 4px solid #2563eb;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.signal-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.signal-card.low { border-left-color: #10b981; }
+.signal-card.medium { border-left-color: #f59e0b; }
+.signal-card.high { border-left-color: #ef4444; }
+.signal-card.critical { border-left-color: #7c2d12; }
+
+.signal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.signal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.signal-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.5rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.badge.low { background: #dcfce7; color: #15803d; }
+.badge.medium { background: #fef3c7; color: #92400e; }
+.badge.high { background: #fee2e2; color: #991b1b; }
+.badge.critical { background: #fed7aa; color: #92400e; }
+
+.signal-summary {
+    color: #555;
+    line-height: 1.6;
+    margin: 1rem 0;
+}
+
+.similarity-score {
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
 </style>
+
+<script>
+    function performSearch() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) {
+            alert('Please enter a search query');
+            return;
+        }
+
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '<p style="text-align: center; color: #888;">Searching...</p>';
+
+        fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`)
+            .then(r => r.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    container.innerHTML = '<div class="placeholder-content"><p>No results found. Try different keywords.</p></div>';
+                    return;
+                }
+
+                let html = `<p style="color: #666; margin-bottom: 1rem;">Found ${results.length} relevant signals</p>`;
+                results.forEach(signal => {
+                    const threatClass = signal.threat_level || 'low';
+                    const similarity = ((signal.similarity || 0) * 100).toFixed(0);
+                    html += `
+                        <div class="signal-card ${threatClass}">
+                            <div class="signal-header">
+                                <div>
+                                    <div class="signal-title">${signal.title}</div>
+                                    <div class="signal-meta">
+                                        <span>${signal.source_type === 'news' ? '📰 News' : '📈 Market'}</span>
+                                        <span>${new Date(signal.fetched_at).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span class="badge ${threatClass}">${signal.threat_level}</span>
+                                    <div class="similarity-score">${similarity}% match</div>
+                                    <div style="font-size: 0.8rem; color: #888;">${signal.significance_score}/10</div>
+                                </div>
+                            </div>
+                            <div class="signal-summary">${signal.summary}</div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                container.innerHTML = '<div class="placeholder-content"><p>Error performing search</p></div>';
+            });
+    }
+
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performSearch();
+    });
+
+    document.getElementById('resultsContainer').innerHTML = '<div class="placeholder-content"><p>Enter a search query to find relevant signals by meaning</p></div>';
+</script>
 {% endblock %}
