@@ -239,8 +239,10 @@ def api_market_data():
 
         return jsonify(market_data)
     except Exception as e:
+        # Degrade gracefully: return an empty list so the page shows a
+        # friendly "no data" message instead of a hard error.
         logger.error(f"Market data error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify([])
 
 @app.errorhandler(404)
 def not_found(error):
