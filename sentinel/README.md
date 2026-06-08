@@ -5,11 +5,11 @@ A sophisticated AI-powered signal collection, analysis, and visualization platfo
 ## Features
 
 - **Signal Collection**: Fetches signals from multiple sources (news + live market data)
-- **AI Analysis**: Uses Claude Sonnet to analyze each signal for threat level, entities, domains, sentiment, and significance
-- **Vector Search**: Semantic search across all signals (coming soon)
-- **Market Dashboard**: Live ticker prices and sector analysis (coming soon)
-- **Intelligence Brief**: AI-generated daily synthesis of key signals (coming soon)
-- **Entity Network**: D3.js visualization of entity relationships (coming soon)
+- **AI Analysis**: Uses Claude to analyze each signal for threat level, entities, domains, sentiment, and significance
+- **Vector Search**: Semantic search across all signals via ChromaDB embeddings
+- **Market Dashboard**: Live ticker prices, percent change, and a sector heatmap with Chart.js trends
+- **Intelligence Brief**: AI-generated daily synthesis of key signals, with a browsable archive
+- **Entity Network**: Interactive D3.js force-directed graph of entities that co-appear across signals
 
 ## Tech Stack
 
@@ -76,25 +76,27 @@ python app.py
 - Flask app skeleton, SQLite schema
 - News + market data collection
 - Claude signal analysis
-- Basic feed UI
+- Feed UI with threat filters
 
-### Phase 2 🚧 Agents
-- Multi-step agent chains
-- Enhanced threat analysis
-- Brief generation
+### Phase 2 ✅ Agents
+- Multi-step agent chain (collector → analyzer → embedder → synthesizer)
+- Threat/risk/sentiment analysis
+- Daily brief generation
 
-### Phase 3 Semantic Search
+### Phase 3 ✅ Semantic Search
 - ChromaDB vector storage
-- Semantic search implementation
+- Meaning-based search across signals
 
-### Phase 4 Market & Brief Pages
-- Chart.js price visualization
+### Phase 4 ✅ Market & Brief Pages
+- Chart.js price visualization + sector heatmap
 - Brief history and archive
 
-### Phase 5 Entity Network & Deploy
-- D3.js force graph
-- Entity relationship tracking
-- Render.com deployment
+### Phase 5 ✅ Entity Network
+- D3.js force-directed graph
+- Entity co-occurrence tracking
+
+### Deployment ⬜ Optional
+- Render.com (Procfile included)
 
 ## API Endpoints
 
@@ -111,6 +113,15 @@ Triggers signal collection and analysis.
 
 ### GET `/api/briefs?limit=5`
 Returns latest intelligence briefs.
+
+### GET `/api/search?q=supply+chain+risks&limit=20`
+Semantic vector search across all signals (ChromaDB).
+
+### GET `/api/market-data`
+Current price, percent change, and volume for tracked tickers.
+
+### GET `/api/entities`
+Entity co-occurrence graph (nodes + links) for the network visualization.
 
 ## Architecture
 
