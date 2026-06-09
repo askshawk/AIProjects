@@ -251,3 +251,94 @@ def get_latest_briefs(limit=5):
         return [dict(row) for row in results]
     except sqlite3.Error as e:
         raise DatabaseError(f"Error fetching briefs: {e}")
+
+def _entity_name(entity):
+    """Normalize an entity (string or dict) to a clean name string, or None."""
+    name = entity.get('name') if isinstance(entity, dict) else entity
+    if name and isinstance(name, str):
+        name = name.strip()
+        if name:
+            return name
+    return None
+
+def save_entities(signal_id, entities_list):
+    """Upsert entities and link them to a signal (best-effort, honors schema)."""
+    if not entities_list:
+        return
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        for entity in entities_list:
+            name = _entity_name(entity)
+            if not name:
+                continue
+            etype = entity.get('type') if isinstance(entity, dict) else None
+            cursor.execute('''
+                INSERT INTO entities (name, entity_type, mention_count)
+                VALUES (?, ?, 1)
+                ON CONFLICT(name) DO UPDATE SET mention_count = mention_count + 1
+            ''', (name, etype))
+            cursor.execute('SELECT id FROM entities WHERE name = ?', (name,))
+            entity_id = cursor.fetchone()['id']
+            cursor.execute('''
+                INSERT OR IGNORE INTO entity_signals (entity_id, signal_id)
+                VALUES (?, ?)
+            ''', (entity_id, signal_id))
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        raise DatabaseError(f"Error saving entities: {e}")
+
+def get_entity_graph(max_entities=40):
+    """
+    Build an entity co-occurrence graph from analyzed signals.
+    Two entities are linked when they appear in the same signal.
+    Returns {'nodes': [{id, mentions}], 'links': [{source, target, weight}]}.
+    Reads directly from signal_analysis so it reflects all existing data.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT entities FROM signal_analysis WHERE entities IS NOT NULL')
+        rows = cursor.fetchall()
+        conn.close()
+
+        mention_counts = {}
+        cooccurrence = {}
+
+        for row in rows:
+            try:
+                entities = json.loads(row['entities']) or []
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            # Normalize + dedupe entity names within a single signal
+            names = []
+            for entity in entities:
+                name = _entity_name(entity)
+                if name:
+                    names.append(name)
+            names = list(dict.fromkeys(names))
+
+            for name in names:
+                mention_counts[name] = mention_counts.get(name, 0) + 1
+
+            for i in range(len(names)):
+                for j in range(i + 1, len(names)):
+                    pair = tuple(sorted((names[i], names[j])))
+                    cooccurrence[pair] = cooccurrence.get(pair, 0) + 1
+
+        # Keep the most-mentioned entities so the graph stays readable
+        top = sorted(mention_counts.items(), key=lambda x: x[1], reverse=True)[:max_entities]
+        top_names = {name for name, _ in top}
+
+        nodes = [{'id': name, 'mentions': count} for name, count in top]
+        links = [
+            {'source': a, 'target': b, 'weight': weight}
+            for (a, b), weight in cooccurrence.items()
+            if a in top_names and b in top_names
+        ]
+
+        return {'nodes': nodes, 'links': links}
+    except sqlite3.Error as e:
+        raise DatabaseError(f"Error building entity graph: {e}")

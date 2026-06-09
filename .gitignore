@@ -3,6 +3,13 @@
 .env.local
 .env.*.local
 
+# Secrets / OAuth credentials (e.g. newsletter-digest Gmail API)
+credentials.json
+token.json
+
+# Claude Code local state (worktrees, agent data)
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]

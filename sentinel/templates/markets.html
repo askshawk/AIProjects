@@ -5,10 +5,20 @@
 {% block content %}
 <div class="markets-page">
     <h1>📈 Market Dashboard</h1>
-    <p class="subtitle">Live market data and sector analysis (Coming soon)</p>
+    <p class="subtitle">Live market data and sector analysis</p>
 
-    <div class="placeholder-content">
-        <p>Market visualization will display tracked tickers, price charts, and sector heatmaps.</p>
+    <div class="markets-grid" id="marketsGrid">
+        <p style="text-align: center; color: #888; grid-column: 1/-1;">Loading market data...</p>
+    </div>
+
+    <div class="sector-analysis">
+        <h2>Sector Heatmap</h2>
+        <div class="sector-grid">
+            <div class="sector-card sector-healthcare">Healthcare (XLV)</div>
+            <div class="sector-card sector-tech">Technology (XLK)</div>
+            <div class="sector-card sector-finance">Finance (XLF)</div>
+            <div class="sector-card sector-energy">Energy (XLE)</div>
+        </div>
     </div>
 </div>
 
@@ -30,12 +40,245 @@
     font-size: 1.1rem;
 }
 
-.placeholder-content {
+.markets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.market-card {
     background: white;
-    border-radius: 12px;
-    padding: 3rem 2rem;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-top: 4px solid #2563eb;
+}
+
+.market-card.positive {
+    border-top-color: #10b981;
+}
+
+.market-card.negative {
+    border-top-color: #ef4444;
+}
+
+.market-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.market-ticker {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.market-company {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.market-price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.market-change {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    display: inline-block;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.market-change.down {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.market-volume {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 0.5rem;
+}
+
+.market-chart {
+    margin-top: 1rem;
+    height: 150px;
+    position: relative;
+}
+
+.sector-analysis {
+    margin-top: 3rem;
+}
+
+.sector-analysis h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #1f2937;
+}
+
+.sector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.sector-card {
+    padding: 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
     text-align: center;
-    color: #9ca3af;
+    font-size: 1rem;
+}
+
+.sector-healthcare {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.sector-tech {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.sector-finance {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.sector-energy {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+@media (max-width: 768px) {
+    .markets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .market-price {
+        font-size: 1.5rem;
+    }
 }
 </style>
+
+<script>
+    async function loadMarketData() {
+        try {
+            const response = await fetch('/api/market-data');
+            const data = await response.json();
+
+            if (!data || data.length === 0) {
+                document.getElementById('marketsGrid').innerHTML =
+                    '<p style="text-align: center; color: #888; grid-column: 1/-1;">No market data available</p>';
+                return;
+            }
+
+            let html = '';
+            data.forEach((market, idx) => {
+                const isPositive = market.change_pct >= 0;
+                const changeClass = isPositive ? 'positive' : 'negative';
+                const changeSign = isPositive ? '+' : '';
+                const direction = isPositive ? '📈' : '📉';
+
+                html += `
+                    <div class="market-card ${changeClass}">
+                        <div class="market-header">
+                            <div>
+                                <div class="market-ticker">${market.ticker}</div>
+                                <div class="market-company">${market.company_name}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 1.5rem;">${direction}</span>
+                            </div>
+                        </div>
+                        <div class="market-price">$${market.price.toFixed(2)}</div>
+                        <div class="market-change ${changeClass}">
+                            ${changeSign}${market.change_pct.toFixed(2)}%
+                        </div>
+                        <div class="market-volume">
+                            Vol: ${(market.volume / 1000000).toFixed(1)}M
+                        </div>
+                        <div class="market-chart">
+                            <canvas id="chart-${idx}"></canvas>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('marketsGrid').innerHTML = html;
+
+            // Draw simple price trend charts
+            data.forEach((market, idx) => {
+                drawTrendChart(idx, market.change_pct);
+            });
+        } catch (error) {
+            console.error('Market data error:', error);
+            document.getElementById('marketsGrid').innerHTML =
+                '<p style="text-align: center; color: red; grid-column: 1/-1;">Error loading market data</p>';
+        }
+    }
+
+    function drawTrendChart(idx, changePercent) {
+        const canvas = document.getElementById(`chart-${idx}`);
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const isPositive = changePercent >= 0;
+        const basePrice = 100;
+        const endPrice = basePrice * (1 + changePercent / 100);
+
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, 150);
+        if (isPositive) {
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+            gradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+        }
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Open', '', '', '', 'Now'],
+                datasets: [{
+                    label: 'Price Trend',
+                    data: [basePrice, basePrice + (endPrice - basePrice) * 0.3, basePrice + (endPrice - basePrice) * 0.6, basePrice + (endPrice - basePrice) * 0.8, endPrice],
+                    borderColor: isPositive ? '#10b981' : '#ef4444',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        display: false,
+                        beginAtZero: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    loadMarketData();
+    setInterval(loadMarketData, 60000); // Refresh every minute
+</script>
 {% endblock %}

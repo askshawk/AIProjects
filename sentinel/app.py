@@ -7,7 +7,8 @@ AI-powered signal collection, analysis, and visualization
 from flask import Flask, render_template, request, jsonify
 from src.database import (
     init_db, DatabaseError, signal_exists, save_signal, save_signal_analysis,
-    save_market_data, get_all_signals, get_signals_by_threat_level, get_latest_briefs
+    save_market_data, get_all_signals, get_signals_by_threat_level, get_latest_briefs,
+    save_entities, get_entity_graph
 )
 from agents.collector import collect_all_signals, CollectorError
 from agents.analyzer import analyze_signal, ClaudeAnalysisError
@@ -121,6 +122,12 @@ def api_collect():
                 # Save analysis
                 save_signal_analysis(signal_id, analysis)
 
+                # Populate entity network (best-effort; never blocks collection)
+                try:
+                    save_entities(signal_id, analysis.get('entities', []))
+                except DatabaseError as e:
+                    logger.warning(f"Entity save failed for signal {signal_id}: {e}")
+
                 # Step 3: Embed signal into ChromaDB
                 signal_with_analysis = {**signal, **analysis}
                 try:
@@ -226,6 +233,32 @@ def api_search():
 
     except Exception as e:
         logger.error(f"Search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/market-data')
+def api_market_data():
+    """Get current market data for tracked tickers."""
+    try:
+        from src.market import fetch_market_data
+
+        tickers = ['SPY', 'QQQ', 'BTC-USD', 'XLV', 'XLK', 'XLF', 'XLE']
+        market_data = fetch_market_data(tickers)
+
+        return jsonify(market_data)
+    except Exception as e:
+        # Degrade gracefully: return an empty list so the page shows a
+        # friendly "no data" message instead of a hard error.
+        logger.error(f"Market data error: {e}")
+        return jsonify([])
+
+@app.route('/api/entities')
+def api_entities():
+    """Entity co-occurrence network graph data for the D3 force graph."""
+    try:
+        graph = get_entity_graph()
+        return jsonify(graph)
+    except DatabaseError as e:
+        logger.error(f"Entity graph error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.errorhandler(404)
