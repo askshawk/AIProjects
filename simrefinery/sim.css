@@ -329,6 +329,35 @@ body {
     margin-top: 10px;
 }
 
+/* New Game menu accent */
+.new-game-menu { color: #fff; background: #006000; font-weight: bold; border-radius: 2px; }
+.new-game-menu:hover { background: #008000; color: #fff; }
+
+/* ---------- Operator Training panel ---------- */
+.training-panel {
+    position: fixed; left: 12px; bottom: 12px; z-index: 900;
+    width: 320px; max-width: calc(100vw - 24px);
+    background: var(--panel);
+    border-top: 2px solid var(--win-white); border-left: 2px solid var(--win-white);
+    border-right: 2px solid var(--win-gray-dark); border-bottom: 2px solid var(--win-gray-dark);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.35);
+    padding: 8px;
+}
+.train-head {
+    background: linear-gradient(90deg, #006000, #2a8a2a);
+    color: white; font-weight: bold; padding: 4px 6px; margin: -8px -8px 8px;
+}
+.train-bar { height: 8px; background: var(--win-white); border: 1px solid var(--win-gray-dark); margin-bottom: 8px; }
+.train-bar-fill { height: 100%; background: #2a8a2a; transition: width 0.3s ease; }
+.train-text { font-size: 12px; line-height: 1.45; margin-bottom: 6px; }
+.train-hint { font-size: 11px; color: #555; font-style: italic; margin-bottom: 8px; }
+.train-btns { display: flex; gap: 6px; }
+.train-btns .modal-btn { flex: 1; text-align: center; font-size: 11px; padding: 4px 8px; }
+
+@media (max-width: 900px) {
+    .training-panel { left: 8px; right: 8px; bottom: 8px; width: auto; }
+}
+
 /* ---------- Responsive: stack for mobile ---------- */
 @media (max-width: 900px) {
     .sim-layout { grid-template-columns: 1fr; }

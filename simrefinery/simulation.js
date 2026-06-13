@@ -116,6 +116,11 @@ function newGame(scenario) {
         weekStartProfit: 0,
         training: false,
         sandbox: false,
+        flags: { repaired: false, emergency: false }, // for tutorial checks
+        wearMod: 1,            // capital "Reliability Program" lowers this
+        sulfurBoost: 1,        // capital "Sulfur Recovery Unit" raises this
+        built: {},             // purchased capital projects
+        trainStep: 0,          // operator-training task index
     };
     // reset any price-table mutations from a previous scenario run
     for (const k in PRODUCTS) PRODUCTS[k].base = ORIG_PROD_BASE[k];
@@ -176,7 +181,7 @@ function stepSimulation() {
     // Hydrotreater: desulfurizes diesel/gasoil streams; removes sulfur as elemental.
     const sulfurFeed = (cut.diesel + cut.gasoil + fccLco) ;
     const hdtRun = unitThroughput(u.hydro, sulfurFeed);
-    const sulfurRecovered = hdtRun * (slate.sulfur/100) * 5.0; // tons/day approx
+    const sulfurRecovered = hdtRun * (slate.sulfur/100) * 5.0 * G.sulfurBoost; // tons/day approx
     const treatedDiesel = Math.min(cut.diesel + fccLco + cokerDistillate, hdtRun);
 
     // 4. Blend final products.
@@ -224,7 +229,7 @@ function stepSimulation() {
         const unit = u[id];
         if (!unit.online) continue;
         // wear increases with severity & pressure; maintenance offsets.
-        const wear = (unit.severity/100) * (unit.press/100) * 0.9;
+        const wear = (unit.severity/100) * (unit.press/100) * 0.9 * G.wearMod;
         const repair = (G.maint - 100) > 0 ? (G.maint-100)/100 * 0.7 : 0;
         unit.cond = clamp(unit.cond - wear + repair - 0.15, 0, 100);
         // random breakdown / explosion chance
@@ -504,6 +509,7 @@ function renderUnitControls() {
         const costM = (100-u.cond) * 0.08e6;
         if (G.cash < costM) { logEvent('Not enough cash for repair.'); return; }
         G.cash -= costM; u.cond = clamp(u.cond+30,0,100); u.online=true;
+        G.flags.repaired = true;
         logEvent(`Turnaround on ${u.name}: condition restored (−${fmtMoney(costM)}).`);
         renderUnitControls(); renderPlantUnits(); renderPerformance(); drawPlant();
     };
@@ -640,6 +646,7 @@ function setupControls() {
     document.getElementById('pauseMenu').onclick = togglePause;
     document.getElementById('emergencyBtn').onclick = () => {
         Object.values(G.units).forEach(u=>u.online=false);
+        G.flags.emergency = true;
         logEvent('🛑 EMERGENCY SHUTDOWN — all units offline.');
         renderAll();
     };
@@ -659,7 +666,9 @@ function setupControls() {
 
     document.getElementById('budgetBtn').onclick = showBudget;
     document.getElementById('reportBtn').onclick = showReport;
-    document.getElementById('buildBtn').onclick = () => showModal('Build', '<p>Capital projects (new units, debottlenecking) are planned for a future release. For now, run turnarounds via a unit\'s REPAIR button to restore condition.</p><div class="modal-btn" onclick="closeModal()">OK</div>');
+    const ng = document.getElementById('newGameMenu');
+    if (ng) ng.onclick = goToLobby;
+    document.getElementById('buildBtn').onclick = showBuild;
     document.getElementById('modalClose').onclick = closeModal;
 
     document.querySelectorAll('.menu-item[data-menu]').forEach(m=>{
@@ -692,6 +701,61 @@ function handleMenu(menu) {
         <div class="modal-btn" onclick="closeModal()">OK</div>`);
     else if (menu==='file') showModal('File', '<p>SimRefinery 2.0 — homage build. Progress is in-memory only.</p><div class="modal-btn" onclick="location.reload()">Restart / Choose Scenario</div>');
     else if (menu==='windows') showReport();
+}
+
+// ---------- Capital projects (BUILD) ----------
+const BUILD_PROJECTS = [
+    { id:'crudetrain', name:'New Crude Train', cost:40e6,
+      desc:'+25,000 bbl/d crude distillation capacity. The biggest throughput lever.',
+      apply:(g)=>{ g.units.cdu.cap += 25000; } },
+    { id:'fccrevamp', name:'FCC Revamp', cost:25e6,
+      desc:'+10,000 bbl/d cat-cracker capacity — converts more gas oil into gasoline.',
+      apply:(g)=>{ g.units.fcc.cap += 10000; } },
+    { id:'hdtexpand', name:'Hydrotreater Expansion', cost:30e6,
+      desc:'+15,000 bbl/d hydrotreating — lets you run cheap heavy-sour crude without choking.',
+      apply:(g)=>{ g.units.hydro.cap += 15000; } },
+    { id:'cokerup', name:'Coker Upgrade', cost:18e6,
+      desc:'+8,000 bbl/d coking — turns low-value residuum into distillate.',
+      apply:(g)=>{ g.units.coker.cap += 8000; } },
+    { id:'alkyexpand', name:'Alkylation Expansion', cost:12e6,
+      desc:'+6,000 bbl/d alkylation — more premium gasoline blendstock from LPG.',
+      apply:(g)=>{ g.units.alky.cap += 6000; } },
+    { id:'reliability', name:'Reliability Program', cost:20e6,
+      desc:'Cuts equipment wear 25% plant-wide. Fewer breakdowns, lower turnaround spend.',
+      apply:(g)=>{ g.wearMod *= 0.75; } },
+    { id:'sru', name:'Sulfur Recovery Unit', cost:15e6,
+      desc:'+50% sulfur recovery revenue and cleaner heavy-crude operation.',
+      apply:(g)=>{ g.sulfurBoost *= 1.5; } },
+];
+
+function showBuild() {
+    const rows = BUILD_PROJECTS.map(p => {
+        const owned = !!G.built[p.id];
+        const afford = G.cash >= p.cost;
+        const btn = owned
+            ? `<span style="color:#2a8a2a;font-weight:bold">✔ Built</span>`
+            : `<span class="modal-btn" style="margin:0;${afford?'':'opacity:.45;pointer-events:none'}" onclick="buyProject('${p.id}')">Buy ${fmtMoney(p.cost)}</span>`;
+        return `<tr><td style="text-align:left">
+                  <b>${p.name}</b> — ${fmtMoney(p.cost)}<br>
+                  <span style="font-size:10px;color:#555">${p.desc}</span>
+                </td><td>${btn}</td></tr>`;
+    }).join('');
+    showModal('Build — Capital Projects', `
+        <p>Cash on hand: <b>${fmtMoney(G.cash)}</b>. Capital projects are permanent upgrades for the current run.</p>
+        <table>${rows}</table>
+        <div class="modal-btn" onclick="closeModal()">Close</div>`);
+}
+
+function buyProject(id) {
+    const p = BUILD_PROJECTS.find(x => x.id === id);
+    if (!p || G.built[id]) return;
+    if (G.cash < p.cost) { logEvent('Not enough cash for that project.'); return; }
+    G.cash -= p.cost;
+    G.built[id] = true;
+    p.apply(G);
+    logEvent(`🏗️ Capital project complete: ${p.name} (−${fmtMoney(p.cost)}).`);
+    renderAll();
+    showBuild(); // refresh the list
 }
 
 function showBudget() {
@@ -730,6 +794,107 @@ function showModal(title, html) {
 }
 function closeModal(){ document.getElementById('modalOverlay').classList.add('hidden'); }
 
+// ---------- Operator Training (guided 10-task tutorial) ----------
+const TRAINING_TASKS = [
+    { text:'Welcome to the Richmond refinery. First choose your feedstock: in the <b>CRUDE MARKET</b> panel, click <b>Light Sweet</b> to buy it.',
+      hint:'Light sweet is pricier but clean and gasoline-rich.',
+      check:(g)=>g.slate==='light' },
+    { text:'Open a unit\'s controls: click the <b>Crude Distillation (CDU)</b> tower on the plant — or the CDU row in the PLANT list.',
+      hint:'The CDU splits the barrel into the cuts that feed every other unit.',
+      check:(g)=>g.selectedUnit==='cdu' },
+    { text:'Throttle the still: with the CDU selected, drag its <b>Severity down to 70% or lower</b>.',
+      hint:'Lower severity = less throughput but slower wear.',
+      check:(g)=>g.units.cdu.severity<=70 },
+    { text:'Run it safely: select the <b>Cat Cracker (FCC)</b> and bring its <b>Pressure to 60% or lower</b>.',
+      hint:'High pressure on a worn unit is exactly how explosions happen.',
+      check:(g)=>g.units.fcc.press<=60 },
+    { text:'Feedstock economics: switch to <b>Heavy Sour</b> crude in the CRUDE MARKET and watch the hydrotreater load up.',
+      hint:'Heavy sour is cheap but dirty — the hydrotreater becomes the bottleneck.',
+      check:(g)=>g.slate==='heavy' },
+    { text:'Protect your iron: raise the <b>Maintenance budget above 115%</b> with the slider.',
+      hint:'Above 115% the budget slowly restores unit condition.',
+      check:(g)=>g.maint>115 },
+    { text:'Run a turnaround: select any unit and press <b>REPAIR</b> to restore its condition.',
+      hint:'A targeted repair is faster than waiting on the maintenance budget.',
+      check:(g)=>g.flags.repaired },
+    { text:'Think big: open <b>BUILD</b> (left palette) and purchase any one capital project.',
+      hint:'Capital projects permanently debottleneck the plant.',
+      check:(g)=>Object.keys(g.built).length>0 },
+    { text:'Emergency drill: hit <b>EMERGENCY SHUTDOWN</b>, then select the CDU and press <b>START UP</b> to bring it back online.',
+      hint:'Know how to safe the plant — and how to recover.',
+      check:(g)=>g.flags.emergency && g.units.cdu.online },
+    { text:'Final exam: keep the plant in the black and grow cash by <b>$1M</b> from here.',
+      hint:'Balance throughput, crude choice, and maintenance.',
+      start:(g)=>{ g._trainTarget = g.cash + 1e6; },
+      check:(g)=>g.cash >= (g._trainTarget||0) },
+];
+
+function updateTraining() {
+    const panel = document.getElementById('trainingPanel');
+    if (!panel) return;
+    if (!G || !G.training) { panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+
+    if (G.trainStep >= TRAINING_TASKS.length) { renderTrainingDone(panel); return; }
+    const task = TRAINING_TASKS[G.trainStep];
+    if (G._trainRenderedStep !== G.trainStep) {
+        G._trainRenderedStep = G.trainStep;
+        if (task.start) task.start(G);
+        renderTrainingPanel(panel, task);
+    }
+    if (task.check(G)) {
+        logEvent(`✓ Training task ${G.trainStep+1}/${TRAINING_TASKS.length} complete.`);
+        G.trainStep++;
+    }
+}
+
+function renderTrainingPanel(panel, task) {
+    const n = G.trainStep + 1, total = TRAINING_TASKS.length;
+    panel.innerHTML = `
+        <div class="train-head">🎓 Operator Training — Task ${n}/${total}</div>
+        <div class="train-bar"><div class="train-bar-fill" style="width:${(G.trainStep/total)*100}%"></div></div>
+        <div class="train-text">${task.text}</div>
+        <div class="train-hint">💡 ${task.hint}</div>
+        <div class="train-btns">
+            <span class="modal-btn" style="margin:0" onclick="skipTrainingTask()">Skip task</span>
+            <span class="modal-btn" style="margin:0" onclick="exitTraining()">Exit tutorial</span>
+        </div>`;
+}
+
+function renderTrainingDone(panel) {
+    if (G._trainRenderedStep === 'done') return;
+    G._trainRenderedStep = 'done';
+    panel.innerHTML = `
+        <div class="train-head">🎓 Operator Training — Complete ✅</div>
+        <div class="train-text">You've covered feed selection, unit control, safety, maintenance,
+        turnarounds, capital projects, and emergencies. The plant is yours — keep it profitable.</div>
+        <div class="train-btns">
+            <span class="modal-btn" style="margin:0" onclick="exitTraining()">Keep playing</span>
+        </div>`;
+}
+
+function skipTrainingTask() {
+    if (!G || !G.training) return;
+    if (G.trainStep < TRAINING_TASKS.length) G.trainStep++;
+    G._trainRenderedStep = -1; // force re-render of next task
+}
+function exitTraining() {
+    if (!G) return;
+    G.training = false;
+    document.getElementById('trainingPanel').classList.add('hidden');
+    logEvent('Tutorial closed. Free play resumed.');
+}
+
+// Return to the scenario lobby (stops the sim cleanly).
+function goToLobby() {
+    G = null;
+    const tp = document.getElementById('trainingPanel');
+    if (tp) tp.classList.add('hidden');
+    closeModal();
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('scenarioScreen').classList.remove('hidden');
+}
+
 // ---------- Boot ----------
 function renderScenarioList() {
     const el = document.getElementById('scenarioList');
@@ -765,7 +930,7 @@ function startScenario(scenario) {
     if (!loopsStarted) {
         loopsStarted = true;
         setInterval(() => { if (G && !G.paused && !G.gameOver) stepSimulation(); }, 2000); // day tick
-        setInterval(() => { if (G) drawPlant(); }, 60); // animation
+        setInterval(() => { if (G) { drawPlant(); updateTraining(); } }, 60); // animation + tutorial
     }
 }
 
