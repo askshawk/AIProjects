@@ -590,91 +590,171 @@ function drawPipe(x1,y1,x2,y2,color,highlight,flowing) {
 }
 
 function drawUnit(u, selected) {
-    const x=u.x, y=u.y;
-    const w=80, h=80;
-    const condCol = condColor(u.cond);
+    const x = u.x, y = u.y;
 
-    // shadow
-    pctx.fillStyle='rgba(0,0,0,0.25)'; pctx.fillRect(x-w/2-2,y-h/2+h+2,w+4,8);
+    // Isometric 3D building with proper perspective
+    const w = 50, h = 70, d = 20;
+    const cond = u.cond, press = u.press;
+    const condCol = condColor(cond);
+    const pressCol = pressColor(press);
 
-    // main body with gradient
-    const grad = pctx.createLinearGradient(x-w/2, y-h/2, x+w/2, y+h/2);
-    if (u.online) {
-        grad.addColorStop(0, '#d4d9df');
-        grad.addColorStop(1, '#9ba0a8');
-    } else {
-        grad.addColorStop(0, '#8a7070');
-        grad.addColorStop(1, '#5a4a4a');
-    }
-    pctx.fillStyle = grad;
-    pctx.fillRect(x-w/2, y-h/2, w, h);
+    // Draw isometric box (3D appearance)
+    // Top face (visible when looking isometric)
+    const topLeft = [x - w/2, y - h/2 - d/2];
+    const topRight = [x + w/2, y - h/2 - d/2];
+    const topBack = [x, y - h/2 - d];
 
-    // condition bar on left (tall, full height)
-    const condH = h * (u.cond / 100);
+    // Front face corners
+    const bottomLeft = [x - w/2, y + h/2 - d/2];
+    const bottomRight = [x + w/2, y + h/2 - d/2];
+
+    // Right face corners
+    const topRightBack = [x + w/2, y - h/2 - d];
+    const bottomRightBack = [x + w/2, y + h/2 - d];
+
+    // Left face corners
+    const topLeftBack = [x - w/2, y - h/2 - d];
+    const bottomLeftBack = [x - w/2, y + h/2 - d];
+
+    // Draw shadow
+    pctx.fillStyle = 'rgba(0,0,0,0.2)';
+    pctx.beginPath();
+    pctx.moveTo(bottomLeft[0], bottomLeft[1] + 4);
+    pctx.lineTo(bottomRight[0], bottomRight[1] + 4);
+    pctx.lineTo(bottomRight[0] + 8, bottomRight[1] + 12);
+    pctx.lineTo(bottomLeft[0] + 8, bottomLeft[1] + 12);
+    pctx.fill();
+
+    // Left face (darker)
+    const leftColor = u.online ? '#8a9aaa' : '#5a4a4a';
+    pctx.fillStyle = leftColor;
+    pctx.beginPath();
+    pctx.moveTo(topLeft[0], topLeft[1]);
+    pctx.lineTo(topBack[0], topBack[1]);
+    pctx.lineTo(bottomLeftBack[0], bottomLeftBack[1]);
+    pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.stroke();
+
+    // Front face (lighter)
+    const frontColor = u.online ? '#c8d8e8' : '#7a6a6a';
+    pctx.fillStyle = frontColor;
+    pctx.beginPath();
+    pctx.moveTo(topLeft[0], topLeft[1]);
+    pctx.lineTo(topRight[0], topRight[1]);
+    pctx.lineTo(bottomRight[0], bottomRight[1]);
+    pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.stroke();
+
+    // Right face (medium)
+    const rightColor = u.online ? '#9aaa9a' : '#6a5a5a';
+    pctx.fillStyle = rightColor;
+    pctx.beginPath();
+    pctx.moveTo(topRight[0], topRight[1]);
+    pctx.lineTo(topRightBack[0], topRightBack[1]);
+    pctx.lineTo(bottomRightBack[0], bottomRightBack[1]);
+    pctx.lineTo(bottomRight[0], bottomRight[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.stroke();
+
+    // Top face (bright)
+    const topColor = u.online ? '#e8e8e8' : '#8a7a7a';
+    pctx.fillStyle = topColor;
+    pctx.beginPath();
+    pctx.moveTo(topLeft[0], topLeft[1]);
+    pctx.lineTo(topRight[0], topRight[1]);
+    pctx.lineTo(topRightBack[0], topRightBack[1]);
+    pctx.lineTo(topBack[0], topBack[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#555'; pctx.lineWidth = 0.5;
+    pctx.stroke();
+
+    // Status bars on front face
+    // Condition bar (left side)
+    const barWidth = 6;
+    const barHeight = (h - 8) * (cond / 100);
     pctx.fillStyle = condCol;
-    pctx.fillRect(x-w/2-2, y+h/2-condH, 4, condH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
-    pctx.strokeRect(x-w/2-2, y-h/2, 4, h);
+    pctx.fillRect(topLeft[0] + 4, bottomLeft[1] - barHeight, barWidth, barHeight);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
+    pctx.strokeRect(topLeft[0] + 4, bottomLeft[1] - (h - 8), barWidth, h - 8);
 
-    // pressure bar on right
-    const pressH = h * (u.press / 100);
-    pctx.fillStyle = pressColor(u.press);
-    pctx.fillRect(x+w/2-2, y+h/2-pressH, 4, pressH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
-    pctx.strokeRect(x+w/2-2, y-h/2, 4, h);
+    // Pressure bar (right side)
+    const pressHeight = (h - 8) * (press / 100);
+    pctx.fillStyle = pressCol;
+    pctx.fillRect(topRight[0] - 10, bottomRight[1] - pressHeight, barWidth, pressHeight);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
+    pctx.strokeRect(topRight[0] - 10, bottomRight[1] - (h - 8), barWidth, h - 8);
 
-    // internal grating/details
-    pctx.strokeStyle = 'rgba(0,0,0,0.15)'; pctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-        const yy = y - h/2 + (i+1) * (h/5);
-        pctx.beginPath(); pctx.moveTo(x-w/2+4, yy); pctx.lineTo(x+w/2-4, yy); pctx.stroke();
+    // Internal grating on front face
+    pctx.strokeStyle = 'rgba(0,0,0,0.1)'; pctx.lineWidth = 0.5;
+    for (let i = 1; i < 4; i++) {
+        const yy = topLeft[1] + (i/4) * (bottomLeft[1] - topLeft[1]);
+        pctx.beginPath();
+        pctx.moveTo(topLeft[0] + 12, yy);
+        pctx.lineTo(topRight[0] - 12, yy);
+        pctx.stroke();
     }
-    for (let i = 0; i < 3; i++) {
-        const xx = x - w/2 + (i+1) * (w/4);
-        pctx.beginPath(); pctx.moveTo(xx, y-h/2+4); pctx.lineTo(xx, y+h/2-4); pctx.stroke();
-    }
-
-    // outer border (darker)
-    pctx.lineWidth = selected ? 4 : 2;
-    pctx.strokeStyle = selected ? '#ffd700' : '#222';
-    pctx.strokeRect(x-w/2, y-h/2, w, h);
-
-    // top highlight (3D effect)
-    pctx.strokeStyle = 'rgba(255,255,255,0.4)'; pctx.lineWidth = 1;
-    pctx.beginPath(); pctx.moveTo(x-w/2+1, y-h/2+1); pctx.lineTo(x+w/2-1, y-h/2+1); pctx.stroke();
-
-    // CDU tower detail
-    if (u.id==='cdu') {
-        pctx.fillStyle = u.online ? '#c8d0d8' : '#6a5a5a';
-        pctx.fillRect(x-8, y-h/2-20, 16, 20);
-        pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
-        pctx.strokeRect(x-8, y-h/2-20, 16, 20);
-        // heat effect
-        const heat = (animT%20)/20;
-        pctx.fillStyle = `rgba(255,${100+heat*140},0,0.3)`;
-        pctx.fillRect(x-6, y+h/2-12, 12, 10);
+    for (let i = 1; i < 3; i++) {
+        const xx = topLeft[0] + (i/3) * (topRight[0] - topLeft[0]);
+        pctx.beginPath();
+        pctx.moveTo(xx, topLeft[1] + 6);
+        pctx.lineTo(xx, bottomLeft[1] - 6);
+        pctx.stroke();
     }
 
-    // unit label (inside building)
-    pctx.fillStyle = '#000'; pctx.font = 'bold 11px Tahoma'; pctx.textAlign='center';
-    pctx.fillText(u.short, x, y-6);
+    // Unit label
+    pctx.fillStyle = '#000'; pctx.font = 'bold 10px Tahoma'; pctx.textAlign = 'center';
+    pctx.fillText(u.short, x, y - 4);
 
-    // status text
-    pctx.font = '9px Tahoma'; pctx.fillStyle = u.online ? '#2a2a2a' : '#b02020';
-    pctx.fillText(Math.round(u.cond)+'%', x, y+8);
+    // Condition % text
+    pctx.font = '8px Tahoma'; pctx.fillStyle = u.online ? '#000' : '#b02020';
+    pctx.fillText(Math.round(cond) + '%', x, y + 12);
 
-    // offline indicator X
+    // Selection highlight
+    if (selected) {
+        pctx.strokeStyle = '#ffd700'; pctx.lineWidth = 3;
+        pctx.beginPath();
+        pctx.moveTo(topLeft[0], topLeft[1]);
+        pctx.lineTo(topRight[0], topRight[1]);
+        pctx.lineTo(bottomRight[0], bottomRight[1]);
+        pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+        pctx.stroke();
+        pctx.beginPath();
+        pctx.moveTo(topRight[0], topRight[1]);
+        pctx.lineTo(topRightBack[0], topRightBack[1]);
+        pctx.lineTo(bottomRightBack[0], bottomRightBack[1]);
+        pctx.lineTo(bottomRight[0], bottomRight[1]);
+        pctx.stroke();
+    }
+
+    // Offline X
     if (!u.online) {
-        pctx.strokeStyle='#b02020'; pctx.lineWidth=3;
-        const d = 18;
-        pctx.beginPath(); pctx.moveTo(x-d, y-d); pctx.lineTo(x+d, y+d); pctx.stroke();
-        pctx.beginPath(); pctx.moveTo(x+d, y-d); pctx.lineTo(x-d, y+d); pctx.stroke();
+        pctx.strokeStyle = '#b02020'; pctx.lineWidth = 2.5;
+        const d = 16;
+        pctx.beginPath();
+        pctx.moveTo(x - d, y - d);
+        pctx.lineTo(x + d, y + d);
+        pctx.stroke();
+        pctx.beginPath();
+        pctx.moveTo(x + d, y - d);
+        pctx.lineTo(x - d, y + d);
+        pctx.stroke();
     }
 
-    // explosion warning
-    if (u.online && u.press>80 && u.cond<30) {
-        const a = 0.3+0.3*Math.sin(animT/4);
-        pctx.fillStyle=`rgba(255,0,0,${a})`; pctx.fillRect(x-w/2, y-h/2, w, h);
+    // Explosion warning
+    if (u.online && u.press > 80 && u.cond < 30) {
+        const a = 0.25 + 0.25 * Math.sin(animT / 4);
+        pctx.fillStyle = `rgba(255,0,0,${a})`;
+        pctx.beginPath();
+        pctx.moveTo(topLeft[0], topLeft[1]);
+        pctx.lineTo(topRight[0], topRight[1]);
+        pctx.lineTo(bottomRight[0], bottomRight[1]);
+        pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+        pctx.fill();
     }
 }
 
