@@ -107,13 +107,13 @@
                     <div class="ops-row"><span>Tank inventory (bbl)</span><span id="tankInv">450,000 / 900,000</span></div>
                     <div class="ops-bar"><div class="ops-bar-fill" id="tankBar" style="width:50%"></div></div>
                     <div class="ops-row"><span id="tankerEta">New tanker in 3 days</span><span id="lastTanker">last: 667,000</span></div>
-                    <div class="ops-note">Crude is bought by the tanker load at the current slate price. A dry tank starves the distillation unit.</div>
+                    <div class="ops-note">Tankers refill the tank on a schedule. A dry tank starves the distillation unit. Crude is expensed as it's processed.</div>
                 </div>
 
                 <!-- Maintenance budget -->
                 <div class="ops-section">
                     <div class="ops-header">MAINTENANCE BUDGET</div>
-                    <div class="ops-row"><span>Spending</span><span id="maintLabel">100% — $13.6M/wk</span></div>
+                    <div class="ops-row"><span>Spending</span><span id="maintLabel">100% — $3.0M/wk</span></div>
                     <input type="range" id="maintSlider" min="0" max="150" value="100" class="ops-slider">
                     <div class="ops-note">Above 115% slowly restores unit condition. Held units idle but don't decay.</div>
                 </div>

@@ -40,6 +40,15 @@ const STREAMS = [
     { id:'sulfur',   name:'SULFUR',   color:'#e8e83c' },
 ];
 
+// Snapshot the default market prices so scenario setups (which tweak them)
+// never permanently drift the tables across retries.
+const ORIG_PROD_BASE = Object.fromEntries(Object.entries(PRODUCTS).map(([k,v]) => [k, v.base]));
+const ORIG_CRUDE_BASE = Object.fromEntries(Object.entries(CRUDES).map(([k,v]) => [k, v.basePrice]));
+
+// Economic balance constants.
+const MAINT_FULL = 3.0e6;     // maintenance $/week at 100% spending
+const ENERGY_PER_BBL = 2.0;   // utilities $/bbl processed
+
 // Refinery units. capacity = bbl/day throughput. severity = adjustable run setting.
 function makeUnits() {
     return {
@@ -108,6 +117,9 @@ function newGame(scenario) {
         training: false,
         sandbox: false,
     };
+    // reset any price-table mutations from a previous scenario run
+    for (const k in PRODUCTS) PRODUCTS[k].base = ORIG_PROD_BASE[k];
+    for (const k in CRUDES) CRUDES[k].basePrice = ORIG_CRUDE_BASE[k];
     // init markets
     for (const k in PRODUCTS) G.prices[k] = PRODUCTS[k].base;
     for (const k in CRUDES) G.crudePrices[k] = CRUDES[k].basePrice;
@@ -198,9 +210,9 @@ function stepSimulation() {
         if (k === 'sulfur') revenue += prod[k] * G.prices.sulfur;
         else revenue += prod[k] * G.prices[k];
     }
-    const crudeCost = feed * G.crudePrices[G.slate];
-    const energyCost = feed * 3.2; // utilities
-    const maintCostDaily = (13.6e6 * (G.maint/100)) / 7;
+    const crudeCost = feed * G.crudePrices[G.slate]; // crude is expensed as it's processed
+    const energyCost = feed * ENERGY_PER_BBL; // utilities
+    const maintCostDaily = (MAINT_FULL * (G.maint/100)) / 7;
     const dayProfit = revenue - crudeCost - energyCost - maintCostDaily;
     G.cash += dayProfit;
     G.totalProfit += dayProfit;
@@ -219,16 +231,15 @@ function stepSimulation() {
         riskCheck(unit);
     }
 
-    // 8. Crude logistics: tanker arrivals.
+    // 8. Crude logistics: tanker arrivals (refill only — crude is expensed as
+    //    it's processed in step 6, so there is no separate purchase charge).
     G.tankerDays -= 1;
     if (G.tankerDays <= 0) {
         const load = G.tankerSize;
-        const cost = load * G.crudePrices[G.slate];
-        G.cash -= cost;
         G.tank = Math.min(G.tankMax, G.tank + load);
         G.lastTanker = load;
         G.tankerDays = 3 + Math.floor(Math.random()*2);
-        logEvent(`Tanker delivered ${fmtBig(load)} bbl ${CRUDES[G.slate].name} (−${fmtMoney(cost)}).`);
+        logEvent(`Tanker delivered ${fmtBig(load)} bbl ${CRUDES[G.slate].name}.`);
     }
 
     // 9. Market drift.
@@ -311,7 +322,10 @@ function firePlayer(msg) {
           <tr><td>Breakdowns</td><td>${G.breakdowns}</td></tr>
           <tr><td>Explosions</td><td>${G.explosions}</td></tr>
         </table>
-        <div class="modal-btn" onclick="location.reload()">New Game</div>
+        <div style="display:flex;gap:8px">
+          <div class="modal-btn" onclick="retryScenario()">Retry scenario</div>
+          <div class="modal-btn" onclick="location.reload()">Choose scenario</div>
+        </div>
     `);
     renderAll();
 }
@@ -397,7 +411,7 @@ function renderCrudeSupply() {
 }
 
 function renderMaintenance() {
-    const weekly = 13.6e6 * (G.maint/100);
+    const weekly = MAINT_FULL * (G.maint/100);
     document.getElementById('maintLabel').textContent = `${G.maint}% — ${fmtMoney(weekly)}/wk`;
     document.getElementById('maintSlider').value = G.maint;
 }
@@ -681,7 +695,7 @@ function handleMenu(menu) {
 }
 
 function showBudget() {
-    const weekly = 13.6e6*(G.maint/100);
+    const weekly = MAINT_FULL*(G.maint/100);
     showModal('$ Budget', `
         <h3>Weekly economics (current run rate)</h3>
         <table>
@@ -729,18 +743,38 @@ function renderScenarioList() {
     });
 }
 
+let currentScenario = null, loopsStarted = false;
+
+function resetPauseButton() {
+    const p = document.getElementById('pauseMenu');
+    p.textContent = 'Pause';
+    p.style.color = '';
+}
+
 function startScenario(scenario) {
+    currentScenario = scenario;
     document.getElementById('scenarioScreen').classList.add('hidden');
     document.getElementById('gameScreen').classList.remove('hidden');
     newGame(scenario);
     initCanvas();
     setupControls();
+    resetPauseButton();
     renderAll();
 
-    // simulation loop (day tick)
-    setInterval(() => { if (G && !G.paused && !G.gameOver) stepSimulation(); }, 2000);
-    // animation loop
-    setInterval(() => { if (G) drawPlant(); }, 60);
+    // start loops exactly once so retries don't stack timers
+    if (!loopsStarted) {
+        loopsStarted = true;
+        setInterval(() => { if (G && !G.paused && !G.gameOver) stepSimulation(); }, 2000); // day tick
+        setInterval(() => { if (G) drawPlant(); }, 60); // animation
+    }
+}
+
+// Restart the current scenario in place (from the Game Over screen).
+function retryScenario() {
+    closeModal();
+    newGame(currentScenario);
+    resetPauseButton();
+    renderAll();
 }
 
 document.addEventListener('DOMContentLoaded', renderScenarioList);
