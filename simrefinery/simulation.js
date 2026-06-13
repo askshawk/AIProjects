@@ -633,262 +633,349 @@ function drawUnit(u, selected) {
     const x = u.x, y = u.y;
     const cond = u.cond, press = u.press;
     const online = u.online;
-
-    // Get unit-specific styling
     const style = UNIT_STYLES[u.id] || UNIT_STYLES.hydro;
-    const w = style.w, h = style.h, d = style.d;
     const colorSet = online ? style.online : style.offline;
+    const shortName = UNIT_STYLES[u.id]?.name || u.id;
 
-    // Isometric corner positions
-    const ftl = [x - w/2, y + h/2];
-    const ftr = [x + w/2, y + h/2];
-    const fbl = [x - w/2, y + h/2 + h];
-    const fbr = [x + w/2, y + h/2 + h];
-    const btl = [x - w/2 - d/2, y + h/2 - d/2];
-    const btr = [x + w/2 - d/2, y + h/2 - d/2];
-    const bbl = [x - w/2 - d/2, y + h/2 + h - d/2];
-    const bbr = [x + w/2 - d/2, y + h/2 + h - d/2];
+    // Drawing function for different unit types
+    if (u.id === 'cdu') drawCDU(x, y, cond, press, online, colorSet, selected, shortName);
+    else if (u.id === 'fcc') drawFCC(x, y, cond, press, online, colorSet, selected, shortName);
+    else if (u.id === 'reformer') drawReformer(x, y, cond, press, online, colorSet, selected, shortName);
+    else if (u.id === 'hydro') drawHydrotreater(x, y, cond, press, online, colorSet, selected, shortName);
+    else if (u.id === 'alky') drawAlkylation(x, y, cond, press, online, colorSet, selected, shortName);
+    else if (u.id === 'coker') drawCoker(x, y, cond, press, online, colorSet, selected, shortName);
+}
 
-    // --- GROUND SHADOW ---
+// CDU: Tall, narrow distillation tower with tapered top
+function drawCDU(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 35, h = 140, d = 20;
+    const shadowY = y + h/2 + h + 5;
+
+    // Ground shadow
     pctx.fillStyle = 'rgba(0,0,0,0.3)';
     pctx.beginPath();
-    pctx.moveTo(fbl[0], fbr[1] + 5);
-    pctx.lineTo(fbr[0], fbr[1] + 5);
-    pctx.lineTo(fbr[0] + 10, fbr[1] + 12);
-    pctx.lineTo(fbl[0] + 10, fbl[1] + 12);
+    pctx.ellipse(x, shadowY + 5, w/2 + 2, 4, 0, 0, Math.PI * 2);
     pctx.fill();
 
-    // --- LEFT FACE ---
-    const leftGrad = pctx.createLinearGradient(x - w/2 - d/2, y, x - w/2, y + h);
+    // Main tower body - tall and narrow
+    const topW = w * 0.6; // Narrower at top
+    const topH = y + h/2 - 30;
+    const midH = y + h/2 + 40;
+    const botH = y + h/2 + h;
+
+    // Left face (tapered)
+    const leftGrad = pctx.createLinearGradient(x - w/2, topH, x - w/2, botH);
     leftGrad.addColorStop(0, colorSet.left);
-    leftGrad.addColorStop(0.5, '#' + (parseInt(colorSet.left.slice(1), 16) - 0x222222).toString(16).padStart(6, '0'));
-    leftGrad.addColorStop(1, '#' + (parseInt(colorSet.left.slice(1), 16) - 0x444444).toString(16).padStart(6, '0'));
+    leftGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.left.slice(1), 16) - 0x333333).toString(16).padStart(6, '0'));
     pctx.fillStyle = leftGrad;
     pctx.beginPath();
-    pctx.moveTo(ftl[0], ftl[1]);
-    pctx.lineTo(btl[0], btl[1]);
-    pctx.lineTo(bbl[0], bbl[1]);
-    pctx.lineTo(fbl[0], fbl[1]);
+    pctx.moveTo(x - topW/2, topH);
+    pctx.lineTo(x - w/2 - d/3, topH - d/2);
+    pctx.lineTo(x - w/2 - d/3, botH - d/2);
+    pctx.lineTo(x - w/2, botH);
     pctx.fill();
-    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1.5;
+    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1;
     pctx.stroke();
 
-    // --- FRONT FACE (with unit-specific colors) ---
-    const frontGrad = pctx.createLinearGradient(x, ftl[1], x, fbl[1]);
+    // Front face (tapered tower)
+    const frontGrad = pctx.createLinearGradient(x, topH, x, botH);
     frontGrad.addColorStop(0, colorSet.front);
     frontGrad.addColorStop(0.3, colorSet.front);
-    frontGrad.addColorStop(0.6, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x181818).toString(16).padStart(6, '0'));
-    frontGrad.addColorStop(0.9, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x303030).toString(16).padStart(6, '0'));
-    frontGrad.addColorStop(1, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x404040).toString(16).padStart(6, '0'));
+    frontGrad.addColorStop(0.7, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x202020).toString(16).padStart(6, '0'));
+    frontGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x404040).toString(16).padStart(6, '0'));
     pctx.fillStyle = frontGrad;
     pctx.beginPath();
-    pctx.moveTo(ftl[0], ftl[1]);
-    pctx.lineTo(ftr[0], ftr[1]);
-    pctx.lineTo(fbr[0], fbr[1]);
-    pctx.lineTo(fbl[0], fbl[1]);
+    pctx.moveTo(x - topW/2, topH);
+    pctx.lineTo(x + topW/2, topH);
+    pctx.lineTo(x + w/2, botH);
+    pctx.lineTo(x - w/2, botH);
     pctx.fill();
     pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
     pctx.stroke();
 
-    // --- RIGHT FACE ---
-    const rightGrad = pctx.createLinearGradient(ftr[0], ftr[1], btr[0], btr[1]);
+    // Right face
+    const rightGrad = pctx.createLinearGradient(x + topW/2, topH, x + w/2 - d/3, topH - d/2);
     rightGrad.addColorStop(0, colorSet.right);
-    rightGrad.addColorStop(1, '#' + (parseInt(colorSet.right.slice(1), 16) - 0x202020).toString(16).padStart(6, '0'));
+    rightGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.right.slice(1), 16) - 0x1a1a1a).toString(16).padStart(6, '0'));
     pctx.fillStyle = rightGrad;
     pctx.beginPath();
-    pctx.moveTo(ftr[0], ftr[1]);
-    pctx.lineTo(btr[0], btr[1]);
-    pctx.lineTo(bbr[0], bbr[1]);
-    pctx.lineTo(fbr[0], fbr[1]);
+    pctx.moveTo(x + topW/2, topH);
+    pctx.lineTo(x + w/2 - d/3, topH - d/2);
+    pctx.lineTo(x + w/2 - d/3, botH - d/2);
+    pctx.lineTo(x + w/2, botH);
     pctx.fill();
-    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1.5;
+    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1;
     pctx.stroke();
 
-    // --- TOP FACE ---
-    const topGrad = pctx.createLinearGradient(x, ftl[1], x, btl[1]);
-    topGrad.addColorStop(0, colorSet.top);
-    topGrad.addColorStop(1, '#' + (parseInt(colorSet.top.slice(1), 16) - 0x0a0a0a).toString(16).padStart(6, '0'));
-    pctx.fillStyle = topGrad;
-    pctx.beginPath();
-    pctx.moveTo(ftl[0], ftl[1]);
-    pctx.lineTo(ftr[0], ftr[1]);
-    pctx.lineTo(btr[0], btr[1]);
-    pctx.lineTo(btl[0], btl[1]);
-    pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
-    pctx.stroke();
-
-    // --- RECESSED PANELS (6 sections: 2×3 grid) ---
-    const panelW = (ftr[0] - ftl[0] - 4) / 2;
-    const panelH = (fbl[1] - ftl[1] - 4) / 3;
-    const darkCol = online ? '#5a5a5a' : '#3a3a3a';
-
-    for (let col = 0; col < 2; col++) {
-        for (let row = 0; row < 3; row++) {
-            const px = ftl[0] + 2 + col * (panelW + 2);
-            const py = ftl[1] + 2 + row * (panelH + 2);
-            // Recessed panel effect
-            pctx.fillStyle = darkCol;
-            pctx.fillRect(px, py, panelW, panelH);
-            pctx.strokeStyle = online ? '#444' : '#222'; pctx.lineWidth = 0.5;
-            pctx.strokeRect(px, py, panelW, panelH);
-            // Beveled effect (dark on bottom-right, light on top-left)
-            pctx.strokeStyle = 'rgba(0,0,0,0.4)'; pctx.lineWidth = 0.5;
-            pctx.beginPath(); pctx.moveTo(px, py + panelH); pctx.lineTo(px + panelW, py + panelH); pctx.stroke();
-            pctx.beginPath(); pctx.moveTo(px + panelW, py); pctx.lineTo(px + panelW, py + panelH); pctx.stroke();
-            pctx.strokeStyle = 'rgba(255,255,255,0.2)'; pctx.lineWidth = 0.5;
-            pctx.beginPath(); pctx.moveTo(px, py); pctx.lineTo(px + panelW, py); pctx.stroke();
-            pctx.beginPath(); pctx.moveTo(px, py); pctx.lineTo(px, py + panelH); pctx.stroke();
-        }
-    }
-
-    // --- WINDOWS (grid based on unit style) ---
-    const [winCols, winRows] = style.windows;
-    const winW = 3, winH = 3;
-    const winStartX = ftl[0] + panelW * 0.3;
-    const winStartY = ftl[1] + 6;
-    const winSpaceX = (ftr[0] - ftl[0] - 4) / (winCols + 1);
-    const winSpaceY = (fbl[1] - ftl[1] - 12) / (winRows + 1);
-
-    for (let r = 0; r < winRows; r++) {
-        for (let c = 0; c < winCols; c++) {
-            const wx = ftl[0] + winSpaceX * (c + 1) - winW/2;
-            const wy = ftl[1] + winSpaceY * (r + 1) - winH/2;
-            // Window dark fill
-            pctx.fillStyle = online ? '#1a1a2a' : '#0a0a0a';
-            pctx.fillRect(wx, wy, winW, winH);
-            // Window highlight (top-left light reflection)
-            pctx.fillStyle = online ? 'rgba(200,220,255,0.4)' : 'rgba(100,100,100,0.2)';
-            pctx.fillRect(wx, wy, 1, 1);
-            pctx.fillRect(wx, wy, 2, 1);
-        }
-    }
-
-    // --- RIVETS ---
-    const rivetRadius = 1;
-    const rivetPositions = [
-        [ftl[0] + 3, ftl[1] + 4], [ftr[0] - 3, ftl[1] + 4],
-        [ftl[0] + 3, fbl[1] - 4], [ftr[0] - 3, fbl[1] - 4],
-        [ftl[0] + panelW + 2, ftl[1] + panelH + 2],
-        [ftl[0] + panelW + 2, ftl[1] + panelH * 2 + 4],
-        [ftr[0] - panelW - 2, ftl[1] + panelH + 2],
-        [ftr[0] - panelW - 2, ftl[1] + panelH * 2 + 4],
-    ];
-
-    pctx.fillStyle = '#3a3a3a';
-    for (let i = 0; i < Math.min(style.rivets, rivetPositions.length); i++) {
-        const [rx, ry] = rivetPositions[i];
+    // Horizontal section bands (distillation stages)
+    pctx.strokeStyle = online ? '#555' : '#333'; pctx.lineWidth = 0.5;
+    for (let i = 0; i < 8; i++) {
+        const bandY = topH + (botH - topH) * (i / 8);
+        const ratio = i / 8;
+        const w1 = topW + (w - topW) * ratio;
         pctx.beginPath();
-        pctx.arc(rx, ry, rivetRadius, 0, Math.PI * 2);
-        pctx.fill();
-        pctx.strokeStyle = 'rgba(255,255,255,0.3)'; pctx.lineWidth = 0.5;
+        pctx.moveTo(x - w1/2, bandY);
+        pctx.lineTo(x + w1/2, bandY);
         pctx.stroke();
     }
 
-    // --- HATCH PATTERNS (based on unit detail type) ---
-    if (style.detail.includes('hatch')) {
-        const hatchPanelIdx = Math.floor(style.windows[1] / 2);
-        const hx = ftl[0] + panelW * 0.3;
-        const hy = ftl[1] + panelH * hatchPanelIdx + 2;
-        const hw = panelW * 0.4;
-        const hh = panelH - 4;
-        pctx.strokeStyle = 'rgba(0,0,0,0.25)'; pctx.lineWidth = 0.5;
-        for (let i = 0; i < 8; i++) {
-            pctx.beginPath();
-            pctx.moveTo(hx + i * 2, hy);
-            pctx.lineTo(hx + i * 2 - hh, hy + hh);
-            pctx.stroke();
-        }
+    drawStatusBars(x, topH, botH, w, cond, press);
+    drawUnitLabel(x, (topH + botH) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topH, x + w/2, botH);
+    if (!online) drawOfflineX((topH + botH) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topH, w, botH - topH);
+}
+
+// FCC: Wide, squat reactor with rounded corners
+function drawFCC(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 70, h = 90, d = 30;
+    const topY = y + h/2;
+    const botY = y + h/2 + h;
+
+    // Shadow
+    pctx.fillStyle = 'rgba(0,0,0,0.35)';
+    pctx.beginPath();
+    pctx.ellipse(x, botY + 5, w/2 + 3, 5, 0, 0, Math.PI * 2);
+    pctx.fill();
+
+    // Wide squat body with rounded corners
+    const leftGrad = pctx.createLinearGradient(x - w/2 - d/2, y, x - w/2, y + h);
+    leftGrad.addColorStop(0, colorSet.left);
+    leftGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.left.slice(1), 16) - 0x2a2a2a).toString(16).padStart(6, '0'));
+    pctx.fillStyle = leftGrad;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2 + 8, topY);
+    pctx.lineTo(x - w/2 - d/2 + 8, topY - d/2);
+    pctx.lineTo(x - w/2 - d/2 + 8, botY - d/2);
+    pctx.lineTo(x - w/2 + 8, botY);
+    pctx.fill();
+    pctx.stroke();
+
+    const frontGrad = pctx.createLinearGradient(x, topY, x, botY);
+    frontGrad.addColorStop(0, colorSet.front);
+    frontGrad.addColorStop(0.5, colorSet.front);
+    frontGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x3a3a3a).toString(16).padStart(6, '0'));
+    pctx.fillStyle = frontGrad;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2 + 8, topY);
+    pctx.arcTo(x - w/2, topY, x - w/2, topY + 8, 8);
+    pctx.lineTo(x + w/2 - 8, topY);
+    pctx.arcTo(x + w/2, topY, x + w/2, topY + 8, 8);
+    pctx.lineTo(x + w/2, botY - 8);
+    pctx.arcTo(x + w/2, botY, x + w/2 - 8, botY, 8);
+    pctx.lineTo(x - w/2 + 8, botY);
+    pctx.arcTo(x - w/2, botY, x - w/2, botY - 8, 8);
+    pctx.closePath();
+    pctx.fill();
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.stroke();
+
+    // Right face
+    pctx.fillStyle = colorSet.right;
+    pctx.beginPath();
+    pctx.moveTo(x + w/2 - 8, topY);
+    pctx.lineTo(x + w/2 - d/2 + 8, topY - d/2);
+    pctx.lineTo(x + w/2 - d/2 + 8, botY - d/2);
+    pctx.lineTo(x + w/2, botY);
+    pctx.fill();
+    pctx.stroke();
+
+    drawStatusBars(x, topY, botY, w, cond, press);
+    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (!online) drawOfflineX((topY + botY) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+}
+
+// Reformer: Sleek medium unit
+function drawReformer(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 50, h = 100, d = 24;
+    const topY = y + h/2;
+    const botY = y + h/2 + h;
+
+    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+    pctx.beginPath();
+    pctx.ellipse(x, botY + 5, w/2 + 2, 4, 0, 0, Math.PI * 2);
+    pctx.fill();
+
+    // Sleek tapered design
+    pctx.fillStyle = colorSet.front;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2, topY);
+    pctx.lineTo(x + w/2, topY);
+    pctx.lineTo(x + w/2 - 5, botY);
+    pctx.lineTo(x - w/2 + 5, botY);
+    pctx.fill();
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.stroke();
+
+    // Horizontal ribbing
+    pctx.strokeStyle = online ? '#666' : '#444'; pctx.lineWidth = 0.5;
+    for (let i = 1; i < 5; i++) {
+        const ribY = topY + (botY - topY) * (i / 5);
+        pctx.beginPath();
+        pctx.moveTo(x - w/2 + 3, ribY);
+        pctx.lineTo(x + w/2 - 3, ribY);
+        pctx.stroke();
     }
 
-    // --- WEATHERING STREAKS (subtle age on offline/degraded units) ---
-    if (!online || cond < 40) {
-        const weatherAlpha = online ? 0.05 : 0.12;
-        const weatherGrad = pctx.createLinearGradient(x, ftl[1], x, fbl[1]);
-        weatherGrad.addColorStop(0.2, `rgba(139, 90, 43, ${weatherAlpha})`);
-        weatherGrad.addColorStop(1, `rgba(139, 90, 43, 0)`);
-        pctx.fillStyle = weatherGrad;
-        pctx.fillRect(ftl[0] + 2, ftl[1] + 15, ftr[0] - ftl[0] - 4, fbl[1] - ftl[1] - 20);
+    drawStatusBars(x, topY, botY, w, cond, press);
+    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (!online) drawOfflineX((topY + botY) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+}
+
+// Hydrotreater: Rounded cylinder
+function drawHydrotreater(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 48, h = 95, d = 22;
+    const topY = y + h/2;
+    const botY = y + h/2 + h;
+
+    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+    pctx.beginPath();
+    pctx.ellipse(x, botY + 5, w/2 + 1.5, 4, 0, 0, Math.PI * 2);
+    pctx.fill();
+
+    pctx.fillStyle = colorSet.front;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2, topY + 4);
+    pctx.arcTo(x - w/2, topY, x - w/2 + 8, topY, 6);
+    pctx.lineTo(x + w/2 - 8, topY);
+    pctx.arcTo(x + w/2, topY, x + w/2, topY + 4, 6);
+    pctx.lineTo(x + w/2, botY - 4);
+    pctx.arcTo(x + w/2, botY, x + w/2 - 8, botY, 6);
+    pctx.lineTo(x - w/2 + 8, botY);
+    pctx.arcTo(x - w/2, botY, x - w/2, botY - 4, 6);
+    pctx.closePath();
+    pctx.fill();
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.stroke();
+
+    drawStatusBars(x, topY, botY, w, cond, press);
+    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (!online) drawOfflineX((topY + botY) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+}
+
+// Alkylation: Small, compact sealed unit
+function drawAlkylation(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 40, h = 75, d = 18;
+    const topY = y + h/2;
+    const botY = y + h/2 + h;
+
+    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+    pctx.beginPath();
+    pctx.ellipse(x, botY + 5, w/2 + 1, 3, 0, 0, Math.PI * 2);
+    pctx.fill();
+
+    pctx.fillStyle = colorSet.front;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2, topY);
+    pctx.lineTo(x + w/2, topY);
+    pctx.lineTo(x + w/2, botY);
+    pctx.lineTo(x - w/2, botY);
+    pctx.fill();
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 1.5;
+    pctx.stroke();
+
+    drawStatusBars(x, topY, botY, w, cond, press);
+    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (!online) drawOfflineX((topY + botY) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+}
+
+// Coker: Large, stacked industrial
+function drawCoker(x, y, cond, press, online, colorSet, selected, shortName) {
+    const w = 65, h = 120, d = 28;
+    const topY = y + h/2;
+    const botY = y + h/2 + h;
+
+    pctx.fillStyle = 'rgba(0,0,0,0.35)';
+    pctx.beginPath();
+    pctx.ellipse(x, botY + 5, w/2 + 2.5, 5, 0, 0, Math.PI * 2);
+    pctx.fill();
+
+    pctx.fillStyle = colorSet.front;
+    pctx.beginPath();
+    pctx.moveTo(x - w/2, topY);
+    pctx.lineTo(x + w/2, topY);
+    pctx.lineTo(x + w/2, botY);
+    pctx.lineTo(x - w/2, botY);
+    pctx.fill();
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.stroke();
+
+    // Stacked section divisions
+    pctx.strokeStyle = online ? '#666' : '#444'; pctx.lineWidth = 0.8;
+    for (let i = 1; i < 3; i++) {
+        const divY = topY + (botY - topY) * (i / 3);
+        pctx.beginPath();
+        pctx.moveTo(x - w/2 + 2, divY);
+        pctx.lineTo(x + w/2 - 2, divY);
+        pctx.stroke();
     }
 
-    // --- OPERATIONAL GLOW (when online) ---
-    if (online) {
-        const glowIntensity = 0.08 + 0.04 * Math.sin(animT / 30);
-        pctx.fillStyle = `rgba(255, 255, 255, ${glowIntensity})`;
-        pctx.fillRect(ftl[0] + 1, ftl[1] + 1, ftr[0] - ftl[0] - 2, 3);
-    }
+    drawStatusBars(x, topY, botY, w, cond, press);
+    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
+    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (!online) drawOfflineX((topY + botY) / 2, x);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+}
 
-    // --- STATUS BARS ---
-    const barW = 5, barH = h - 8;
+// Helper functions
+function drawStatusBars(x, topY, botY, w, cond, press) {
+    const barW = 4, barH = botY - topY - 6;
     const condH = barH * (cond / 100);
     const pressH = barH * (press / 100);
 
     pctx.fillStyle = condColor(cond);
-    pctx.fillRect(ftl[0] - 7, fbl[1] - condH, barW, condH);
+    pctx.fillRect(x - w/2 - 6, botY - 3 - condH, barW, condH);
     pctx.strokeStyle = '#000'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(ftl[0] - 7, ftl[1], barW, barH);
+    pctx.strokeRect(x - w/2 - 6, topY + 3, barW, barH);
 
     pctx.fillStyle = pressColor(press);
-    pctx.fillRect(ftr[0] + 2, fbr[1] - pressH, barW, pressH);
+    pctx.fillRect(x + w/2 + 2, botY - 3 - pressH, barW, pressH);
     pctx.strokeStyle = '#000'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(ftr[0] + 2, ftr[1], barW, barH);
+    pctx.strokeRect(x + w/2 + 2, topY + 3, barW, barH);
+}
 
-    // --- STRESS WOBBLE (slight vertical movement when stressed) ---
-    let wobbleOffset = 0;
-    if (online && press > 70 && cond < 50) {
-        wobbleOffset = Math.sin(animT / 8) * 1.5 * (press / 100);
-    }
-
-    // --- UNIT LABEL ---
-    const labelX = (ftl[0] + ftr[0]) / 2;
-    const labelY = (ftl[1] + fbl[1]) / 2 + wobbleOffset;
+function drawUnitLabel(x, midY, label, cond, online) {
     pctx.fillStyle = online ? '#000' : '#555';
-    pctx.font = 'bold 10px Tahoma';
+    pctx.font = 'bold 9px Tahoma';
     pctx.textAlign = 'center';
-    pctx.fillText(u.short, labelX, labelY - 8);
-    pctx.font = '8px Tahoma';
+    pctx.fillText(label, x, midY - 5);
+    pctx.font = '7px Tahoma';
     pctx.fillStyle = cond > 60 ? '#2a8a2a' : cond > 30 ? '#c8a000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', labelX, labelY + 12);
+    pctx.fillText(Math.round(cond) + '%', x, midY + 8);
+}
 
-    // --- SELECTION HIGHLIGHT ---
-    if (selected) {
-        pctx.strokeStyle = '#ffd700';
-        pctx.lineWidth = 2.5;
-        pctx.beginPath();
-        pctx.moveTo(ftl[0], ftl[1]);
-        pctx.lineTo(ftr[0], ftr[1]);
-        pctx.lineTo(fbr[0], fbr[1]);
-        pctx.lineTo(fbl[0], fbl[1]);
-        pctx.stroke();
-        pctx.beginPath();
-        pctx.moveTo(ftr[0], ftr[1]);
-        pctx.lineTo(btr[0], btr[1]);
-        pctx.lineTo(bbr[0], bbr[1]);
-        pctx.lineTo(fbr[0], fbr[1]);
-        pctx.stroke();
-    }
+function drawSelection(x1, y1, x2, y2) {
+    pctx.strokeStyle = '#ffd700';
+    pctx.lineWidth = 2;
+    pctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+}
 
-    // --- OFFLINE X ---
-    if (!u.online) {
-        pctx.strokeStyle = '#b02020';
-        pctx.lineWidth = 2;
-        const xd = 20;
-        pctx.beginPath();
-        pctx.moveTo(labelX - xd, labelY - xd);
-        pctx.lineTo(labelX + xd, labelY + xd);
-        pctx.stroke();
-        pctx.beginPath();
-        pctx.moveTo(labelX + xd, labelY - xd);
-        pctx.lineTo(labelX - xd, labelY + xd);
-        pctx.stroke();
-    }
+function drawOfflineX(midY, x) {
+    pctx.strokeStyle = '#b02020';
+    pctx.lineWidth = 2;
+    const d = 18;
+    pctx.beginPath();
+    pctx.moveTo(x - d, midY - d);
+    pctx.lineTo(x + d, midY + d);
+    pctx.stroke();
+    pctx.beginPath();
+    pctx.moveTo(x + d, midY - d);
+    pctx.lineTo(x - d, midY + d);
+    pctx.stroke();
+}
 
-    // --- EXPLOSION WARNING ---
-    if (online && press > 80 && cond < 30) {
-        const a = 0.15 + 0.15 * Math.sin(animT / 4);
-        pctx.fillStyle = `rgba(255, 0, 0, ${a})`;
-        pctx.fillRect(ftl[0], ftl[1], ftr[0] - ftl[0], fbl[1] - ftl[1]);
-    }
+function drawExplosion(x1, y1, w, h) {
+    const a = 0.15 + 0.15 * Math.sin(animT / 4);
+    pctx.fillStyle = `rgba(255, 0, 0, ${a})`;
+    pctx.fillRect(x1, y1, w, h);
 }
 
 function drawStorageTank(x,y,level,color,label) {
