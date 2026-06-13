@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimRefinery — Chevron Richmond Refinery Simulation</title>
+    <link rel="stylesheet" href="sim.css">
+</head>
+<body>
+    <!-- ============ SCENARIO SELECTION SCREEN ============ -->
+    <div id="scenarioScreen" class="scenario-screen">
+        <div class="scenario-window">
+            <div class="title-bar">
+                <span class="title-bar-text">SimRefinery</span>
+                <div class="title-bar-controls">
+                    <span class="tb-btn">_</span>
+                    <span class="tb-btn">□</span>
+                    <span class="tb-btn">×</span>
+                </div>
+            </div>
+            <div class="scenario-body">
+                <h1 class="game-logo">SimRefinery</h1>
+                <p class="scenario-intro">
+                    A reconstruction inspired by SimRefinery, the lost 1992 Maxis Business
+                    Simulations training game built for the Chevron Richmond refinery. The plant
+                    behind this window is running the simulation.
+                </p>
+
+                <div class="scenario-list-header">Select a scenario.</div>
+                <div class="scenario-list" id="scenarioList"></div>
+
+                <div class="scenario-goal">
+                    <strong>Goal:</strong> maximize long-term profit, week to week. There is no ending.
+                    Click any unit for its controls; the left palette highlights any product stream on
+                    the plant. You are fired at <strong>-$20M</strong> cash or after a <strong>second
+                    explosion</strong>. Homage built from the historical record and surviving
+                    screenshots (the original software is lost). Not affiliated with Maxis or Chevron.
+                    Version 2.0, June 2026.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MAIN SIMULATION SCREEN ============ -->
+    <div id="gameScreen" class="game-screen hidden">
+        <!-- Menu bar -->
+        <div class="menu-bar">
+            <div class="menu-left">
+                <span class="menu-item" data-menu="file">File</span>
+                <span class="menu-item" data-menu="options">Options</span>
+                <span class="menu-item" data-menu="refinery">Refinery</span>
+                <span class="menu-item" data-menu="windows">Windows</span>
+                <span class="menu-item" id="pauseMenu">Pause</span>
+                <span class="menu-item" data-menu="help">Help</span>
+                <span class="menu-item new-game-menu" id="newGameMenu">⟳ New Game</span>
+            </div>
+            <div class="menu-right">
+                <span id="gameClock">Jan 1, 1992  8:00am</span>
+            </div>
+        </div>
+
+        <div class="sim-layout">
+            <!-- LEFT PALETTE: product streams + controls -->
+            <div class="palette">
+                <div class="palette-controls">
+                    <button class="pal-btn active" data-mode="AUTO">AUTO CTL</button>
+                    <button class="pal-btn" data-mode="MANUAL">MANUAL</button>
+                    <button class="pal-btn danger" data-mode="SHUTDOWN">SHUTDOWN</button>
+                    <button class="pal-btn" data-mode="STARTUP">START UP</button>
+                </div>
+                <div class="stream-list" id="streamList"></div>
+                <div class="palette-footer">
+                    <button class="pal-btn build" id="buildBtn">BUILD</button>
+                    <button class="pal-btn budget" id="budgetBtn">$ BUDGET</button>
+                    <button class="pal-btn report" id="reportBtn">REPORT</button>
+                </div>
+            </div>
+
+            <!-- CENTER: refinery plant visualization -->
+            <div class="plant-view">
+                <div class="plant-titlebar">
+                    <span id="scenarioName">Fable Refinery</span>
+                </div>
+                <canvas id="plantCanvas" width="640" height="620"></canvas>
+                <div class="plant-hint" id="plantHint">Click a unit to inspect and control it.</div>
+            </div>
+
+            <!-- RIGHT: operations panel -->
+            <div class="ops-panel">
+                <div class="ops-titlebar">Operations</div>
+                <button class="emergency-btn" id="emergencyBtn">EMERGENCY SHUTDOWN</button>
+
+                <!-- Selected unit controls (hidden until a unit clicked) -->
+                <div class="ops-section unit-controls hidden" id="unitControls">
+                    <div class="ops-header" id="unitCtrlHeader">UNIT</div>
+                    <div class="unit-ctrl-body" id="unitCtrlBody"></div>
+                </div>
+
+                <!-- Plant units overview -->
+                <div class="ops-section">
+                    <div class="ops-header">PLANT — click a unit</div>
+                    <div id="plantUnitsList"></div>
+                </div>
+
+                <!-- Crude supply -->
+                <div class="ops-section">
+                    <div class="ops-header">CRUDE SUPPLY</div>
+                    <div class="ops-row"><span>Tank inventory (bbl)</span><span id="tankInv">450,000 / 900,000</span></div>
+                    <div class="ops-bar"><div class="ops-bar-fill" id="tankBar" style="width:50%"></div></div>
+                    <div class="ops-row"><span id="tankerEta">New tanker in 3 days</span><span id="lastTanker">last: 667,000</span></div>
+                    <div class="ops-note">Tankers refill the tank on a schedule. A dry tank starves the distillation unit. Crude is expensed as it's processed.</div>
+                </div>
+
+                <!-- Maintenance budget -->
+                <div class="ops-section">
+                    <div class="ops-header">MAINTENANCE BUDGET</div>
+                    <div class="ops-row"><span>Spending</span><span id="maintLabel">100% — $3.0M/wk</span></div>
+                    <input type="range" id="maintSlider" min="0" max="150" value="100" class="ops-slider">
+                    <div class="ops-note">Above 115% slowly restores unit condition. Held units idle but don't decay.</div>
+                </div>
+
+                <!-- Crude market -->
+                <div class="ops-section">
+                    <div class="ops-header">CRUDE MARKET ($/bbl)</div>
+                    <div id="crudeMarket"></div>
+                    <div class="ops-note" id="crudeSlateNote">Buying: Light Sweet</div>
+                </div>
+
+                <!-- Product prices -->
+                <div class="ops-section">
+                    <div class="ops-header">PRODUCT PRICES ($/bbl)</div>
+                    <div id="productPrices"></div>
+                </div>
+
+                <!-- Today's production -->
+                <div class="ops-section">
+                    <div class="ops-header">TODAY'S PRODUCTION (bbl/d)</div>
+                    <div id="todayProduction"></div>
+                </div>
+
+                <!-- Performance -->
+                <div class="ops-section">
+                    <div class="ops-header">PERFORMANCE</div>
+                    <div class="ops-row"><span>Cash</span><span id="perfCash">$20.6M</span></div>
+                    <div class="ops-row"><span>Total profit</span><span id="perfProfit">-$4.4M</span></div>
+                    <div class="ops-row"><span>Weeks operated</span><span id="perfWeeks">0</span></div>
+                    <div class="ops-row"><span>Breakdowns / explosions</span><span id="perfIncidents">0 / 0</span></div>
+                    <div class="ops-row"><span>12-week review grade</span><span id="perfGrade">—</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event ticker -->
+        <div class="ticker">
+            <span class="ticker-label">PLANT LOG</span>
+            <div class="ticker-feed" id="tickerFeed"></div>
+        </div>
+    </div>
+
+    <!-- Operator Training guided tutorial panel -->
+    <div id="trainingPanel" class="training-panel hidden"></div>
+
+    <!-- Modal for budget / report / dialogs -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal-window">
+            <div class="title-bar">
+                <span class="title-bar-text" id="modalTitle">Report</span>
+                <div class="title-bar-controls">
+                    <span class="tb-btn" id="modalClose">×</span>
+                </div>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="simulation.js"></script>
+</body>
+</html>
