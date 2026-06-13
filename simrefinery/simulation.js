@@ -525,6 +525,46 @@ function renderUnitControls() {
 function condColor(c){ return c>60?'#2a8a2a':c>30?'#c8a000':'#b02020'; }
 function pressColor(p){ return p>80?'#b02020':p>60?'#c8a000':'#2a8a2a'; }
 
+// Unit-specific styling for professional game art appearance
+const UNIT_STYLES = {
+    cdu: {
+        name: 'CDU', w: 48, h: 120, d: 28,
+        online: { front:'#e0e8f0', left:'#7a8a9a', right:'#c0d0e0', top:'#f0f8ff' },
+        offline: { front:'#8a8a8a', left:'#5a4a4a', right:'#707070', top:'#9a9a9a' },
+        windows: [4, 6], rivets: 10, detail: 'ribbed-vertical', baseColor: '#7a8aaa'
+    },
+    fcc: {
+        name: 'FCC', w: 50, h: 100, d: 32,
+        online: { front:'#f0e0d8', left:'#8a6a5a', right:'#d8b8a0', top:'#faf0e8' },
+        offline: { front:'#7a7a7a', left:'#5a4a3a', right:'#6a6a6a', top:'#8a8a8a' },
+        windows: [3, 3], rivets: 14, detail: 'heavy-rivets', baseColor: '#c8845a'
+    },
+    reformer: {
+        name: 'REF', w: 45, h: 105, d: 26,
+        online: { front:'#e0f0e8', left:'#7a9a8a', right:'#c0d8d0', top:'#f0faf8' },
+        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
+        windows: [2, 4], rivets: 8, detail: 'ribbed-horizontal', baseColor: '#7a9a8a'
+    },
+    hydro: {
+        name: 'HDT', w: 48, h: 100, d: 28,
+        online: { front:'#f0e8d8', left:'#8a7a5a', right:'#d8c8a0', top:'#faf8f0' },
+        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
+        windows: [3, 4], rivets: 9, detail: 'hatch-center', baseColor: '#b4a884'
+    },
+    alky: {
+        name: 'ALK', w: 46, h: 95, d: 25,
+        online: { front:'#e8e0f0', left:'#7a6a8a', right:'#d0c0e0', top:'#f8f0fa' },
+        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
+        windows: [2, 2], rivets: 6, detail: 'minimal', baseColor: '#9a8aaa'
+    },
+    coker: {
+        name: 'COK', w: 52, h: 115, d: 30,
+        online: { front:'#d8d8d8', left:'#6a7a7a', right:'#b8c8c8', top:'#e8e8e8' },
+        offline: { front:'#6a6a6a', left:'#4a4a4a', right:'#5a5a5a', top:'#7a7a7a' },
+        windows: [2, 3], rivets: 12, detail: 'rough-hatch', baseColor: '#6a7a7a'
+    },
+};
+
 // ---------- Canvas plant ----------
 let plantCanvas, pctx, animT=0;
 function initCanvas() {
@@ -594,23 +634,22 @@ function drawUnit(u, selected) {
     const cond = u.cond, press = u.press;
     const online = u.online;
 
-    // Professional 3D isometric building with multiple faces and realistic shading
-    const w = 48, h = 110, d = 28;
+    // Get unit-specific styling
+    const style = UNIT_STYLES[u.id] || UNIT_STYLES.hydro;
+    const w = style.w, h = style.h, d = style.d;
+    const colorSet = online ? style.online : style.offline;
 
-    // Isometric perspective: create 3D box with front, left, right, and top faces visible
-    // Front face corners (closest to viewer)
-    const ftl = [x - w/2, y + h/2];           // front top-left
-    const ftr = [x + w/2, y + h/2];           // front top-right
-    const fbl = [x - w/2, y + h/2 + h];       // front bottom-left
-    const fbr = [x + w/2, y + h/2 + h];       // front bottom-right
-
-    // Back face corners (isometric depth)
+    // Isometric corner positions
+    const ftl = [x - w/2, y + h/2];
+    const ftr = [x + w/2, y + h/2];
+    const fbl = [x - w/2, y + h/2 + h];
+    const fbr = [x + w/2, y + h/2 + h];
     const btl = [x - w/2 - d/2, y + h/2 - d/2];
     const btr = [x + w/2 - d/2, y + h/2 - d/2];
     const bbl = [x - w/2 - d/2, y + h/2 + h - d/2];
     const bbr = [x + w/2 - d/2, y + h/2 + h - d/2];
 
-    // --- Ground shadow ---
+    // --- GROUND SHADOW ---
     pctx.fillStyle = 'rgba(0,0,0,0.3)';
     pctx.beginPath();
     pctx.moveTo(fbl[0], fbr[1] + 5);
@@ -619,15 +658,11 @@ function drawUnit(u, selected) {
     pctx.lineTo(fbl[0] + 10, fbl[1] + 12);
     pctx.fill();
 
-    // --- LEFT FACE (darker shade) ---
+    // --- LEFT FACE ---
     const leftGrad = pctx.createLinearGradient(x - w/2 - d/2, y, x - w/2, y + h);
-    if (online) {
-        leftGrad.addColorStop(0, '#7a8a9a');
-        leftGrad.addColorStop(1, '#5a7a8a');
-    } else {
-        leftGrad.addColorStop(0, '#6a5a5a');
-        leftGrad.addColorStop(1, '#4a3a3a');
-    }
+    leftGrad.addColorStop(0, colorSet.left);
+    leftGrad.addColorStop(0.5, '#' + (parseInt(colorSet.left.slice(1), 16) - 0x222222).toString(16).padStart(6, '0'));
+    leftGrad.addColorStop(1, '#' + (parseInt(colorSet.left.slice(1), 16) - 0x444444).toString(16).padStart(6, '0'));
     pctx.fillStyle = leftGrad;
     pctx.beginPath();
     pctx.moveTo(ftl[0], ftl[1]);
@@ -635,20 +670,16 @@ function drawUnit(u, selected) {
     pctx.lineTo(bbl[0], bbl[1]);
     pctx.lineTo(fbl[0], fbl[1]);
     pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
+    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1.5;
     pctx.stroke();
 
-    // --- FRONT FACE (brightest, main visible surface) ---
-    const frontGrad = pctx.createLinearGradient(x - w/2, y, x - w/2, y + h + 20);
-    if (online) {
-        frontGrad.addColorStop(0, '#e8e8f0');
-        frontGrad.addColorStop(0.5, '#d0d8e8');
-        frontGrad.addColorStop(1, '#b8c0d0');
-    } else {
-        frontGrad.addColorStop(0, '#a8a8a8');
-        frontGrad.addColorStop(0.5, '#888888');
-        frontGrad.addColorStop(1, '#686868');
-    }
+    // --- FRONT FACE (with unit-specific colors) ---
+    const frontGrad = pctx.createLinearGradient(x, ftl[1], x, fbl[1]);
+    frontGrad.addColorStop(0, colorSet.front);
+    frontGrad.addColorStop(0.3, colorSet.front);
+    frontGrad.addColorStop(0.6, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x181818).toString(16).padStart(6, '0'));
+    frontGrad.addColorStop(0.9, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x303030).toString(16).padStart(6, '0'));
+    frontGrad.addColorStop(1, '#' + (parseInt(colorSet.front.slice(1), 16) - 0x404040).toString(16).padStart(6, '0'));
     pctx.fillStyle = frontGrad;
     pctx.beginPath();
     pctx.moveTo(ftl[0], ftl[1]);
@@ -656,18 +687,13 @@ function drawUnit(u, selected) {
     pctx.lineTo(fbr[0], fbr[1]);
     pctx.lineTo(fbl[0], fbl[1]);
     pctx.fill();
-    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 2;
+    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
     pctx.stroke();
 
-    // --- RIGHT FACE (medium shade with gradient) ---
-    const rightGrad = pctx.createLinearGradient(x + w/2, y + h/2, x + w/2 - d/2, y + h/2 - d/2);
-    if (online) {
-        rightGrad.addColorStop(0, '#c8d8e8');
-        rightGrad.addColorStop(1, '#a8b8c8');
-    } else {
-        rightGrad.addColorStop(0, '#888888');
-        rightGrad.addColorStop(1, '#686868');
-    }
+    // --- RIGHT FACE ---
+    const rightGrad = pctx.createLinearGradient(ftr[0], ftr[1], btr[0], btr[1]);
+    rightGrad.addColorStop(0, colorSet.right);
+    rightGrad.addColorStop(1, '#' + (parseInt(colorSet.right.slice(1), 16) - 0x202020).toString(16).padStart(6, '0'));
     pctx.fillStyle = rightGrad;
     pctx.beginPath();
     pctx.moveTo(ftr[0], ftr[1]);
@@ -675,18 +701,13 @@ function drawUnit(u, selected) {
     pctx.lineTo(bbr[0], bbr[1]);
     pctx.lineTo(fbr[0], fbr[1]);
     pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
+    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1.5;
     pctx.stroke();
 
-    // --- TOP FACE (brightest, light source from above) ---
-    const topGrad = pctx.createLinearGradient(x, y + h/2 - d, x, y + h/2);
-    if (online) {
-        topGrad.addColorStop(0, '#f8f8f8');
-        topGrad.addColorStop(1, '#e8e8e8');
-    } else {
-        topGrad.addColorStop(0, '#b8b8b8');
-        topGrad.addColorStop(1, '#989898');
-    }
+    // --- TOP FACE ---
+    const topGrad = pctx.createLinearGradient(x, ftl[1], x, btl[1]);
+    topGrad.addColorStop(0, colorSet.top);
+    topGrad.addColorStop(1, '#' + (parseInt(colorSet.top.slice(1), 16) - 0x0a0a0a).toString(16).padStart(6, '0'));
     pctx.fillStyle = topGrad;
     pctx.beginPath();
     pctx.moveTo(ftl[0], ftl[1]);
@@ -694,72 +715,145 @@ function drawUnit(u, selected) {
     pctx.lineTo(btr[0], btr[1]);
     pctx.lineTo(btl[0], btl[1]);
     pctx.fill();
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
     pctx.stroke();
 
-    // --- INTERNAL DETAIL: Panels and sections on front face ---
-    pctx.strokeStyle = online ? '#666' : '#444';
-    pctx.lineWidth = 0.8;
+    // --- RECESSED PANELS (6 sections: 2×3 grid) ---
+    const panelW = (ftr[0] - ftl[0] - 4) / 2;
+    const panelH = (fbl[1] - ftl[1] - 4) / 3;
+    const darkCol = online ? '#5a5a5a' : '#3a3a3a';
 
-    // Horizontal panel dividers
-    for (let i = 1; i < 6; i++) {
-        const ratio = i / 6;
-        const x1 = ftl[0] + (ftr[0] - ftl[0]) * ratio * 0.1;
-        const y1 = ftl[1] + (fbl[1] - ftl[1]) * ratio;
-        const x2 = ftr[0] - (ftr[0] - ftl[0]) * ratio * 0.1;
-        const y2 = y1;
+    for (let col = 0; col < 2; col++) {
+        for (let row = 0; row < 3; row++) {
+            const px = ftl[0] + 2 + col * (panelW + 2);
+            const py = ftl[1] + 2 + row * (panelH + 2);
+            // Recessed panel effect
+            pctx.fillStyle = darkCol;
+            pctx.fillRect(px, py, panelW, panelH);
+            pctx.strokeStyle = online ? '#444' : '#222'; pctx.lineWidth = 0.5;
+            pctx.strokeRect(px, py, panelW, panelH);
+            // Beveled effect (dark on bottom-right, light on top-left)
+            pctx.strokeStyle = 'rgba(0,0,0,0.4)'; pctx.lineWidth = 0.5;
+            pctx.beginPath(); pctx.moveTo(px, py + panelH); pctx.lineTo(px + panelW, py + panelH); pctx.stroke();
+            pctx.beginPath(); pctx.moveTo(px + panelW, py); pctx.lineTo(px + panelW, py + panelH); pctx.stroke();
+            pctx.strokeStyle = 'rgba(255,255,255,0.2)'; pctx.lineWidth = 0.5;
+            pctx.beginPath(); pctx.moveTo(px, py); pctx.lineTo(px + panelW, py); pctx.stroke();
+            pctx.beginPath(); pctx.moveTo(px, py); pctx.lineTo(px, py + panelH); pctx.stroke();
+        }
+    }
+
+    // --- WINDOWS (grid based on unit style) ---
+    const [winCols, winRows] = style.windows;
+    const winW = 3, winH = 3;
+    const winStartX = ftl[0] + panelW * 0.3;
+    const winStartY = ftl[1] + 6;
+    const winSpaceX = (ftr[0] - ftl[0] - 4) / (winCols + 1);
+    const winSpaceY = (fbl[1] - ftl[1] - 12) / (winRows + 1);
+
+    for (let r = 0; r < winRows; r++) {
+        for (let c = 0; c < winCols; c++) {
+            const wx = ftl[0] + winSpaceX * (c + 1) - winW/2;
+            const wy = ftl[1] + winSpaceY * (r + 1) - winH/2;
+            // Window dark fill
+            pctx.fillStyle = online ? '#1a1a2a' : '#0a0a0a';
+            pctx.fillRect(wx, wy, winW, winH);
+            // Window highlight (top-left light reflection)
+            pctx.fillStyle = online ? 'rgba(200,220,255,0.4)' : 'rgba(100,100,100,0.2)';
+            pctx.fillRect(wx, wy, 1, 1);
+            pctx.fillRect(wx, wy, 2, 1);
+        }
+    }
+
+    // --- RIVETS ---
+    const rivetRadius = 1;
+    const rivetPositions = [
+        [ftl[0] + 3, ftl[1] + 4], [ftr[0] - 3, ftl[1] + 4],
+        [ftl[0] + 3, fbl[1] - 4], [ftr[0] - 3, fbl[1] - 4],
+        [ftl[0] + panelW + 2, ftl[1] + panelH + 2],
+        [ftl[0] + panelW + 2, ftl[1] + panelH * 2 + 4],
+        [ftr[0] - panelW - 2, ftl[1] + panelH + 2],
+        [ftr[0] - panelW - 2, ftl[1] + panelH * 2 + 4],
+    ];
+
+    pctx.fillStyle = '#3a3a3a';
+    for (let i = 0; i < Math.min(style.rivets, rivetPositions.length); i++) {
+        const [rx, ry] = rivetPositions[i];
         pctx.beginPath();
-        pctx.moveTo(x1, y1);
-        pctx.lineTo(x2, y2);
+        pctx.arc(rx, ry, rivetRadius, 0, Math.PI * 2);
+        pctx.fill();
+        pctx.strokeStyle = 'rgba(255,255,255,0.3)'; pctx.lineWidth = 0.5;
         pctx.stroke();
     }
 
-    // Vertical panel dividers
-    const xx1 = ftl[0] + (ftr[0] - ftl[0]) * 0.35;
-    const xx2 = ftl[0] + (ftr[0] - ftl[0]) * 0.65;
-    pctx.beginPath();
-    pctx.moveTo(xx1, ftl[1] + 4);
-    pctx.lineTo(xx1, fbl[1] - 4);
-    pctx.stroke();
-    pctx.beginPath();
-    pctx.moveTo(xx2, ftl[1] + 4);
-    pctx.lineTo(xx2, fbl[1] - 4);
-    pctx.stroke();
+    // --- HATCH PATTERNS (based on unit detail type) ---
+    if (style.detail.includes('hatch')) {
+        const hatchPanelIdx = Math.floor(style.windows[1] / 2);
+        const hx = ftl[0] + panelW * 0.3;
+        const hy = ftl[1] + panelH * hatchPanelIdx + 2;
+        const hw = panelW * 0.4;
+        const hh = panelH - 4;
+        pctx.strokeStyle = 'rgba(0,0,0,0.25)'; pctx.lineWidth = 0.5;
+        for (let i = 0; i < 8; i++) {
+            pctx.beginPath();
+            pctx.moveTo(hx + i * 2, hy);
+            pctx.lineTo(hx + i * 2 - hh, hy + hh);
+            pctx.stroke();
+        }
+    }
 
-    // --- STATUS BARS (full height on sides) ---
-    const barW = 6, barH = h - 8;
+    // --- WEATHERING STREAKS (subtle age on offline/degraded units) ---
+    if (!online || cond < 40) {
+        const weatherAlpha = online ? 0.05 : 0.12;
+        const weatherGrad = pctx.createLinearGradient(x, ftl[1], x, fbl[1]);
+        weatherGrad.addColorStop(0.2, `rgba(139, 90, 43, ${weatherAlpha})`);
+        weatherGrad.addColorStop(1, `rgba(139, 90, 43, 0)`);
+        pctx.fillStyle = weatherGrad;
+        pctx.fillRect(ftl[0] + 2, ftl[1] + 15, ftr[0] - ftl[0] - 4, fbl[1] - ftl[1] - 20);
+    }
+
+    // --- OPERATIONAL GLOW (when online) ---
+    if (online) {
+        const glowIntensity = 0.08 + 0.04 * Math.sin(animT / 30);
+        pctx.fillStyle = `rgba(255, 255, 255, ${glowIntensity})`;
+        pctx.fillRect(ftl[0] + 1, ftl[1] + 1, ftr[0] - ftl[0] - 2, 3);
+    }
+
+    // --- STATUS BARS ---
+    const barW = 5, barH = h - 8;
     const condH = barH * (cond / 100);
     const pressH = barH * (press / 100);
 
-    // Condition bar (left edge)
     pctx.fillStyle = condColor(cond);
-    pctx.fillRect(ftl[0] - 8, fbl[1] - condH, barW, condH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
-    pctx.strokeRect(ftl[0] - 8, ftl[1], barW, barH);
+    pctx.fillRect(ftl[0] - 7, fbl[1] - condH, barW, condH);
+    pctx.strokeStyle = '#000'; pctx.lineWidth = 0.5;
+    pctx.strokeRect(ftl[0] - 7, ftl[1], barW, barH);
 
-    // Pressure bar (right edge)
     pctx.fillStyle = pressColor(press);
     pctx.fillRect(ftr[0] + 2, fbr[1] - pressH, barW, pressH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeStyle = '#000'; pctx.lineWidth = 0.5;
     pctx.strokeRect(ftr[0] + 2, ftr[1], barW, barH);
 
+    // --- STRESS WOBBLE (slight vertical movement when stressed) ---
+    let wobbleOffset = 0;
+    if (online && press > 70 && cond < 50) {
+        wobbleOffset = Math.sin(animT / 8) * 1.5 * (press / 100);
+    }
+
     // --- UNIT LABEL ---
-    pctx.fillStyle = online ? '#000' : '#555';
-    pctx.font = 'bold 11px Tahoma';
-    pctx.textAlign = 'center';
     const labelX = (ftl[0] + ftr[0]) / 2;
-    const labelY = (ftl[1] + fbl[1]) / 2;
-    pctx.fillText(u.short, labelX, labelY - 6);
-
-    // --- CONDITION % ---
-    pctx.font = '9px Tahoma';
+    const labelY = (ftl[1] + fbl[1]) / 2 + wobbleOffset;
+    pctx.fillStyle = online ? '#000' : '#555';
+    pctx.font = 'bold 10px Tahoma';
+    pctx.textAlign = 'center';
+    pctx.fillText(u.short, labelX, labelY - 8);
+    pctx.font = '8px Tahoma';
     pctx.fillStyle = cond > 60 ? '#2a8a2a' : cond > 30 ? '#c8a000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', labelX, labelY + 14);
+    pctx.fillText(Math.round(cond) + '%', labelX, labelY + 12);
 
-    // --- SELECTION GLOW ---
+    // --- SELECTION HIGHLIGHT ---
     if (selected) {
         pctx.strokeStyle = '#ffd700';
-        pctx.lineWidth = 3;
+        pctx.lineWidth = 2.5;
         pctx.beginPath();
         pctx.moveTo(ftl[0], ftl[1]);
         pctx.lineTo(ftr[0], ftr[1]);
@@ -777,28 +871,23 @@ function drawUnit(u, selected) {
     // --- OFFLINE X ---
     if (!u.online) {
         pctx.strokeStyle = '#b02020';
-        pctx.lineWidth = 2.5;
-        const d = 22;
+        pctx.lineWidth = 2;
+        const xd = 20;
         pctx.beginPath();
-        pctx.moveTo(labelX - d, labelY - d);
-        pctx.lineTo(labelX + d, labelY + d);
+        pctx.moveTo(labelX - xd, labelY - xd);
+        pctx.lineTo(labelX + xd, labelY + xd);
         pctx.stroke();
         pctx.beginPath();
-        pctx.moveTo(labelX + d, labelY - d);
-        pctx.lineTo(labelX - d, labelY + d);
+        pctx.moveTo(labelX + xd, labelY - xd);
+        pctx.lineTo(labelX - xd, labelY + xd);
         pctx.stroke();
     }
 
     // --- EXPLOSION WARNING ---
-    if (u.online && press > 80 && cond < 30) {
-        const a = 0.2 + 0.2 * Math.sin(animT / 4);
-        pctx.fillStyle = `rgba(255,0,0,${a})`;
-        pctx.beginPath();
-        pctx.moveTo(ftl[0], ftl[1]);
-        pctx.lineTo(ftr[0], ftr[1]);
-        pctx.lineTo(fbr[0], fbr[1]);
-        pctx.lineTo(fbl[0], fbl[1]);
-        pctx.fill();
+    if (online && press > 80 && cond < 30) {
+        const a = 0.15 + 0.15 * Math.sin(animT / 4);
+        pctx.fillStyle = `rgba(255, 0, 0, ${a})`;
+        pctx.fillRect(ftl[0], ftl[1], ftr[0] - ftl[0], fbl[1] - ftl[1]);
     }
 }
 
