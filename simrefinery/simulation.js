@@ -592,142 +592,213 @@ function drawPipe(x1,y1,x2,y2,color,highlight,flowing) {
 function drawUnit(u, selected) {
     const x = u.x, y = u.y;
     const cond = u.cond, press = u.press;
-    const condCol = condColor(cond);
     const online = u.online;
 
-    // Clean game art style - tall simple rectangles with structure
-    const w = 36, h = 100;
+    // Professional 3D isometric building with multiple faces and realistic shading
+    const w = 48, h = 110, d = 28;
 
-    // Main building bounds
-    const left = x - w/2;
-    const right = x + w/2;
-    const top = y - h/2;
-    const bottom = y + h/2;
+    // Isometric perspective: create 3D box with front, left, right, and top faces visible
+    // Front face corners (closest to viewer)
+    const ftl = [x - w/2, y + h/2];           // front top-left
+    const ftr = [x + w/2, y + h/2];           // front top-right
+    const fbl = [x - w/2, y + h/2 + h];       // front bottom-left
+    const fbr = [x + w/2, y + h/2 + h];       // front bottom-right
 
-    // --- Shadow under building ---
-    pctx.fillStyle = 'rgba(0,0,0,0.2)';
+    // Back face corners (isometric depth)
+    const btl = [x - w/2 - d/2, y + h/2 - d/2];
+    const btr = [x + w/2 - d/2, y + h/2 - d/2];
+    const bbl = [x - w/2 - d/2, y + h/2 + h - d/2];
+    const bbr = [x + w/2 - d/2, y + h/2 + h - d/2];
+
+    // --- Ground shadow ---
+    pctx.fillStyle = 'rgba(0,0,0,0.3)';
     pctx.beginPath();
-    pctx.ellipse(x, bottom + 6, w/2 + 4, 4, 0, 0, Math.PI * 2);
+    pctx.moveTo(fbl[0], fbr[1] + 5);
+    pctx.lineTo(fbr[0], fbr[1] + 5);
+    pctx.lineTo(fbr[0] + 10, fbr[1] + 12);
+    pctx.lineTo(fbl[0] + 10, fbl[1] + 12);
     pctx.fill();
 
-    // --- Main building body (light color) ---
-    const baseColor = online ? '#e8e8e8' : '#9a8a8a';
-    pctx.fillStyle = baseColor;
-    pctx.fillRect(left, top, w, h);
-
-    // --- Dark shadow on right edge (3D depth) ---
-    pctx.fillStyle = online ? '#a8a8a8' : '#6a5a5a';
-    pctx.fillRect(right - 4, top, 4, h);
-
-    // --- Dark shadow on bottom edge (3D depth) ---
-    pctx.fillStyle = 'rgba(0,0,0,0.15)';
-    pctx.fillRect(left, bottom - 3, w, 3);
-
-    // --- Structure: visible compartments/sections inside ---
-    pctx.strokeStyle = online ? '#888' : '#555';
-    pctx.lineWidth = 1;
-
-    // Horizontal dividers (create tier/compartment look)
-    const compartments = 5;
-    for (let i = 1; i < compartments; i++) {
-        const yy = top + (i / compartments) * h;
-        pctx.beginPath();
-        pctx.moveTo(left + 2, yy);
-        pctx.lineTo(right - 6, yy);
-        pctx.stroke();
-    }
-
-    // Vertical dividers (create internal structure)
-    for (let i = 1; i < 2; i++) {
-        const xx = left + (i / 2) * w;
-        pctx.beginPath();
-        pctx.moveTo(xx, top + 3);
-        pctx.lineTo(xx, bottom - 3);
-        pctx.stroke();
-    }
-
-    // --- Condition indicator bar (left side, full height) ---
-    const condBarW = 5;
-    const condBarH = h - 6;
-    const condH = condBarH * (cond / 100);
-
-    // Background for condition bar
-    pctx.fillStyle = 'rgba(0,0,0,0.1)';
-    pctx.fillRect(left + 1, top + 3, condBarW, condBarH);
-
-    // Condition bar (filled from bottom)
-    pctx.fillStyle = condCol;
-    pctx.fillRect(left + 1, bottom - 3 - condH, condBarW, condH);
-
-    // Condition bar border
-    pctx.strokeStyle = '#333';
-    pctx.lineWidth = 0.5;
-    pctx.strokeRect(left + 1, top + 3, condBarW, condBarH);
-
-    // --- Pressure indicator bar (right side, full height) ---
-    const pressBarW = 5;
-    const pressBarH = h - 6;
-    const pressH = pressBarH * (press / 100);
-
-    // Background for pressure bar
-    pctx.fillStyle = 'rgba(0,0,0,0.1)';
-    pctx.fillRect(right - 6, top + 3, pressBarW, pressBarH);
-
-    // Pressure bar (filled from bottom)
-    pctx.fillStyle = pressColor(press);
-    pctx.fillRect(right - 6, bottom - 3 - pressH, pressBarW, pressH);
-
-    // Pressure bar border
-    pctx.strokeStyle = '#333';
-    pctx.lineWidth = 0.5;
-    pctx.strokeRect(right - 6, top + 3, pressBarW, pressBarH);
-
-    // --- Main building border (strong outline) ---
-    pctx.strokeStyle = selected ? '#ffd700' : '#333';
-    pctx.lineWidth = selected ? 3 : 2;
-    pctx.strokeRect(left, top, w, h);
-
-    // --- Highlight on top edge (beveled 3D effect) ---
+    // --- LEFT FACE (darker shade) ---
+    const leftGrad = pctx.createLinearGradient(x - w/2 - d/2, y, x - w/2, y + h);
     if (online) {
-        pctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        pctx.lineWidth = 1;
+        leftGrad.addColorStop(0, '#7a8a9a');
+        leftGrad.addColorStop(1, '#5a7a8a');
+    } else {
+        leftGrad.addColorStop(0, '#6a5a5a');
+        leftGrad.addColorStop(1, '#4a3a3a');
+    }
+    pctx.fillStyle = leftGrad;
+    pctx.beginPath();
+    pctx.moveTo(ftl[0], ftl[1]);
+    pctx.lineTo(btl[0], btl[1]);
+    pctx.lineTo(bbl[0], bbl[1]);
+    pctx.lineTo(fbl[0], fbl[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
+    pctx.stroke();
+
+    // --- FRONT FACE (brightest, main visible surface) ---
+    const frontGrad = pctx.createLinearGradient(x - w/2, y, x - w/2, y + h + 20);
+    if (online) {
+        frontGrad.addColorStop(0, '#e8e8f0');
+        frontGrad.addColorStop(0.5, '#d0d8e8');
+        frontGrad.addColorStop(1, '#b8c0d0');
+    } else {
+        frontGrad.addColorStop(0, '#a8a8a8');
+        frontGrad.addColorStop(0.5, '#888888');
+        frontGrad.addColorStop(1, '#686868');
+    }
+    pctx.fillStyle = frontGrad;
+    pctx.beginPath();
+    pctx.moveTo(ftl[0], ftl[1]);
+    pctx.lineTo(ftr[0], ftr[1]);
+    pctx.lineTo(fbr[0], fbr[1]);
+    pctx.lineTo(fbl[0], fbl[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 2;
+    pctx.stroke();
+
+    // --- RIGHT FACE (medium shade with gradient) ---
+    const rightGrad = pctx.createLinearGradient(x + w/2, y + h/2, x + w/2 - d/2, y + h/2 - d/2);
+    if (online) {
+        rightGrad.addColorStop(0, '#c8d8e8');
+        rightGrad.addColorStop(1, '#a8b8c8');
+    } else {
+        rightGrad.addColorStop(0, '#888888');
+        rightGrad.addColorStop(1, '#686868');
+    }
+    pctx.fillStyle = rightGrad;
+    pctx.beginPath();
+    pctx.moveTo(ftr[0], ftr[1]);
+    pctx.lineTo(btr[0], btr[1]);
+    pctx.lineTo(bbr[0], bbr[1]);
+    pctx.lineTo(fbr[0], fbr[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
+    pctx.stroke();
+
+    // --- TOP FACE (brightest, light source from above) ---
+    const topGrad = pctx.createLinearGradient(x, y + h/2 - d, x, y + h/2);
+    if (online) {
+        topGrad.addColorStop(0, '#f8f8f8');
+        topGrad.addColorStop(1, '#e8e8e8');
+    } else {
+        topGrad.addColorStop(0, '#b8b8b8');
+        topGrad.addColorStop(1, '#989898');
+    }
+    pctx.fillStyle = topGrad;
+    pctx.beginPath();
+    pctx.moveTo(ftl[0], ftl[1]);
+    pctx.lineTo(ftr[0], ftr[1]);
+    pctx.lineTo(btr[0], btr[1]);
+    pctx.lineTo(btl[0], btl[1]);
+    pctx.fill();
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.stroke();
+
+    // --- INTERNAL DETAIL: Panels and sections on front face ---
+    pctx.strokeStyle = online ? '#666' : '#444';
+    pctx.lineWidth = 0.8;
+
+    // Horizontal panel dividers
+    for (let i = 1; i < 6; i++) {
+        const ratio = i / 6;
+        const x1 = ftl[0] + (ftr[0] - ftl[0]) * ratio * 0.1;
+        const y1 = ftl[1] + (fbl[1] - ftl[1]) * ratio;
+        const x2 = ftr[0] - (ftr[0] - ftl[0]) * ratio * 0.1;
+        const y2 = y1;
         pctx.beginPath();
-        pctx.moveTo(left + 1, top + 1);
-        pctx.lineTo(right - 1, top + 1);
+        pctx.moveTo(x1, y1);
+        pctx.lineTo(x2, y2);
         pctx.stroke();
     }
 
-    // --- Unit label (centered in building) ---
-    pctx.fillStyle = online ? '#000' : '#888';
-    pctx.font = 'bold 10px Tahoma';
+    // Vertical panel dividers
+    const xx1 = ftl[0] + (ftr[0] - ftl[0]) * 0.35;
+    const xx2 = ftl[0] + (ftr[0] - ftl[0]) * 0.65;
+    pctx.beginPath();
+    pctx.moveTo(xx1, ftl[1] + 4);
+    pctx.lineTo(xx1, fbl[1] - 4);
+    pctx.stroke();
+    pctx.beginPath();
+    pctx.moveTo(xx2, ftl[1] + 4);
+    pctx.lineTo(xx2, fbl[1] - 4);
+    pctx.stroke();
+
+    // --- STATUS BARS (full height on sides) ---
+    const barW = 6, barH = h - 8;
+    const condH = barH * (cond / 100);
+    const pressH = barH * (press / 100);
+
+    // Condition bar (left edge)
+    pctx.fillStyle = condColor(cond);
+    pctx.fillRect(ftl[0] - 8, fbl[1] - condH, barW, condH);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeRect(ftl[0] - 8, ftl[1], barW, barH);
+
+    // Pressure bar (right edge)
+    pctx.fillStyle = pressColor(press);
+    pctx.fillRect(ftr[0] + 2, fbr[1] - pressH, barW, pressH);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeRect(ftr[0] + 2, ftr[1], barW, barH);
+
+    // --- UNIT LABEL ---
+    pctx.fillStyle = online ? '#000' : '#555';
+    pctx.font = 'bold 11px Tahoma';
     pctx.textAlign = 'center';
-    pctx.fillText(u.short, x, y - 8);
+    const labelX = (ftl[0] + ftr[0]) / 2;
+    const labelY = (ftl[1] + fbl[1]) / 2;
+    pctx.fillText(u.short, labelX, labelY - 6);
 
-    // --- Condition percentage (bottom of building) ---
-    pctx.font = '8px Tahoma';
+    // --- CONDITION % ---
+    pctx.font = '9px Tahoma';
     pctx.fillStyle = cond > 60 ? '#2a8a2a' : cond > 30 ? '#c8a000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', x, bottom - 6);
+    pctx.fillText(Math.round(cond) + '%', labelX, labelY + 14);
 
-    // --- Offline X overlay (if offline) ---
+    // --- SELECTION GLOW ---
+    if (selected) {
+        pctx.strokeStyle = '#ffd700';
+        pctx.lineWidth = 3;
+        pctx.beginPath();
+        pctx.moveTo(ftl[0], ftl[1]);
+        pctx.lineTo(ftr[0], ftr[1]);
+        pctx.lineTo(fbr[0], fbr[1]);
+        pctx.lineTo(fbl[0], fbl[1]);
+        pctx.stroke();
+        pctx.beginPath();
+        pctx.moveTo(ftr[0], ftr[1]);
+        pctx.lineTo(btr[0], btr[1]);
+        pctx.lineTo(bbr[0], bbr[1]);
+        pctx.lineTo(fbr[0], fbr[1]);
+        pctx.stroke();
+    }
+
+    // --- OFFLINE X ---
     if (!u.online) {
         pctx.strokeStyle = '#b02020';
         pctx.lineWidth = 2.5;
-        const d = 18;
+        const d = 22;
         pctx.beginPath();
-        pctx.moveTo(x - d, y - d);
-        pctx.lineTo(x + d, y + d);
+        pctx.moveTo(labelX - d, labelY - d);
+        pctx.lineTo(labelX + d, labelY + d);
         pctx.stroke();
         pctx.beginPath();
-        pctx.moveTo(x + d, y - d);
-        pctx.lineTo(x - d, y + d);
+        pctx.moveTo(labelX + d, labelY - d);
+        pctx.lineTo(labelX - d, labelY + d);
         pctx.stroke();
     }
 
-    // --- Explosion warning (pulsing red) ---
+    // --- EXPLOSION WARNING ---
     if (u.online && press > 80 && cond < 30) {
-        const a = 0.15 + 0.15 * Math.sin(animT / 4);
+        const a = 0.2 + 0.2 * Math.sin(animT / 4);
         pctx.fillStyle = `rgba(255,0,0,${a})`;
-        pctx.fillRect(left, top, w, h);
+        pctx.beginPath();
+        pctx.moveTo(ftl[0], ftl[1]);
+        pctx.lineTo(ftr[0], ftr[1]);
+        pctx.lineTo(fbr[0], fbr[1]);
+        pctx.lineTo(fbl[0], fbl[1]);
+        pctx.fill();
     }
 }
 
