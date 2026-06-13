@@ -591,51 +591,91 @@ function drawPipe(x1,y1,x2,y2,color,highlight,flowing) {
 
 function drawUnit(u, selected) {
     const x=u.x, y=u.y;
+    const w=80, h=80;
+    const condCol = condColor(u.cond);
+
     // shadow
-    pctx.fillStyle='rgba(0,0,0,0.2)'; pctx.fillRect(x-38,y-30,76,80);
-    // body
-    const base = u.online ? '#b9bcc4' : '#7a6060';
-    pctx.fillStyle = base;
-    pctx.fillRect(x-40,y-32,80,80);
-    // 3d top
-    pctx.fillStyle = u.online ? '#d6d9e0' : '#8a7070';
-    pctx.fillRect(x-40,y-32,80,12);
-    // outline / selection
-    pctx.lineWidth = selected?4:2;
-    pctx.strokeStyle = selected?'#ffd700':'#333';
-    pctx.strokeRect(x-40,y-32,80,80);
+    pctx.fillStyle='rgba(0,0,0,0.25)'; pctx.fillRect(x-w/2-2,y-h/2+h+2,w+4,8);
 
-    // distillation tower flair on CDU
+    // main body with gradient
+    const grad = pctx.createLinearGradient(x-w/2, y-h/2, x+w/2, y+h/2);
+    if (u.online) {
+        grad.addColorStop(0, '#d4d9df');
+        grad.addColorStop(1, '#9ba0a8');
+    } else {
+        grad.addColorStop(0, '#8a7070');
+        grad.addColorStop(1, '#5a4a4a');
+    }
+    pctx.fillStyle = grad;
+    pctx.fillRect(x-w/2, y-h/2, w, h);
+
+    // condition bar on left (tall, full height)
+    const condH = h * (u.cond / 100);
+    pctx.fillStyle = condCol;
+    pctx.fillRect(x-w/2-2, y+h/2-condH, 4, condH);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeRect(x-w/2-2, y-h/2, 4, h);
+
+    // pressure bar on right
+    const pressH = h * (u.press / 100);
+    pctx.fillStyle = pressColor(u.press);
+    pctx.fillRect(x+w/2-2, y+h/2-pressH, 4, pressH);
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeRect(x+w/2-2, y-h/2, 4, h);
+
+    // internal grating/details
+    pctx.strokeStyle = 'rgba(0,0,0,0.15)'; pctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+        const yy = y - h/2 + (i+1) * (h/5);
+        pctx.beginPath(); pctx.moveTo(x-w/2+4, yy); pctx.lineTo(x+w/2-4, yy); pctx.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+        const xx = x - w/2 + (i+1) * (w/4);
+        pctx.beginPath(); pctx.moveTo(xx, y-h/2+4); pctx.lineTo(xx, y+h/2-4); pctx.stroke();
+    }
+
+    // outer border (darker)
+    pctx.lineWidth = selected ? 4 : 2;
+    pctx.strokeStyle = selected ? '#ffd700' : '#222';
+    pctx.strokeRect(x-w/2, y-h/2, w, h);
+
+    // top highlight (3D effect)
+    pctx.strokeStyle = 'rgba(255,255,255,0.4)'; pctx.lineWidth = 1;
+    pctx.beginPath(); pctx.moveTo(x-w/2+1, y-h/2+1); pctx.lineTo(x+w/2-1, y-h/2+1); pctx.stroke();
+
+    // CDU tower detail
     if (u.id==='cdu') {
-        pctx.fillStyle = base; pctx.fillRect(x-12,y-72,24,42);
-        pctx.strokeRect(x-12,y-72,24,42);
-        // heat shimmer
+        pctx.fillStyle = u.online ? '#c8d0d8' : '#6a5a5a';
+        pctx.fillRect(x-8, y-h/2-20, 16, 20);
+        pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+        pctx.strokeRect(x-8, y-h/2-20, 16, 20);
+        // heat effect
         const heat = (animT%20)/20;
-        pctx.fillStyle = `rgba(255,${120+heat*100},0,0.5)`; pctx.fillRect(x-10,y+30,20,14);
+        pctx.fillStyle = `rgba(255,${100+heat*140},0,0.3)`;
+        pctx.fillRect(x-6, y+h/2-12, 12, 10);
     }
 
-    // condition light
-    pctx.fillStyle = condColor(u.cond); pctx.beginPath(); pctx.arc(x-28,y-26,5,0,7); pctx.fill();
-    // pressure gauge
-    pctx.fillStyle = pressColor(u.press); pctx.fillRect(x+18,y-28,8,16);
+    // unit label (inside building)
+    pctx.fillStyle = '#000'; pctx.font = 'bold 11px Tahoma'; pctx.textAlign='center';
+    pctx.fillText(u.short, x, y-6);
 
-    // offline X / smoke
+    // status text
+    pctx.font = '9px Tahoma'; pctx.fillStyle = u.online ? '#2a2a2a' : '#b02020';
+    pctx.fillText(Math.round(u.cond)+'%', x, y+8);
+
+    // offline indicator X
     if (!u.online) {
-        pctx.strokeStyle='#b02020'; pctx.lineWidth=4;
-        pctx.beginPath(); pctx.moveTo(x-30,y-22); pctx.lineTo(x+30,y+38);
-        pctx.moveTo(x+30,y-22); pctx.lineTo(x-30,y+38); pctx.stroke();
-    }
-    // explosion-prone warning
-    if (u.online && u.press>80 && u.cond<30) {
-        const a = 0.4+0.4*Math.sin(animT/4);
-        pctx.fillStyle=`rgba(255,0,0,${a})`; pctx.fillRect(x-40,y-32,80,80);
+        pctx.strokeStyle='#b02020'; pctx.lineWidth=3;
+        const d = 18;
+        pctx.beginPath(); pctx.moveTo(x-d, y-d); pctx.lineTo(x+d, y+d); pctx.stroke();
+        pctx.beginPath(); pctx.moveTo(x+d, y-d); pctx.lineTo(x-d, y+d); pctx.stroke();
     }
 
-    // label
-    pctx.fillStyle = '#000'; pctx.font = 'bold 12px Tahoma'; pctx.textAlign='center';
-    pctx.fillText(u.short, x, y+16);
-    pctx.font = '9px Tahoma'; pctx.fillStyle='#222';
-    pctx.fillText(Math.round(u.cond)+'%', x, y+44);
+    // explosion warning
+    if (u.online && u.press>80 && u.cond<30) {
+        const a = 0.3+0.3*Math.sin(animT/4);
+        pctx.fillStyle=`rgba(255,0,0,${a})`; pctx.fillRect(x-w/2, y-h/2, w, h);
+    }
 }
 
 function drawStorageTank(x,y,level,color,label) {
