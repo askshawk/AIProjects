@@ -527,42 +527,13 @@ function pressColor(p){ return p>80?'#b02020':p>60?'#c8a000':'#2a8a2a'; }
 
 // Unit-specific styling for professional game art appearance
 const UNIT_STYLES = {
-    cdu: {
-        name: 'CDU', w: 48, h: 120, d: 28,
-        online: { front:'#e0e8f0', left:'#7a8a9a', right:'#c0d0e0', top:'#f0f8ff' },
-        offline: { front:'#8a8a8a', left:'#5a4a4a', right:'#707070', top:'#9a9a9a' },
-        windows: [4, 6], rivets: 10, detail: 'ribbed-vertical', baseColor: '#7a8aaa'
-    },
-    fcc: {
-        name: 'FCC', w: 50, h: 100, d: 32,
-        online: { front:'#f0e0d8', left:'#8a6a5a', right:'#d8b8a0', top:'#faf0e8' },
-        offline: { front:'#7a7a7a', left:'#5a4a3a', right:'#6a6a6a', top:'#8a8a8a' },
-        windows: [3, 3], rivets: 14, detail: 'heavy-rivets', baseColor: '#c8845a'
-    },
-    reformer: {
-        name: 'REF', w: 45, h: 105, d: 26,
-        online: { front:'#e0f0e8', left:'#7a9a8a', right:'#c0d8d0', top:'#f0faf8' },
-        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
-        windows: [2, 4], rivets: 8, detail: 'ribbed-horizontal', baseColor: '#7a9a8a'
-    },
-    hydro: {
-        name: 'HDT', w: 48, h: 100, d: 28,
-        online: { front:'#f0e8d8', left:'#8a7a5a', right:'#d8c8a0', top:'#faf8f0' },
-        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
-        windows: [3, 4], rivets: 9, detail: 'hatch-center', baseColor: '#b4a884'
-    },
-    alky: {
-        name: 'ALK', w: 46, h: 95, d: 25,
-        online: { front:'#e8e0f0', left:'#7a6a8a', right:'#d0c0e0', top:'#f8f0fa' },
-        offline: { front:'#7a7a7a', left:'#5a4a4a', right:'#6a6a6a', top:'#8a8a8a' },
-        windows: [2, 2], rivets: 6, detail: 'minimal', baseColor: '#9a8aaa'
-    },
-    coker: {
-        name: 'COK', w: 52, h: 115, d: 30,
-        online: { front:'#d8d8d8', left:'#6a7a7a', right:'#b8c8c8', top:'#e8e8e8' },
-        offline: { front:'#6a6a6a', left:'#4a4a4a', right:'#5a5a5a', top:'#7a7a7a' },
-        windows: [2, 3], rivets: 12, detail: 'rough-hatch', baseColor: '#6a7a7a'
-    },
+    // baseColor = the vessel's mid-tone metal; shading is derived from it.
+    cdu:      { name: 'CDU', baseColor: '#b7c4d4' },   // pale steel column
+    fcc:      { name: 'FCC', baseColor: '#d8b48c' },   // tan refractory reactor
+    reformer: { name: 'REF', baseColor: '#a7c2b2' },   // green-tinted steel
+    hydro:    { name: 'HDT', baseColor: '#cdbf98' },   // sandy reactor
+    alky:     { name: 'ALK', baseColor: '#bcb0d0' },   // lavender steel drum
+    coker:    { name: 'COK', baseColor: '#aeb6ba' },   // gunmetal coke drums
 };
 
 // ---------- Canvas plant ----------
@@ -634,295 +605,263 @@ function drawUnit(u, selected) {
     const cond = u.cond, press = u.press;
     const online = u.online;
     const style = UNIT_STYLES[u.id] || UNIT_STYLES.hydro;
-    const colorSet = online ? style.online : style.offline;
-    const shortName = UNIT_STYLES[u.id]?.name || u.id;
+    const shortName = style.name || u.id;
+    // Base metal color for the vessel; gray when the unit is shut down.
+    const base = online ? (style.baseColor || '#b9c2cc') : '#7d7d7d';
 
-    // Drawing function for different unit types
-    if (u.id === 'cdu') drawCDU(x, y, cond, press, online, colorSet, selected, shortName);
-    else if (u.id === 'fcc') drawFCC(x, y, cond, press, online, colorSet, selected, shortName);
-    else if (u.id === 'reformer') drawReformer(x, y, cond, press, online, colorSet, selected, shortName);
-    else if (u.id === 'hydro') drawHydrotreater(x, y, cond, press, online, colorSet, selected, shortName);
-    else if (u.id === 'alky') drawAlkylation(x, y, cond, press, online, colorSet, selected, shortName);
-    else if (u.id === 'coker') drawCoker(x, y, cond, press, online, colorSet, selected, shortName);
+    if (u.id === 'cdu')           drawCDU(x, y, cond, press, online, base, selected, shortName);
+    else if (u.id === 'fcc')      drawFCC(x, y, cond, press, online, base, selected, shortName);
+    else if (u.id === 'reformer') drawReformer(x, y, cond, press, online, base, selected, shortName);
+    else if (u.id === 'hydro')    drawHydrotreater(x, y, cond, press, online, base, selected, shortName);
+    else if (u.id === 'alky')     drawAlkylation(x, y, cond, press, online, base, selected, shortName);
+    else if (u.id === 'coker')    drawCoker(x, y, cond, press, online, base, selected, shortName);
 }
 
-// CDU: Tall, narrow distillation tower with tapered top
-function drawCDU(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 35, h = 140, d = 20;
-    const shadowY = y + h/2 + h + 5;
-
-    // Ground shadow
-    pctx.fillStyle = 'rgba(0,0,0,0.3)';
-    pctx.beginPath();
-    pctx.ellipse(x, shadowY + 5, w/2 + 2, 4, 0, 0, Math.PI * 2);
-    pctx.fill();
-
-    // Main tower body - tall and narrow
-    const topW = w * 0.6; // Narrower at top
-    const topH = y + h/2 - 30;
-    const midH = y + h/2 + 40;
-    const botH = y + h/2 + h;
-
-    // Left face (tapered)
-    const leftGrad = pctx.createLinearGradient(x - w/2, topH, x - w/2, botH);
-    leftGrad.addColorStop(0, colorSet.left);
-    leftGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.left.slice(1), 16) - 0x333333).toString(16).padStart(6, '0'));
-    pctx.fillStyle = leftGrad;
-    pctx.beginPath();
-    pctx.moveTo(x - topW/2, topH);
-    pctx.lineTo(x - w/2 - d/3, topH - d/2);
-    pctx.lineTo(x - w/2 - d/3, botH - d/2);
-    pctx.lineTo(x - w/2, botH);
-    pctx.fill();
-    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1;
-    pctx.stroke();
-
-    // Front face (tapered tower)
-    const frontGrad = pctx.createLinearGradient(x, topH, x, botH);
-    frontGrad.addColorStop(0, colorSet.front);
-    frontGrad.addColorStop(0.3, colorSet.front);
-    frontGrad.addColorStop(0.7, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x202020).toString(16).padStart(6, '0'));
-    frontGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x404040).toString(16).padStart(6, '0'));
-    pctx.fillStyle = frontGrad;
-    pctx.beginPath();
-    pctx.moveTo(x - topW/2, topH);
-    pctx.lineTo(x + topW/2, topH);
-    pctx.lineTo(x + w/2, botH);
-    pctx.lineTo(x - w/2, botH);
-    pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
-    pctx.stroke();
-
-    // Right face
-    const rightGrad = pctx.createLinearGradient(x + topW/2, topH, x + w/2 - d/3, topH - d/2);
-    rightGrad.addColorStop(0, colorSet.right);
-    rightGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.right.slice(1), 16) - 0x1a1a1a).toString(16).padStart(6, '0'));
-    pctx.fillStyle = rightGrad;
-    pctx.beginPath();
-    pctx.moveTo(x + topW/2, topH);
-    pctx.lineTo(x + w/2 - d/3, topH - d/2);
-    pctx.lineTo(x + w/2 - d/3, botH - d/2);
-    pctx.lineTo(x + w/2, botH);
-    pctx.fill();
-    pctx.strokeStyle = '#1a1a1a'; pctx.lineWidth = 1;
-    pctx.stroke();
-
-    // Horizontal section bands (distillation stages)
-    pctx.strokeStyle = online ? '#555' : '#333'; pctx.lineWidth = 0.5;
-    for (let i = 0; i < 8; i++) {
-        const bandY = topH + (botH - topH) * (i / 8);
-        const ratio = i / 8;
-        const w1 = topW + (w - topW) * ratio;
-        pctx.beginPath();
-        pctx.moveTo(x - w1/2, bandY);
-        pctx.lineTo(x + w1/2, bandY);
-        pctx.stroke();
+// ---- 3D vessel primitives -------------------------------------------------
+// shade(): lighten (amt>0) or darken (amt<0) a hex color toward white/black.
+function shade(col, amt) {
+    let r, g, b;
+    if (col[0] === '#') {
+        const hex = col.slice(1);
+        r = parseInt(hex.substr(0, 2), 16);
+        g = parseInt(hex.substr(2, 2), 16);
+        b = parseInt(hex.substr(4, 2), 16);
+    } else {
+        // rgb(r,g,b) — lets shade() be applied to its own output safely.
+        const m = col.match(/\d+/g);
+        r = +m[0]; g = +m[1]; b = +m[2];
     }
-
-    drawStatusBars(x, topH, botH, w, cond, press);
-    drawUnitLabel(x, (topH + botH) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topH, x + w/2, botH);
-    if (!online) drawOfflineX((topH + botH) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topH, w, botH - topH);
+    if (amt >= 0) {
+        r = Math.round(r + (255 - r) * amt);
+        g = Math.round(g + (255 - g) * amt);
+        b = Math.round(b + (255 - b) * amt);
+    } else {
+        r = Math.round(r * (1 + amt));
+        g = Math.round(g * (1 + amt));
+        b = Math.round(b * (1 + amt));
+    }
+    return `rgb(${r},${g},${b})`;
 }
 
-// FCC: Wide, squat reactor with rounded corners
-function drawFCC(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 70, h = 90, d = 30;
-    const topY = y + h/2;
-    const botY = y + h/2 + h;
+// A vertical cylinder rendered with a curved highlight so it reads as round,
+// plus a domed top cap and a darker bottom cap (the volume that was missing).
+function drawVCylinder(cx, topY, botY, radius, base, opts = {}) {
+    const capH = radius * 0.34;          // ellipse height of the end caps
+    const dome = opts.dome ? radius * 0.55 : capH;  // taller cap = domed head
 
-    // Shadow
-    pctx.fillStyle = 'rgba(0,0,0,0.35)';
+    // Bottom cap (sits behind, darker) — gives the base its rounded bulge.
+    pctx.fillStyle = shade(base, -0.4);
     pctx.beginPath();
-    pctx.ellipse(x, botY + 5, w/2 + 3, 5, 0, 0, Math.PI * 2);
+    pctx.ellipse(cx, botY, radius, capH, 0, 0, Math.PI * 2);
     pctx.fill();
 
-    // Wide squat body with rounded corners
-    const leftGrad = pctx.createLinearGradient(x - w/2 - d/2, y, x - w/2, y + h);
-    leftGrad.addColorStop(0, colorSet.left);
-    leftGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.left.slice(1), 16) - 0x2a2a2a).toString(16).padStart(6, '0'));
-    pctx.fillStyle = leftGrad;
+    // Cylinder body: horizontal gradient = curved-surface shading.
+    const g = pctx.createLinearGradient(cx - radius, 0, cx + radius, 0);
+    g.addColorStop(0.00, shade(base, -0.46));
+    g.addColorStop(0.16, shade(base, -0.10));
+    g.addColorStop(0.34, shade(base,  0.34));   // specular highlight band
+    g.addColorStop(0.50, shade(base,  0.12));
+    g.addColorStop(0.72, shade(base, -0.16));
+    g.addColorStop(1.00, shade(base, -0.50));
+    pctx.fillStyle = g;
     pctx.beginPath();
-    pctx.moveTo(x - w/2 + 8, topY);
-    pctx.lineTo(x - w/2 - d/2 + 8, topY - d/2);
-    pctx.lineTo(x - w/2 - d/2 + 8, botY - d/2);
-    pctx.lineTo(x - w/2 + 8, botY);
-    pctx.fill();
-    pctx.stroke();
-
-    const frontGrad = pctx.createLinearGradient(x, topY, x, botY);
-    frontGrad.addColorStop(0, colorSet.front);
-    frontGrad.addColorStop(0.5, colorSet.front);
-    frontGrad.addColorStop(1, '#' + Math.max(0, parseInt(colorSet.front.slice(1), 16) - 0x3a3a3a).toString(16).padStart(6, '0'));
-    pctx.fillStyle = frontGrad;
-    pctx.beginPath();
-    pctx.moveTo(x - w/2 + 8, topY);
-    pctx.arcTo(x - w/2, topY, x - w/2, topY + 8, 8);
-    pctx.lineTo(x + w/2 - 8, topY);
-    pctx.arcTo(x + w/2, topY, x + w/2, topY + 8, 8);
-    pctx.lineTo(x + w/2, botY - 8);
-    pctx.arcTo(x + w/2, botY, x + w/2 - 8, botY, 8);
-    pctx.lineTo(x - w/2 + 8, botY);
-    pctx.arcTo(x - w/2, botY, x - w/2, botY - 8, 8);
+    pctx.moveTo(cx - radius, topY);
+    pctx.lineTo(cx - radius, botY);
+    pctx.ellipse(cx, botY, radius, capH, 0, Math.PI, 0, true);
+    pctx.lineTo(cx + radius, topY);
     pctx.closePath();
     pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
-    pctx.stroke();
 
-    // Right face
-    pctx.fillStyle = colorSet.right;
+    // Side outlines.
+    pctx.strokeStyle = 'rgba(0,0,0,0.35)'; pctx.lineWidth = 1;
     pctx.beginPath();
-    pctx.moveTo(x + w/2 - 8, topY);
-    pctx.lineTo(x + w/2 - d/2 + 8, topY - d/2);
-    pctx.lineTo(x + w/2 - d/2 + 8, botY - d/2);
-    pctx.lineTo(x + w/2, botY);
-    pctx.fill();
+    pctx.moveTo(cx - radius, topY); pctx.lineTo(cx - radius, botY);
+    pctx.moveTo(cx + radius, topY); pctx.lineTo(cx + radius, botY);
     pctx.stroke();
 
-    drawStatusBars(x, topY, botY, w, cond, press);
-    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
-    if (!online) drawOfflineX((topY + botY) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+    // Top cap / dome — lighter, catches the light.
+    const tg = pctx.createLinearGradient(cx - radius, 0, cx + radius, 0);
+    tg.addColorStop(0.0, shade(base, -0.05));
+    tg.addColorStop(0.4, shade(base,  0.45));
+    tg.addColorStop(1.0, shade(base, -0.12));
+    pctx.fillStyle = tg;
+    pctx.beginPath();
+    pctx.ellipse(cx, topY, radius, dome, 0, 0, Math.PI * 2);
+    pctx.fill();
+    pctx.strokeStyle = 'rgba(0,0,0,0.35)'; pctx.lineWidth = 1;
+    pctx.stroke();
 }
 
-// Reformer: Sleek medium unit
-function drawReformer(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 50, h = 100, d = 24;
-    const topY = y + h/2;
-    const botY = y + h/2 + h;
-
-    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+// A horizontal drum (cylinder lying on its side): vertical gradient + end cap.
+function drawHCylinder(leftX, rightX, cy, radius, base) {
+    const capW = radius * 0.34;
+    const g = pctx.createLinearGradient(0, cy - radius, 0, cy + radius);
+    g.addColorStop(0.00, shade(base, -0.40));
+    g.addColorStop(0.30, shade(base,  0.32));
+    g.addColorStop(0.50, shade(base,  0.10));
+    g.addColorStop(1.00, shade(base, -0.46));
+    pctx.fillStyle = g;
+    pctx.fillRect(leftX, cy - radius, rightX - leftX, radius * 2);
+    // Right end cap (lit).
+    const cg = pctx.createLinearGradient(0, cy - radius, 0, cy + radius);
+    cg.addColorStop(0.0, shade(base, -0.18));
+    cg.addColorStop(0.4, shade(base,  0.36));
+    cg.addColorStop(1.0, shade(base, -0.24));
+    pctx.fillStyle = cg;
     pctx.beginPath();
-    pctx.ellipse(x, botY + 5, w/2 + 2, 4, 0, 0, Math.PI * 2);
+    pctx.ellipse(rightX, cy, capW, radius, 0, 0, Math.PI * 2);
     pctx.fill();
-
-    // Sleek tapered design
-    pctx.fillStyle = colorSet.front;
+    pctx.strokeStyle = 'rgba(0,0,0,0.3)'; pctx.lineWidth = 1; pctx.stroke();
+    // Left end cap (shadowed).
+    pctx.fillStyle = shade(base, -0.42);
     pctx.beginPath();
-    pctx.moveTo(x - w/2, topY);
-    pctx.lineTo(x + w/2, topY);
-    pctx.lineTo(x + w/2 - 5, botY);
-    pctx.lineTo(x - w/2 + 5, botY);
+    pctx.ellipse(leftX, cy, capW, radius, 0, 0, Math.PI * 2);
     pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    pctx.beginPath();
+    pctx.moveTo(leftX, cy - radius); pctx.lineTo(rightX, cy - radius);
+    pctx.moveTo(leftX, cy + radius); pctx.lineTo(rightX, cy + radius);
     pctx.stroke();
+}
 
-    // Horizontal ribbing
-    pctx.strokeStyle = online ? '#666' : '#444'; pctx.lineWidth = 0.5;
-    for (let i = 1; i < 5; i++) {
-        const ribY = topY + (botY - topY) * (i / 5);
+// Ground shadow ellipse beneath a vessel footprint.
+function groundShadow(cx, baseY, radius) {
+    pctx.fillStyle = 'rgba(0,0,0,0.28)';
+    pctx.beginPath();
+    pctx.ellipse(cx, baseY + 6, radius + 3, 5, 0, 0, Math.PI * 2);
+    pctx.fill();
+}
+
+// Small support skirt / legs at the base of a vessel.
+function drawSkirt(cx, baseY, radius, base) {
+    pctx.fillStyle = shade(base, -0.55);
+    pctx.fillRect(cx - radius * 0.7, baseY - 2, radius * 1.4, 8);
+}
+
+// CDU: very tall, slender distillation column with a domed top and tray rings.
+function drawCDU(x, y, cond, press, online, base, selected, shortName) {
+    const r = 19;
+    const topY = y - 92, botY = y + 50;
+    groundShadow(x, botY, r);
+    drawSkirt(x, botY, r, base);
+    drawVCylinder(x, topY, botY, r, base, { dome: true });
+
+    // Tray rings (distillation stages) as faint curved bands down the column.
+    pctx.strokeStyle = online ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.12)';
+    pctx.lineWidth = 1;
+    for (let i = 1; i <= 9; i++) {
+        const ty = topY + (botY - topY) * (i / 10);
         pctx.beginPath();
-        pctx.moveTo(x - w/2 + 3, ribY);
-        pctx.lineTo(x + w/2 - 3, ribY);
+        pctx.ellipse(x, ty, r, r * 0.30, 0, 0, Math.PI);
         pctx.stroke();
     }
+    // Top nozzle / overhead line.
+    pctx.fillStyle = shade(base, -0.3);
+    pctx.fillRect(x - 2, topY - 18, 4, 14);
 
-    drawStatusBars(x, topY, botY, w, cond, press);
-    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
-    if (!online) drawOfflineX((topY + botY) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+    finishUnit(x, topY, botY, r * 2, cond, press, online, selected, shortName);
 }
 
-// Hydrotreater: Rounded cylinder
-function drawHydrotreater(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 48, h = 95, d = 22;
-    const topY = y + h/2;
-    const botY = y + h/2 + h;
+// FCC: the iconic reactor + tall regenerator pair side by side.
+function drawFCC(x, y, cond, press, online, base, selected, shortName) {
+    const rr = 16, gr = 20;              // reactor radius, regenerator radius
+    const reacX = x - 16, regX = x + 20;
+    const reacTop = y - 40, reacBot = y + 50;
+    const regTop = y - 70, regBot = y + 50;
+    groundShadow(x, y + 50, 44);
 
-    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+    // Cross-over pipe linking the two vessels.
+    pctx.strokeStyle = shade(base, -0.35); pctx.lineWidth = 6;
     pctx.beginPath();
-    pctx.ellipse(x, botY + 5, w/2 + 1.5, 4, 0, 0, Math.PI * 2);
-    pctx.fill();
-
-    pctx.fillStyle = colorSet.front;
-    pctx.beginPath();
-    pctx.moveTo(x - w/2, topY + 4);
-    pctx.arcTo(x - w/2, topY, x - w/2 + 8, topY, 6);
-    pctx.lineTo(x + w/2 - 8, topY);
-    pctx.arcTo(x + w/2, topY, x + w/2, topY + 4, 6);
-    pctx.lineTo(x + w/2, botY - 4);
-    pctx.arcTo(x + w/2, botY, x + w/2 - 8, botY, 6);
-    pctx.lineTo(x - w/2 + 8, botY);
-    pctx.arcTo(x - w/2, botY, x - w/2, botY - 4, 6);
-    pctx.closePath();
-    pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.moveTo(reacX, reacTop + 6); pctx.lineTo(regX, regTop + 18);
     pctx.stroke();
 
-    drawStatusBars(x, topY, botY, w, cond, press);
-    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
-    if (!online) drawOfflineX((topY + botY) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+    // Regenerator (taller) drawn first, reactor in front.
+    drawSkirt(regX, regBot, gr, base);
+    drawVCylinder(regX, regTop, regBot, gr, base, { dome: true });
+    drawSkirt(reacX, reacBot, rr, base);
+    drawVCylinder(reacX, reacTop, reacBot, rr, shade(base, 0.04), { dome: true });
+
+    finishUnit(x, regTop, regBot, 80, cond, press, online, selected, shortName);
 }
 
-// Alkylation: Small, compact sealed unit
-function drawAlkylation(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 40, h = 75, d = 18;
-    const topY = y + h/2;
-    const botY = y + h/2 + h;
-
-    pctx.fillStyle = 'rgba(0,0,0,0.3)';
+// Reformer: a row of three short fixed-bed reactor cylinders.
+function drawReformer(x, y, cond, press, online, base, selected, shortName) {
+    const r = 11, topY = y - 28, botY = y + 48;
+    const xs = [x - 24, x, x + 24];
+    groundShadow(x, botY, 38);
+    xs.forEach(cx => {
+        drawSkirt(cx, botY, r, base);
+        drawVCylinder(cx, topY, botY, r, base, { dome: true });
+    });
+    // Header pipe across the tops.
+    pctx.strokeStyle = shade(base, -0.35); pctx.lineWidth = 5;
     pctx.beginPath();
-    pctx.ellipse(x, botY + 5, w/2 + 1, 3, 0, 0, Math.PI * 2);
-    pctx.fill();
-
-    pctx.fillStyle = colorSet.front;
-    pctx.beginPath();
-    pctx.moveTo(x - w/2, topY);
-    pctx.lineTo(x + w/2, topY);
-    pctx.lineTo(x + w/2, botY);
-    pctx.lineTo(x - w/2, botY);
-    pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 1.5;
+    pctx.moveTo(xs[0], topY - 4); pctx.lineTo(xs[2], topY - 4);
     pctx.stroke();
 
-    drawStatusBars(x, topY, botY, w, cond, press);
-    drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
-    if (!online) drawOfflineX((topY + botY) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+    finishUnit(x, topY, botY, 72, cond, press, online, selected, shortName);
 }
 
-// Coker: Large, stacked industrial
-function drawCoker(x, y, cond, press, online, colorSet, selected, shortName) {
-    const w = 65, h = 120, d = 28;
-    const topY = y + h/2;
-    const botY = y + h/2 + h;
-
-    pctx.fillStyle = 'rgba(0,0,0,0.35)';
+// Hydrotreater: a single fat reactor with a tall domed head + a small KO drum.
+function drawHydrotreater(x, y, cond, press, online, base, selected, shortName) {
+    const r = 22, topY = y - 50, botY = y + 50;
+    groundShadow(x, botY, r);
+    // Small knock-out drum beside it.
+    drawHCylinder(x + r + 4, x + r + 30, y + 10, 9, base);
+    drawSkirt(x, botY, r, base);
+    drawVCylinder(x, topY, botY, r, base, { dome: true });
+    // Manway / access port on the front.
+    pctx.fillStyle = shade(base, -0.3);
     pctx.beginPath();
-    pctx.ellipse(x, botY + 5, w/2 + 2.5, 5, 0, 0, Math.PI * 2);
+    pctx.ellipse(x - 3, y, 5, 7, 0, 0, Math.PI * 2);
     pctx.fill();
 
-    pctx.fillStyle = colorSet.front;
+    finishUnit(x, topY, botY, r * 2, cond, press, online, selected, shortName);
+}
+
+// Alkylation: a compact horizontal contactor drum on a short support.
+function drawAlkylation(x, y, cond, press, online, base, selected, shortName) {
+    const r = 17;
+    const leftX = x - 24, rightX = x + 24, cy = y + 6;
+    groundShadow(x, cy + r, 30);
+    // Support legs.
+    pctx.fillStyle = shade(base, -0.55);
+    pctx.fillRect(x - 20, cy + r - 2, 6, 14);
+    pctx.fillRect(x + 14, cy + r - 2, 6, 14);
+    drawHCylinder(leftX, rightX, cy, r, base);
+    // A small vertical settler riser on top.
+    drawVCylinder(x + 6, cy - r - 18, cy - r + 2, 7, base, { dome: true });
+
+    finishUnit(x, cy - r - 18, cy + r + 12, 56, cond, press, online, selected, shortName);
+}
+
+// Coker: twin tall coke drums side by side — the delayed-coker signature.
+function drawCoker(x, y, cond, press, online, base, selected, shortName) {
+    const r = 15;
+    const dxs = [x - 17, x + 17];
+    const topY = y - 78, botY = y + 50;
+    groundShadow(x, botY, 38);
+    // Connecting overhead header.
+    pctx.strokeStyle = shade(base, -0.35); pctx.lineWidth = 5;
     pctx.beginPath();
-    pctx.moveTo(x - w/2, topY);
-    pctx.lineTo(x + w/2, topY);
-    pctx.lineTo(x + w/2, botY);
-    pctx.lineTo(x - w/2, botY);
-    pctx.fill();
-    pctx.strokeStyle = '#0a0a0a'; pctx.lineWidth = 2;
+    pctx.moveTo(dxs[0], topY + 4); pctx.lineTo(dxs[1], topY + 4);
     pctx.stroke();
+    dxs.forEach(cx => {
+        drawSkirt(cx, botY, r, base);
+        drawVCylinder(cx, topY, botY, r, base, { dome: true });
+    });
 
-    // Stacked section divisions
-    pctx.strokeStyle = online ? '#666' : '#444'; pctx.lineWidth = 0.8;
-    for (let i = 1; i < 3; i++) {
-        const divY = topY + (botY - topY) * (i / 3);
-        pctx.beginPath();
-        pctx.moveTo(x - w/2 + 2, divY);
-        pctx.lineTo(x + w/2 - 2, divY);
-        pctx.stroke();
-    }
+    finishUnit(x, topY, botY, 64, cond, press, online, selected, shortName);
+}
 
+// Shared overlay: status bars, label, selection box, offline/explosion states.
+function finishUnit(x, topY, botY, w, cond, press, online, selected, shortName) {
     drawStatusBars(x, topY, botY, w, cond, press);
     drawUnitLabel(x, (topY + botY) / 2, shortName, cond, online);
-    if (selected) drawSelection(x - w/2, topY, x + w/2, botY);
+    if (selected) drawSelection(x - w / 2, topY, x + w / 2, botY);
     if (!online) drawOfflineX((topY + botY) / 2, x);
-    if (online && press > 80 && cond < 30) drawExplosion(x - w/2, topY, w, botY - topY);
+    if (online && press > 80 && cond < 30) drawExplosion(x - w / 2, topY, w, botY - topY);
 }
 
 // Helper functions
@@ -943,13 +882,21 @@ function drawStatusBars(x, topY, botY, w, cond, press) {
 }
 
 function drawUnitLabel(x, midY, label, cond, online) {
-    pctx.fillStyle = online ? '#000' : '#555';
-    pctx.font = 'bold 9px Tahoma';
+    // Dark rounded plate so the label stays legible over the shiny vessel.
     pctx.textAlign = 'center';
-    pctx.fillText(label, x, midY - 5);
-    pctx.font = '7px Tahoma';
-    pctx.fillStyle = cond > 60 ? '#2a8a2a' : cond > 30 ? '#c8a000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', x, midY + 8);
+    pctx.font = 'bold 9px Tahoma';
+    const tw = Math.max(pctx.measureText(label).width, 22) + 10;
+    pctx.fillStyle = 'rgba(20,24,30,0.72)';
+    pctx.beginPath();
+    if (pctx.roundRect) pctx.roundRect(x - tw / 2, midY - 14, tw, 24, 4);
+    else pctx.rect(x - tw / 2, midY - 14, tw, 24);
+    pctx.fill();
+
+    pctx.fillStyle = online ? '#f0f4f8' : '#b8b8b8';
+    pctx.fillText(label, x, midY - 3);
+    pctx.font = 'bold 7px Tahoma';
+    pctx.fillStyle = cond > 60 ? '#6ee06e' : cond > 30 ? '#ffd24a' : '#ff6a6a';
+    pctx.fillText(Math.round(cond) + '%', x, midY + 7);
 }
 
 function drawSelection(x1, y1, x2, y2) {
