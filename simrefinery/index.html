@@ -18,35 +18,33 @@
         </header>
 
         <main class="main-content">
-            <!-- Dashboard Row 1: Key Metrics -->
-            <section class="dashboard-section metrics-section">
-                <h2>Refinery Status</h2>
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <label>Crude Oil Input</label>
-                        <div class="metric-value" id="crudInput">0</div>
-                        <div class="metric-unit">barrels/day</div>
-                    </div>
-                    <div class="metric-card">
-                        <label>Production Output</label>
-                        <div class="metric-value" id="productionOutput">0</div>
-                        <div class="metric-unit">barrels/day</div>
-                    </div>
-                    <div class="metric-card">
-                        <label>Storage Level</label>
-                        <div class="metric-value" id="storageLevel">50</div>
-                        <div class="metric-unit">%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="storageFill" style="width: 50%"></div>
-                        </div>
-                    </div>
-                    <div class="metric-card">
+            <!-- Visual Refinery Display -->
+            <section class="dashboard-section refinery-visual-section">
+                <h2>Refinery Operations Visualization</h2>
+                <div class="refinery-container">
+                    <canvas id="refineryCanvas" width="900" height="400"></canvas>
+                </div>
+            </section>
+
+            <!-- Status Gauges -->
+            <section class="dashboard-section gauges-section">
+                <h2>System Status Gauges</h2>
+                <div class="gauges-grid">
+                    <div class="gauge-container">
+                        <canvas id="healthGauge" width="150" height="150"></canvas>
                         <label>System Health</label>
-                        <div class="metric-value health-good" id="systemHealth">100</div>
-                        <div class="metric-unit">%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="healthFill" style="width: 100%"></div>
-                        </div>
+                    </div>
+                    <div class="gauge-container">
+                        <canvas id="safetyGauge" width="150" height="150"></canvas>
+                        <label>Safety Level</label>
+                    </div>
+                    <div class="gauge-container">
+                        <canvas id="complianceGauge" width="150" height="150"></canvas>
+                        <label>Environmental Compliance</label>
+                    </div>
+                    <div class="gauge-container">
+                        <canvas id="efficiencyGauge" width="150" height="150"></canvas>
+                        <label>Efficiency</label>
                     </div>
                 </div>
             </section>
@@ -78,60 +76,34 @@
                 </div>
             </section>
 
-            <!-- Dashboard Row 3: Financial & Environmental -->
+            <!-- Financial & Environmental -->
             <section class="dashboard-section financial-section">
-                <h2>Financial & Environmental</h2>
+                <h2>Financial & Environmental Status</h2>
                 <div class="financial-grid">
                     <div class="financial-card">
-                        <h3>Revenue</h3>
+                        <h3>💰 Daily Revenue</h3>
                         <div class="financial-value positive" id="dailyRevenue">+$0</div>
                         <div class="financial-unit">per day</div>
                     </div>
                     <div class="financial-card">
-                        <h3>Operating Costs</h3>
+                        <h3>📉 Operating Costs</h3>
                         <div class="financial-value negative" id="dailyCosts">-$0</div>
                         <div class="financial-unit">per day</div>
                     </div>
                     <div class="financial-card">
-                        <h3>Safety Violations</h3>
+                        <h3>⚠️ Safety Incidents</h3>
                         <div class="financial-value warning" id="safetyViolations">0</div>
                         <div class="financial-unit">incidents</div>
                     </div>
                     <div class="financial-card">
-                        <h3>Emissions Level</h3>
+                        <h3>🌍 Emissions</h3>
                         <div class="financial-value" id="emissionsLevel">Low</div>
                         <div class="financial-unit">status</div>
                     </div>
                 </div>
             </section>
 
-            <!-- Dashboard Row 4: Process Breakdown -->
-            <section class="dashboard-section process-section">
-                <h2>Refinery Process Flow</h2>
-                <div class="process-flow">
-                    <div class="process-step">
-                        <div class="step-name">Crude Input</div>
-                        <div class="step-value" id="processInput">0</div>
-                    </div>
-                    <div class="process-arrow">→</div>
-                    <div class="process-step">
-                        <div class="step-name">Distillation</div>
-                        <div class="step-value" id="processDistillation">0</div>
-                    </div>
-                    <div class="process-arrow">→</div>
-                    <div class="process-step">
-                        <div class="step-name">Cracking</div>
-                        <div class="step-value" id="processCracking">0</div>
-                    </div>
-                    <div class="process-arrow">→</div>
-                    <div class="process-step">
-                        <div class="step-name">Product Output</div>
-                        <div class="step-value" id="processOutput">0</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Dashboard Row 5: Events & Alerts -->
+            <!-- Events & Alerts -->
             <section class="dashboard-section events-section">
                 <h2>Event Log & Alerts</h2>
                 <div class="event-log" id="eventLog">
@@ -141,12 +113,12 @@
 
             <!-- Game Actions -->
             <section class="dashboard-section actions-section">
-                <h2>Game Actions</h2>
+                <h2>Game Controls</h2>
                 <div class="actions-grid">
-                    <button id="advanceDay" class="action-button primary">Advance Day</button>
-                    <button id="pauseGame" class="action-button">Pause</button>
-                    <button id="triggerDisaster" class="action-button warning">⚠️ Emergency Scenario</button>
-                    <button id="resetGame" class="action-button secondary">Reset Game</button>
+                    <button id="advanceDay" class="action-button primary">⏭️ Advance Day</button>
+                    <button id="pauseGame" class="action-button">⏸️ Pause</button>
+                    <button id="triggerDisaster" class="action-button warning">🔥 Emergency Scenario</button>
+                    <button id="resetGame" class="action-button secondary">🔄 Reset Game</button>
                 </div>
             </section>
         </main>
@@ -158,6 +130,6 @@
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <script src="game-enhanced.js"></script>
 </body>
 </html>
