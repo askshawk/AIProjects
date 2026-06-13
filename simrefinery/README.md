@@ -118,11 +118,48 @@ python3 -m http.server 8000
 # Open browser to http://localhost:8000
 ```
 
-### Deployment
-Can be deployed as static files to any web server:
-- Netlify, Vercel, GitHub Pages, etc.
-- No backend server required
-- No build process needed
+### Deployment to Netlify (Like Ethan's)
+
+The easiest way to share your game online:
+
+#### Option 1: Connect GitHub Repository (Recommended)
+1. Push your code to GitHub (this repo is already set up)
+2. Go to [Netlify](https://netlify.com)
+3. Click "New site from Git"
+4. Connect your GitHub account and select `askshawk/AIProjects`
+5. Configure build:
+   - Build command: (leave empty - no build needed)
+   - Publish directory: `simrefinery`
+6. Click "Deploy site"
+7. Your game will be live at `https://your-site-name.netlify.app`
+
+#### Option 2: Drag & Drop Deploy
+1. Zip the `simrefinery` folder contents (index.html, styles.css, game.js, etc.)
+2. Go to [Netlify](https://netlify.com)
+3. Drag the folder onto the Netlify drop zone
+4. Your game is instantly live!
+
+#### Option 3: Netlify CLI
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Navigate to project
+cd simrefinery
+
+# Deploy
+netlify deploy --prod
+```
+
+#### Custom Domain
+Once deployed, you can add a custom domain like `simrefinery.yourdomain.com` in Netlify settings.
+
+### Other Deployment Options
+- **Vercel**: Same process as Netlify, equally easy
+- **GitHub Pages**: Enable in repo settings, set source to `gh-pages` branch
+- **Any static host**: AWS S3, Cloudflare Pages, etc.
+
+All require no build process - just upload the files!
 
 ## Game Strategy Tips
 
