@@ -121,6 +121,7 @@ function newGame(scenario) {
         sulfurBoost: 1,        // capital "Sulfur Recovery Unit" raises this
         built: {},             // purchased capital projects
         trainStep: 0,          // operator-training task index
+        _shockTriggered: {},   // track which market shocks have fired
     };
     // reset any price-table mutations from a previous scenario run
     for (const k in PRODUCTS) PRODUCTS[k].base = ORIG_PROD_BASE[k];
@@ -250,6 +251,9 @@ function stepSimulation() {
     // 9. Market drift.
     driftMarkets();
 
+    // 9b. Market shock events (15% chance per week).
+    marketShockCheck();
+
     // 10. Time + week handling.
     G.day += 1;
     G.date = new Date(G.date.getTime() + 24*3600*1000);
@@ -258,6 +262,9 @@ function stepSimulation() {
     // 11. Failure conditions.
     if (G.cash <= -20e6) return firePlayer('Cash fell below −$20M. You have been fired.');
     if (G.explosions >= 2) return firePlayer('A second explosion destroyed the plant. You have been fired.');
+
+    // 12. Auto-save game state.
+    saveGameState();
 
     renderAll();
 }
@@ -683,6 +690,40 @@ function togglePause() {
     logEvent(G.paused ? 'Simulation paused.' : 'Simulation resumed.');
 }
 
+// ---------- Save / Load system ----------
+function saveGameState() {
+    if (!G || G.gameOver) return;
+    try {
+        const save = {
+            scenario: G.scenarioId,
+            timestamp: new Date().toISOString(),
+            state: G,
+        };
+        localStorage.setItem('simrefinery_save', JSON.stringify(save));
+    } catch (e) {
+        console.error('Failed to save game:', e);
+    }
+}
+
+function loadGameState() {
+    try {
+        const save = JSON.parse(localStorage.getItem('simrefinery_save'));
+        if (!save || !save.state) return null;
+        return save.state;
+    } catch (e) {
+        console.error('Failed to load game:', e);
+        return null;
+    }
+}
+
+function clearSavedGame() {
+    try {
+        localStorage.removeItem('simrefinery_save');
+    } catch (e) {
+        console.error('Failed to clear save:', e);
+    }
+}
+
 function handleMenu(menu) {
     if (menu==='help') showModal('Help', `
         <h3>How to play</h3>
@@ -699,7 +740,14 @@ function handleMenu(menu) {
         <div class="ops-row"><span>Speed</span><span>${G.speed}×</span></div>
         <input type="range" class="ops-slider" min="1" max="5" value="${G.speed}" oninput="G.speed=+this.value">
         <div class="modal-btn" onclick="closeModal()">OK</div>`);
-    else if (menu==='file') showModal('File', '<p>SimRefinery 2.0 — homage build. Progress is in-memory only.</p><div class="modal-btn" onclick="location.reload()">Restart / Choose Scenario</div>');
+    else if (menu==='file') {
+        const hasSave = !!loadGameState();
+        const msg = hasSave
+            ? `<p>SimRefinery 2.0 — your progress is saved to browser storage and will be available when you return.</p>
+               <p><b>Saved game:</b> ${new Date(loadGameState().date).toLocaleDateString()} — ${loadGameState().scenarioName}</p>`
+            : '<p>SimRefinery 2.0 — your progress is saved to browser storage.</p>';
+        showModal('File', msg + `<div class="modal-btn" onclick="location.reload()">Restart / Choose Scenario</div><div class="modal-btn" onclick="closeModal()">OK</div>`);
+    }
     else if (menu==='windows') showReport();
 }
 
@@ -727,6 +775,41 @@ const BUILD_PROJECTS = [
       desc:'+50% sulfur recovery revenue and cleaner heavy-crude operation.',
       apply:(g)=>{ g.sulfurBoost *= 1.5; } },
 ];
+
+// ---------- Market shock events ----------
+const MARKET_SHOCKS = [
+    { id:'opec', name:'OPEC Production Cut', desc:'Major supplier cuts output. Crude prices spike.', week:(7+Math.random()*21), effects:{crude:{light:1.18,medium:1.18,heavy:1.18}, products:{}} },
+    { id:'fire', name:'Refinery Fire in Singapore', desc:'Global refinery accident. Gasoline premiums tighten.', week:(5+Math.random()*25), effects:{crude:{}, products:{gasoline:0.88,heatingoil:0.92}} },
+    { id:'winter', name:'Harsh Winter Incoming', desc:'Heating season demand, cold snap forecasted.', week:(8+Math.random()*20), effects:{crude:{}, products:{heatingoil:1.25,diesel:1.15,jet:1.08}} },
+    { id:'recession', name:'Economic Slowdown', desc:'GDP forecasts cut. Demand expectations fall.', week:(15+Math.random()*20), effects:{crude:{light:0.85,medium:0.87,heavy:0.89}, products:{gasoline:0.90,diesel:0.91,heatingoil:0.92}} },
+    { id:'hurricane', name:'Hurricane - Gulf Shutdown', desc:'Major offshore platforms go dark.', week:(6+Math.random()*24), effects:{crude:{light:1.22,medium:1.20,heavy:1.18}, products:{gasoline:1.12,diesel:1.10,heatingoil:1.08}} },
+    { id:'tech', name:'Refining Tech Breakthrough', desc:'New catalysts improve margins industry-wide.', week:(10+Math.random()*22), effects:{crude:{}, products:{gasoline:1.06,diesel:1.05,heatingoil:1.04}} },
+    { id:'warupset', name:'Middle East Tensions', desc:'Supply uncertainty. Prices volatile.', week:(4+Math.random()*26), effects:{crude:{light:1.15,medium:1.16,heavy:1.17}, products:{}} },
+    { id:'dlrise', name:'Dollar Strengthens', desc:'USD rally cuts petroleum demand. Prices weaken.', week:(12+Math.random()*20), effects:{crude:{light:0.92,medium:0.93,heavy:0.94}, products:{gasoline:0.93,diesel:0.94,heatingoil:0.93,lpg:0.92}} },
+];
+
+function marketShockCheck() {
+    // Roll for a shock once per week
+    if (G.day % 7 !== 0) return;
+    const remaining = MARKET_SHOCKS.filter(s => !G._shockTriggered[s.id]);
+    if (remaining.length === 0) return;
+
+    // ~15% chance per week of triggering a remaining shock
+    if (Math.random() > 0.15) return;
+
+    const shock = remaining[Math.floor(Math.random() * remaining.length)];
+    G._shockTriggered[shock.id] = true;
+
+    // Apply effects
+    for (const crude in shock.effects.crude) {
+        G.crudePrices[crude] *= shock.effects.crude[crude];
+    }
+    for (const prod in shock.effects.products) {
+        G.prices[prod] *= shock.effects.products[prod];
+    }
+
+    logEvent(`🔔 ${shock.name}: ${shock.desc}`);
+}
 
 function showBuild() {
     const rows = BUILD_PROJECTS.map(p => {
@@ -898,12 +981,33 @@ function goToLobby() {
 // ---------- Boot ----------
 function renderScenarioList() {
     const el = document.getElementById('scenarioList');
-    el.innerHTML = SCENARIOS.map((s,i)=>`
+    const saved = loadGameState();
+    let html = '';
+
+    // Show "Load Saved Game" at top if available
+    if (saved) {
+        const d = new Date(saved.date);
+        const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        html += `<div class="scenario-item saved-game" data-action="load-saved">
+                    <div class="sc-name">⏱ Load Saved Game</div>
+                    <div class="sc-desc">${saved.scenarioName} — Week ${saved.week} — ${dateStr}</div>
+                </div>`;
+    }
+
+    // Show all regular scenarios
+    html += SCENARIOS.map((s,i)=>`
         <div class="scenario-item" data-idx="${i}">
             <div class="sc-name">${s.name}</div>
             <div class="sc-desc">${s.desc}</div>
         </div>`).join('');
-    el.querySelectorAll('.scenario-item').forEach(it=>{
+
+    el.innerHTML = html;
+
+    // Attach click handlers
+    if (saved) {
+        el.querySelector('[data-action="load-saved"]').onclick = () => loadAndStartGame();
+    }
+    el.querySelectorAll('.scenario-item:not(.saved-game)').forEach(it=>{
         it.onclick = () => startScenario(SCENARIOS[+it.dataset.idx]);
     });
 }
@@ -914,6 +1018,30 @@ function resetPauseButton() {
     const p = document.getElementById('pauseMenu');
     p.textContent = 'Pause';
     p.style.color = '';
+}
+
+function loadAndStartGame() {
+    const saved = loadGameState();
+    if (!saved) return;
+
+    // Start the game screen with the loaded state
+    document.getElementById('scenarioScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    G = saved;
+    currentScenario = SCENARIOS.find(s => s.id === saved.scenarioId) || SCENARIOS[0];
+    initCanvas();
+    setupControls();
+    resetPauseButton();
+    renderAll();
+
+    logEvent('Game resumed from save.');
+
+    // start loops exactly once so retries don't stack timers
+    if (!loopsStarted) {
+        loopsStarted = true;
+        setInterval(() => { if (G && !G.paused && !G.gameOver) stepSimulation(); }, 2000); // day tick
+        setInterval(() => { if (G) { drawPlant(); updateTraining(); } }, 60); // animation + tutorial
+    }
 }
 
 function startScenario(scenario) {

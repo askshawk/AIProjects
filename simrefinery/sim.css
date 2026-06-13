@@ -113,7 +113,10 @@ body {
     cursor: pointer;
 }
 .scenario-item:hover { background: #d8e6ff; }
+.scenario-item.saved-game { background: #e8f5e9; border-left: 3px solid var(--good); }
+.scenario-item.saved-game:hover { background: #d4edda; }
 .scenario-item .sc-name { color: var(--win-blue); font-weight: bold; font-size: 13px; }
+.scenario-item.saved-game .sc-name { color: var(--good); }
 .scenario-item .sc-desc { font-size: 11px; color: #333; margin-top: 2px; }
 .scenario-goal { font-size: 11px; line-height: 1.5; color: #2a2a2a; }
 
