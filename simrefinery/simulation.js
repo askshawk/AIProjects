@@ -591,169 +591,204 @@ function drawPipe(x1,y1,x2,y2,color,highlight,flowing) {
 
 function drawUnit(u, selected) {
     const x = u.x, y = u.y;
-
-    // Isometric 3D building with proper perspective
-    const w = 50, h = 70, d = 20;
     const cond = u.cond, press = u.press;
     const condCol = condColor(cond);
     const pressCol = pressColor(press);
+    const online = u.online;
 
-    // Draw isometric box (3D appearance)
-    // Top face (visible when looking isometric)
-    const topLeft = [x - w/2, y - h/2 - d/2];
-    const topRight = [x + w/2, y - h/2 - d/2];
-    const topBack = [x, y - h/2 - d];
+    // Much taller proportions - like real refinery columns/towers
+    const w = 30, h = 110, d = 15;
 
-    // Front face corners
-    const bottomLeft = [x - w/2, y + h/2 - d/2];
-    const bottomRight = [x + w/2, y + h/2 - d/2];
+    // Isometric 3D structure with tall proportions
+    // Top corners
+    const tl = [x - w/2, y - h/2 - d/2];
+    const tr = [x + w/2, y - h/2 - d/2];
+    const tb = [x, y - h/2 - d];
 
-    // Right face corners
-    const topRightBack = [x + w/2, y - h/2 - d];
-    const bottomRightBack = [x + w/2, y + h/2 - d];
+    // Bottom corners (front)
+    const bl = [x - w/2, y + h/2 - d/2];
+    const br = [x + w/2, y + h/2 - d/2];
 
-    // Left face corners
-    const topLeftBack = [x - w/2, y - h/2 - d];
-    const bottomLeftBack = [x - w/2, y + h/2 - d];
+    // Back corners
+    const tlb = [x - w/2, y - h/2 - d];
+    const trb = [x + w/2, y - h/2 - d];
+    const blb = [x - w/2, y + h/2 - d];
+    const brb = [x + w/2, y + h/2 - d];
 
-    // Draw shadow
-    pctx.fillStyle = 'rgba(0,0,0,0.2)';
+    // --- Draw 3D structure ---
+
+    // Shadow (ground)
+    pctx.fillStyle = 'rgba(0,0,0,0.25)';
     pctx.beginPath();
-    pctx.moveTo(bottomLeft[0], bottomLeft[1] + 4);
-    pctx.lineTo(bottomRight[0], bottomRight[1] + 4);
-    pctx.lineTo(bottomRight[0] + 8, bottomRight[1] + 12);
-    pctx.lineTo(bottomLeft[0] + 8, bottomLeft[1] + 12);
+    pctx.moveTo(bl[0], bl[1] + 3);
+    pctx.lineTo(br[0], br[1] + 3);
+    pctx.lineTo(br[0] + 6, br[1] + 10);
+    pctx.lineTo(bl[0] + 6, bl[1] + 10);
     pctx.fill();
 
-    // Left face (darker)
-    const leftColor = u.online ? '#8a9aaa' : '#5a4a4a';
-    pctx.fillStyle = leftColor;
+    // Left face (dark)
+    const leftCol = online ? '#7a8a9a' : '#5a4a4a';
+    pctx.fillStyle = leftCol;
     pctx.beginPath();
-    pctx.moveTo(topLeft[0], topLeft[1]);
-    pctx.lineTo(topBack[0], topBack[1]);
-    pctx.lineTo(bottomLeftBack[0], bottomLeftBack[1]);
-    pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+    pctx.moveTo(tl[0], tl[1]);
+    pctx.lineTo(tb[0], tb[1]);
+    pctx.lineTo(blb[0], blb[1]);
+    pctx.lineTo(bl[0], bl[1]);
     pctx.fill();
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
     pctx.stroke();
 
-    // Front face (lighter)
-    const frontColor = u.online ? '#c8d8e8' : '#7a6a6a';
-    pctx.fillStyle = frontColor;
+    // Front face (brightest - main visible surface)
+    const frontCol = online ? '#d8e4f0' : '#8a7a7a';
+    pctx.fillStyle = frontCol;
     pctx.beginPath();
-    pctx.moveTo(topLeft[0], topLeft[1]);
-    pctx.lineTo(topRight[0], topRight[1]);
-    pctx.lineTo(bottomRight[0], bottomRight[1]);
-    pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+    pctx.moveTo(tl[0], tl[1]);
+    pctx.lineTo(tr[0], tr[1]);
+    pctx.lineTo(br[0], br[1]);
+    pctx.lineTo(bl[0], bl[1]);
     pctx.fill();
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
     pctx.stroke();
 
     // Right face (medium)
-    const rightColor = u.online ? '#9aaa9a' : '#6a5a5a';
-    pctx.fillStyle = rightColor;
+    const rightCol = online ? '#a8b8c8' : '#6a5a5a';
+    pctx.fillStyle = rightCol;
     pctx.beginPath();
-    pctx.moveTo(topRight[0], topRight[1]);
-    pctx.lineTo(topRightBack[0], topRightBack[1]);
-    pctx.lineTo(bottomRightBack[0], bottomRightBack[1]);
-    pctx.lineTo(bottomRight[0], bottomRight[1]);
+    pctx.moveTo(tr[0], tr[1]);
+    pctx.lineTo(trb[0], trb[1]);
+    pctx.lineTo(brb[0], brb[1]);
+    pctx.lineTo(br[0], br[1]);
     pctx.fill();
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 1;
+    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
     pctx.stroke();
 
     // Top face (bright)
-    const topColor = u.online ? '#e8e8e8' : '#8a7a7a';
-    pctx.fillStyle = topColor;
+    const topCol = online ? '#f0f0f0' : '#9a8a8a';
+    pctx.fillStyle = topCol;
     pctx.beginPath();
-    pctx.moveTo(topLeft[0], topLeft[1]);
-    pctx.lineTo(topRight[0], topRight[1]);
-    pctx.lineTo(topRightBack[0], topRightBack[1]);
-    pctx.lineTo(topBack[0], topBack[1]);
+    pctx.moveTo(tl[0], tl[1]);
+    pctx.lineTo(tr[0], tr[1]);
+    pctx.lineTo(trb[0], trb[1]);
+    pctx.lineTo(tb[0], tb[1]);
     pctx.fill();
-    pctx.strokeStyle = '#555'; pctx.lineWidth = 0.5;
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
     pctx.stroke();
 
-    // Status bars on front face
-    // Condition bar (left side)
-    const barWidth = 6;
-    const barHeight = (h - 8) * (cond / 100);
+    // --- Add industrial detail: vertical sections/tiers ---
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
+    const tierCount = 5;
+    for (let i = 1; i < tierCount; i++) {
+        const ratio = i / tierCount;
+        const leftX = tl[0] + (bl[0] - tl[0]) * ratio;
+        const leftY = tl[1] + (bl[1] - tl[1]) * ratio;
+        const rightX = tr[0] + (br[0] - tr[0]) * ratio;
+        const rightY = tr[1] + (br[1] - tr[1]) * ratio;
+        pctx.beginPath();
+        pctx.moveTo(leftX, leftY);
+        pctx.lineTo(rightX, rightY);
+        pctx.stroke();
+    }
+
+    // Vertical edge detail
+    pctx.strokeStyle = 'rgba(0,0,0,0.3)'; pctx.lineWidth = 0.5;
+    const centerX = x;
+    pctx.beginPath();
+    pctx.moveTo(centerX, tl[1] + 2);
+    pctx.lineTo(centerX, bl[1] - 2);
+    pctx.stroke();
+
+    // --- Status indicators bars (full height on sides) ---
+
+    // Condition bar (left edge - green/yellow/red)
+    const barW = 5;
+    const barH = h - 8;
+    const condH = barH * (cond / 100);
     pctx.fillStyle = condCol;
-    pctx.fillRect(topLeft[0] + 4, bottomLeft[1] - barHeight, barWidth, barHeight);
+    pctx.fillRect(tl[0] - 3, bl[1] - condH, barW, condH);
     pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(topLeft[0] + 4, bottomLeft[1] - (h - 8), barWidth, h - 8);
+    pctx.strokeRect(tl[0] - 3, tl[1], barW, barH);
 
-    // Pressure bar (right side)
-    const pressHeight = (h - 8) * (press / 100);
+    // Pressure bar (right edge)
+    const pressH = barH * (press / 100);
     pctx.fillStyle = pressCol;
-    pctx.fillRect(topRight[0] - 10, bottomRight[1] - pressHeight, barWidth, pressHeight);
+    pctx.fillRect(tr[0] - 2, br[1] - pressH, barW, pressH);
     pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(topRight[0] - 10, bottomRight[1] - (h - 8), barWidth, h - 8);
+    pctx.strokeRect(tr[0] - 2, tr[1], barW, barH);
 
-    // Internal grating on front face
-    pctx.strokeStyle = 'rgba(0,0,0,0.1)'; pctx.lineWidth = 0.5;
+    // --- Detail grating on front face ---
+    pctx.strokeStyle = 'rgba(0,0,0,0.12)'; pctx.lineWidth = 0.5;
     for (let i = 1; i < 4; i++) {
-        const yy = topLeft[1] + (i/4) * (bottomLeft[1] - topLeft[1]);
+        const ratio = i / 4;
+        const lx = tl[0] + (bl[0] - tl[0]) * ratio;
+        const ly = tl[1] + (bl[1] - tl[1]) * ratio;
+        const rx = tr[0] + (br[0] - tr[0]) * ratio;
+        const ry = tr[1] + (br[1] - tr[1]) * ratio;
         pctx.beginPath();
-        pctx.moveTo(topLeft[0] + 12, yy);
-        pctx.lineTo(topRight[0] - 12, yy);
+        pctx.moveTo(lx + 6, ly);
+        pctx.lineTo(rx - 6, ry);
         pctx.stroke();
     }
+
+    // Vertical detail lines
     for (let i = 1; i < 3; i++) {
-        const xx = topLeft[0] + (i/3) * (topRight[0] - topLeft[0]);
+        const ratio = i / 3;
+        const tx = tl[0] + (tr[0] - tl[0]) * ratio;
+        const ty = tl[1] + (tr[1] - tl[1]) * ratio;
+        const bx = bl[0] + (br[0] - bl[0]) * ratio;
+        const by = bl[1] + (br[1] - bl[1]) * ratio;
         pctx.beginPath();
-        pctx.moveTo(xx, topLeft[1] + 6);
-        pctx.lineTo(xx, bottomLeft[1] - 6);
+        pctx.moveTo(tx, ty + 4);
+        pctx.lineTo(bx, by - 4);
         pctx.stroke();
     }
 
-    // Unit label
-    pctx.fillStyle = '#000'; pctx.font = 'bold 10px Tahoma'; pctx.textAlign = 'center';
-    pctx.fillText(u.short, x, y - 4);
+    // --- Labels ---
+    pctx.fillStyle = '#000'; pctx.font = 'bold 9px Tahoma'; pctx.textAlign = 'center';
+    pctx.fillText(u.short, x, y - 10);
 
-    // Condition % text
-    pctx.font = '8px Tahoma'; pctx.fillStyle = u.online ? '#000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', x, y + 12);
+    pctx.font = '7px Tahoma'; pctx.fillStyle = online ? '#000' : '#b02020';
+    pctx.fillText(Math.round(cond) + '%', x, y + 18);
 
-    // Selection highlight
+    // --- Selection glow ---
     if (selected) {
-        pctx.strokeStyle = '#ffd700'; pctx.lineWidth = 3;
+        pctx.strokeStyle = '#ffd700'; pctx.lineWidth = 2.5;
         pctx.beginPath();
-        pctx.moveTo(topLeft[0], topLeft[1]);
-        pctx.lineTo(topRight[0], topRight[1]);
-        pctx.lineTo(bottomRight[0], bottomRight[1]);
-        pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+        pctx.moveTo(tl[0], tl[1]);
+        pctx.lineTo(tr[0], tr[1]);
+        pctx.lineTo(br[0], br[1]);
+        pctx.lineTo(bl[0], bl[1]);
         pctx.stroke();
         pctx.beginPath();
-        pctx.moveTo(topRight[0], topRight[1]);
-        pctx.lineTo(topRightBack[0], topRightBack[1]);
-        pctx.lineTo(bottomRightBack[0], bottomRightBack[1]);
-        pctx.lineTo(bottomRight[0], bottomRight[1]);
+        pctx.moveTo(tr[0], tr[1]);
+        pctx.lineTo(trb[0], trb[1]);
+        pctx.lineTo(brb[0], brb[1]);
+        pctx.lineTo(br[0], br[1]);
         pctx.stroke();
     }
 
-    // Offline X
+    // --- Offline X (large, visible) ---
     if (!u.online) {
-        pctx.strokeStyle = '#b02020'; pctx.lineWidth = 2.5;
-        const d = 16;
+        pctx.strokeStyle = '#b02020'; pctx.lineWidth = 2;
+        const xd = 20;
         pctx.beginPath();
-        pctx.moveTo(x - d, y - d);
-        pctx.lineTo(x + d, y + d);
+        pctx.moveTo(x - xd, y - xd);
+        pctx.lineTo(x + xd, y + xd);
         pctx.stroke();
         pctx.beginPath();
-        pctx.moveTo(x + d, y - d);
-        pctx.lineTo(x - d, y + d);
+        pctx.moveTo(x + xd, y - xd);
+        pctx.lineTo(x - xd, y + xd);
         pctx.stroke();
     }
 
-    // Explosion warning
+    // --- Explosion warning (pulsing) ---
     if (u.online && u.press > 80 && u.cond < 30) {
-        const a = 0.25 + 0.25 * Math.sin(animT / 4);
+        const a = 0.2 + 0.2 * Math.sin(animT / 4);
         pctx.fillStyle = `rgba(255,0,0,${a})`;
         pctx.beginPath();
-        pctx.moveTo(topLeft[0], topLeft[1]);
-        pctx.lineTo(topRight[0], topRight[1]);
-        pctx.lineTo(bottomRight[0], bottomRight[1]);
-        pctx.lineTo(bottomLeft[0], bottomLeft[1]);
+        pctx.moveTo(tl[0], tl[1]);
+        pctx.lineTo(tr[0], tr[1]);
+        pctx.lineTo(br[0], br[1]);
+        pctx.lineTo(bl[0], bl[1]);
         pctx.fill();
     }
 }
