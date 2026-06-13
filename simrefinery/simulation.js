@@ -593,203 +593,141 @@ function drawUnit(u, selected) {
     const x = u.x, y = u.y;
     const cond = u.cond, press = u.press;
     const condCol = condColor(cond);
-    const pressCol = pressColor(press);
     const online = u.online;
 
-    // Much taller proportions - like real refinery columns/towers
-    const w = 30, h = 110, d = 15;
+    // Clean game art style - tall simple rectangles with structure
+    const w = 36, h = 100;
 
-    // Isometric 3D structure with tall proportions
-    // Top corners
-    const tl = [x - w/2, y - h/2 - d/2];
-    const tr = [x + w/2, y - h/2 - d/2];
-    const tb = [x, y - h/2 - d];
+    // Main building bounds
+    const left = x - w/2;
+    const right = x + w/2;
+    const top = y - h/2;
+    const bottom = y + h/2;
 
-    // Bottom corners (front)
-    const bl = [x - w/2, y + h/2 - d/2];
-    const br = [x + w/2, y + h/2 - d/2];
-
-    // Back corners
-    const tlb = [x - w/2, y - h/2 - d];
-    const trb = [x + w/2, y - h/2 - d];
-    const blb = [x - w/2, y + h/2 - d];
-    const brb = [x + w/2, y + h/2 - d];
-
-    // --- Draw 3D structure ---
-
-    // Shadow (ground)
-    pctx.fillStyle = 'rgba(0,0,0,0.25)';
+    // --- Shadow under building ---
+    pctx.fillStyle = 'rgba(0,0,0,0.2)';
     pctx.beginPath();
-    pctx.moveTo(bl[0], bl[1] + 3);
-    pctx.lineTo(br[0], br[1] + 3);
-    pctx.lineTo(br[0] + 6, br[1] + 10);
-    pctx.lineTo(bl[0] + 6, bl[1] + 10);
+    pctx.ellipse(x, bottom + 6, w/2 + 4, 4, 0, 0, Math.PI * 2);
     pctx.fill();
 
-    // Left face (dark)
-    const leftCol = online ? '#7a8a9a' : '#5a4a4a';
-    pctx.fillStyle = leftCol;
-    pctx.beginPath();
-    pctx.moveTo(tl[0], tl[1]);
-    pctx.lineTo(tb[0], tb[1]);
-    pctx.lineTo(blb[0], blb[1]);
-    pctx.lineTo(bl[0], bl[1]);
-    pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
-    pctx.stroke();
+    // --- Main building body (light color) ---
+    const baseColor = online ? '#e8e8e8' : '#9a8a8a';
+    pctx.fillStyle = baseColor;
+    pctx.fillRect(left, top, w, h);
 
-    // Front face (brightest - main visible surface)
-    const frontCol = online ? '#d8e4f0' : '#8a7a7a';
-    pctx.fillStyle = frontCol;
-    pctx.beginPath();
-    pctx.moveTo(tl[0], tl[1]);
-    pctx.lineTo(tr[0], tr[1]);
-    pctx.lineTo(br[0], br[1]);
-    pctx.lineTo(bl[0], bl[1]);
-    pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1.5;
-    pctx.stroke();
+    // --- Dark shadow on right edge (3D depth) ---
+    pctx.fillStyle = online ? '#a8a8a8' : '#6a5a5a';
+    pctx.fillRect(right - 4, top, 4, h);
 
-    // Right face (medium)
-    const rightCol = online ? '#a8b8c8' : '#6a5a5a';
-    pctx.fillStyle = rightCol;
-    pctx.beginPath();
-    pctx.moveTo(tr[0], tr[1]);
-    pctx.lineTo(trb[0], trb[1]);
-    pctx.lineTo(brb[0], brb[1]);
-    pctx.lineTo(br[0], br[1]);
-    pctx.fill();
-    pctx.strokeStyle = '#222'; pctx.lineWidth = 1;
-    pctx.stroke();
+    // --- Dark shadow on bottom edge (3D depth) ---
+    pctx.fillStyle = 'rgba(0,0,0,0.15)';
+    pctx.fillRect(left, bottom - 3, w, 3);
 
-    // Top face (bright)
-    const topCol = online ? '#f0f0f0' : '#9a8a8a';
-    pctx.fillStyle = topCol;
-    pctx.beginPath();
-    pctx.moveTo(tl[0], tl[1]);
-    pctx.lineTo(tr[0], tr[1]);
-    pctx.lineTo(trb[0], trb[1]);
-    pctx.lineTo(tb[0], tb[1]);
-    pctx.fill();
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    pctx.stroke();
+    // --- Structure: visible compartments/sections inside ---
+    pctx.strokeStyle = online ? '#888' : '#555';
+    pctx.lineWidth = 1;
 
-    // --- Add industrial detail: vertical sections/tiers ---
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    const tierCount = 5;
-    for (let i = 1; i < tierCount; i++) {
-        const ratio = i / tierCount;
-        const leftX = tl[0] + (bl[0] - tl[0]) * ratio;
-        const leftY = tl[1] + (bl[1] - tl[1]) * ratio;
-        const rightX = tr[0] + (br[0] - tr[0]) * ratio;
-        const rightY = tr[1] + (br[1] - tr[1]) * ratio;
+    // Horizontal dividers (create tier/compartment look)
+    const compartments = 5;
+    for (let i = 1; i < compartments; i++) {
+        const yy = top + (i / compartments) * h;
         pctx.beginPath();
-        pctx.moveTo(leftX, leftY);
-        pctx.lineTo(rightX, rightY);
+        pctx.moveTo(left + 2, yy);
+        pctx.lineTo(right - 6, yy);
         pctx.stroke();
     }
 
-    // Vertical edge detail
-    pctx.strokeStyle = 'rgba(0,0,0,0.3)'; pctx.lineWidth = 0.5;
-    const centerX = x;
-    pctx.beginPath();
-    pctx.moveTo(centerX, tl[1] + 2);
-    pctx.lineTo(centerX, bl[1] - 2);
-    pctx.stroke();
+    // Vertical dividers (create internal structure)
+    for (let i = 1; i < 2; i++) {
+        const xx = left + (i / 2) * w;
+        pctx.beginPath();
+        pctx.moveTo(xx, top + 3);
+        pctx.lineTo(xx, bottom - 3);
+        pctx.stroke();
+    }
 
-    // --- Status indicators bars (full height on sides) ---
+    // --- Condition indicator bar (left side, full height) ---
+    const condBarW = 5;
+    const condBarH = h - 6;
+    const condH = condBarH * (cond / 100);
 
-    // Condition bar (left edge - green/yellow/red)
-    const barW = 5;
-    const barH = h - 8;
-    const condH = barH * (cond / 100);
+    // Background for condition bar
+    pctx.fillStyle = 'rgba(0,0,0,0.1)';
+    pctx.fillRect(left + 1, top + 3, condBarW, condBarH);
+
+    // Condition bar (filled from bottom)
     pctx.fillStyle = condCol;
-    pctx.fillRect(tl[0] - 3, bl[1] - condH, barW, condH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(tl[0] - 3, tl[1], barW, barH);
+    pctx.fillRect(left + 1, bottom - 3 - condH, condBarW, condH);
 
-    // Pressure bar (right edge)
-    const pressH = barH * (press / 100);
-    pctx.fillStyle = pressCol;
-    pctx.fillRect(tr[0] - 2, br[1] - pressH, barW, pressH);
-    pctx.strokeStyle = '#333'; pctx.lineWidth = 0.5;
-    pctx.strokeRect(tr[0] - 2, tr[1], barW, barH);
+    // Condition bar border
+    pctx.strokeStyle = '#333';
+    pctx.lineWidth = 0.5;
+    pctx.strokeRect(left + 1, top + 3, condBarW, condBarH);
 
-    // --- Detail grating on front face ---
-    pctx.strokeStyle = 'rgba(0,0,0,0.12)'; pctx.lineWidth = 0.5;
-    for (let i = 1; i < 4; i++) {
-        const ratio = i / 4;
-        const lx = tl[0] + (bl[0] - tl[0]) * ratio;
-        const ly = tl[1] + (bl[1] - tl[1]) * ratio;
-        const rx = tr[0] + (br[0] - tr[0]) * ratio;
-        const ry = tr[1] + (br[1] - tr[1]) * ratio;
+    // --- Pressure indicator bar (right side, full height) ---
+    const pressBarW = 5;
+    const pressBarH = h - 6;
+    const pressH = pressBarH * (press / 100);
+
+    // Background for pressure bar
+    pctx.fillStyle = 'rgba(0,0,0,0.1)';
+    pctx.fillRect(right - 6, top + 3, pressBarW, pressBarH);
+
+    // Pressure bar (filled from bottom)
+    pctx.fillStyle = pressColor(press);
+    pctx.fillRect(right - 6, bottom - 3 - pressH, pressBarW, pressH);
+
+    // Pressure bar border
+    pctx.strokeStyle = '#333';
+    pctx.lineWidth = 0.5;
+    pctx.strokeRect(right - 6, top + 3, pressBarW, pressBarH);
+
+    // --- Main building border (strong outline) ---
+    pctx.strokeStyle = selected ? '#ffd700' : '#333';
+    pctx.lineWidth = selected ? 3 : 2;
+    pctx.strokeRect(left, top, w, h);
+
+    // --- Highlight on top edge (beveled 3D effect) ---
+    if (online) {
+        pctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        pctx.lineWidth = 1;
         pctx.beginPath();
-        pctx.moveTo(lx + 6, ly);
-        pctx.lineTo(rx - 6, ry);
+        pctx.moveTo(left + 1, top + 1);
+        pctx.lineTo(right - 1, top + 1);
         pctx.stroke();
     }
 
-    // Vertical detail lines
-    for (let i = 1; i < 3; i++) {
-        const ratio = i / 3;
-        const tx = tl[0] + (tr[0] - tl[0]) * ratio;
-        const ty = tl[1] + (tr[1] - tl[1]) * ratio;
-        const bx = bl[0] + (br[0] - bl[0]) * ratio;
-        const by = bl[1] + (br[1] - bl[1]) * ratio;
-        pctx.beginPath();
-        pctx.moveTo(tx, ty + 4);
-        pctx.lineTo(bx, by - 4);
-        pctx.stroke();
-    }
+    // --- Unit label (centered in building) ---
+    pctx.fillStyle = online ? '#000' : '#888';
+    pctx.font = 'bold 10px Tahoma';
+    pctx.textAlign = 'center';
+    pctx.fillText(u.short, x, y - 8);
 
-    // --- Labels ---
-    pctx.fillStyle = '#000'; pctx.font = 'bold 9px Tahoma'; pctx.textAlign = 'center';
-    pctx.fillText(u.short, x, y - 10);
+    // --- Condition percentage (bottom of building) ---
+    pctx.font = '8px Tahoma';
+    pctx.fillStyle = cond > 60 ? '#2a8a2a' : cond > 30 ? '#c8a000' : '#b02020';
+    pctx.fillText(Math.round(cond) + '%', x, bottom - 6);
 
-    pctx.font = '7px Tahoma'; pctx.fillStyle = online ? '#000' : '#b02020';
-    pctx.fillText(Math.round(cond) + '%', x, y + 18);
-
-    // --- Selection glow ---
-    if (selected) {
-        pctx.strokeStyle = '#ffd700'; pctx.lineWidth = 2.5;
-        pctx.beginPath();
-        pctx.moveTo(tl[0], tl[1]);
-        pctx.lineTo(tr[0], tr[1]);
-        pctx.lineTo(br[0], br[1]);
-        pctx.lineTo(bl[0], bl[1]);
-        pctx.stroke();
-        pctx.beginPath();
-        pctx.moveTo(tr[0], tr[1]);
-        pctx.lineTo(trb[0], trb[1]);
-        pctx.lineTo(brb[0], brb[1]);
-        pctx.lineTo(br[0], br[1]);
-        pctx.stroke();
-    }
-
-    // --- Offline X (large, visible) ---
+    // --- Offline X overlay (if offline) ---
     if (!u.online) {
-        pctx.strokeStyle = '#b02020'; pctx.lineWidth = 2;
-        const xd = 20;
+        pctx.strokeStyle = '#b02020';
+        pctx.lineWidth = 2.5;
+        const d = 18;
         pctx.beginPath();
-        pctx.moveTo(x - xd, y - xd);
-        pctx.lineTo(x + xd, y + xd);
+        pctx.moveTo(x - d, y - d);
+        pctx.lineTo(x + d, y + d);
         pctx.stroke();
         pctx.beginPath();
-        pctx.moveTo(x + xd, y - xd);
-        pctx.lineTo(x - xd, y + xd);
+        pctx.moveTo(x + d, y - d);
+        pctx.lineTo(x - d, y + d);
         pctx.stroke();
     }
 
-    // --- Explosion warning (pulsing) ---
-    if (u.online && u.press > 80 && u.cond < 30) {
-        const a = 0.2 + 0.2 * Math.sin(animT / 4);
+    // --- Explosion warning (pulsing red) ---
+    if (u.online && press > 80 && cond < 30) {
+        const a = 0.15 + 0.15 * Math.sin(animT / 4);
         pctx.fillStyle = `rgba(255,0,0,${a})`;
-        pctx.beginPath();
-        pctx.moveTo(tl[0], tl[1]);
-        pctx.lineTo(tr[0], tr[1]);
-        pctx.lineTo(br[0], br[1]);
-        pctx.lineTo(bl[0], bl[1]);
-        pctx.fill();
+        pctx.fillRect(left, top, w, h);
     }
 }
 
