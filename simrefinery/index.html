@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimRefinery - Oil Refinery Management Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <header class="header">
+            <h1>⚙️ SimRefinery Management System</h1>
+            <div class="header-info">
+                <span id="dayCounter">Day: 1</span>
+                <span id="budgetDisplay">Budget: $100,000</span>
+                <button id="toggleLearning" class="learning-toggle">📚 Learning Mode: OFF</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Dashboard Row 1: Key Metrics -->
+            <section class="dashboard-section metrics-section">
+                <h2>Refinery Status</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <label>Crude Oil Input</label>
+                        <div class="metric-value" id="crudInput">0</div>
+                        <div class="metric-unit">barrels/day</div>
+                    </div>
+                    <div class="metric-card">
+                        <label>Production Output</label>
+                        <div class="metric-value" id="productionOutput">0</div>
+                        <div class="metric-unit">barrels/day</div>
+                    </div>
+                    <div class="metric-card">
+                        <label>Storage Level</label>
+                        <div class="metric-value" id="storageLevel">50</div>
+                        <div class="metric-unit">%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="storageFill" style="width: 50%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <label>System Health</label>
+                        <div class="metric-value health-good" id="systemHealth">100</div>
+                        <div class="metric-unit">%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="healthFill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Row 2: Control Panel -->
+            <section class="dashboard-section control-section">
+                <h2>Operations Control</h2>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="oilInput">Crude Oil Input (barrels/day)</label>
+                        <input type="range" id="oilInput" min="0" max="500" value="200" class="slider">
+                        <span id="oilInputValue">200</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="refiningSpeed">Refining Speed</label>
+                        <input type="range" id="refiningSpeed" min="0.5" max="2" step="0.1" value="1" class="slider">
+                        <span id="refiningSpeedValue">1.0x</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="safetyLevel">Safety Maintenance</label>
+                        <input type="range" id="safetyLevel" min="0" max="100" value="50" class="slider">
+                        <span id="safetyLevelValue">50%</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="environmentalCompliance">Environmental Compliance</label>
+                        <input type="range" id="environmentalCompliance" min="0" max="100" value="50" class="slider">
+                        <span id="environmentalComplianceValue">50%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Row 3: Financial & Environmental -->
+            <section class="dashboard-section financial-section">
+                <h2>Financial & Environmental</h2>
+                <div class="financial-grid">
+                    <div class="financial-card">
+                        <h3>Revenue</h3>
+                        <div class="financial-value positive" id="dailyRevenue">+$0</div>
+                        <div class="financial-unit">per day</div>
+                    </div>
+                    <div class="financial-card">
+                        <h3>Operating Costs</h3>
+                        <div class="financial-value negative" id="dailyCosts">-$0</div>
+                        <div class="financial-unit">per day</div>
+                    </div>
+                    <div class="financial-card">
+                        <h3>Safety Violations</h3>
+                        <div class="financial-value warning" id="safetyViolations">0</div>
+                        <div class="financial-unit">incidents</div>
+                    </div>
+                    <div class="financial-card">
+                        <h3>Emissions Level</h3>
+                        <div class="financial-value" id="emissionsLevel">Low</div>
+                        <div class="financial-unit">status</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Row 4: Process Breakdown -->
+            <section class="dashboard-section process-section">
+                <h2>Refinery Process Flow</h2>
+                <div class="process-flow">
+                    <div class="process-step">
+                        <div class="step-name">Crude Input</div>
+                        <div class="step-value" id="processInput">0</div>
+                    </div>
+                    <div class="process-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-name">Distillation</div>
+                        <div class="step-value" id="processDistillation">0</div>
+                    </div>
+                    <div class="process-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-name">Cracking</div>
+                        <div class="step-value" id="processCracking">0</div>
+                    </div>
+                    <div class="process-arrow">→</div>
+                    <div class="process-step">
+                        <div class="step-name">Product Output</div>
+                        <div class="step-value" id="processOutput">0</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Row 5: Events & Alerts -->
+            <section class="dashboard-section events-section">
+                <h2>Event Log & Alerts</h2>
+                <div class="event-log" id="eventLog">
+                    <div class="event-entry info">🟢 Refinery initialized and ready for operation</div>
+                </div>
+            </section>
+
+            <!-- Game Actions -->
+            <section class="dashboard-section actions-section">
+                <h2>Game Actions</h2>
+                <div class="actions-grid">
+                    <button id="advanceDay" class="action-button primary">Advance Day</button>
+                    <button id="pauseGame" class="action-button">Pause</button>
+                    <button id="triggerDisaster" class="action-button warning">⚠️ Emergency Scenario</button>
+                    <button id="resetGame" class="action-button secondary">Reset Game</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Learning Mode Info Panel -->
+        <div id="learningPanel" class="learning-panel hidden">
+            <h3>📚 Learning Mode Information</h3>
+            <div id="learningContent"></div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

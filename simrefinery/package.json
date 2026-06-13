@@ -1,0 +1,13 @@
+{
+  "name": "simrefinery",
+  "version": "1.0.0",
+  "description": "SimRefinery - Oil Refinery Management Simulation built with Opus 4.8",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": ["simulation", "game", "management", "claude", "opus"],
+  "author": "Ash Hawk",
+  "license": "MIT"
+}
