@@ -10,6 +10,7 @@ A collection of my AI/Python learning projects. Each project lives in its own se
 | [sentinel/](sentinel/) | Personal intelligence & market dashboard — collects news + live market data, analyzes each signal with Claude, and visualizes it (entity graph, briefs). The more advanced evolution of news-analysis. | `cd sentinel && pip install -r requirements.txt && python app.py` |
 | [newsletter-digest/](newsletter-digest/) | Automated daily digest that pulls newsletters from Gmail, summarizes them with Claude, and emails a clean digest. | `cd newsletter-digest && python main.py` (needs Gmail credentials) |
 | [focus-timer/](focus-timer/) | A self-contained single-page focus/Pomodoro timer. | `open focus-timer/index.html` |
+| [trade-route-tycoon/](trade-route-tycoon/) | *Aegean Trader* — a Greek/Roman ship-trading **and** city-building game (Phaser 3): a real WebGL ocean, dynamic economy, isometric cities, sieges, diplomacy & research, rival factions, save/load, and an optional Oracle (Claude) advisor. | `open trade-route-tycoon/index.html` |
 | [workout-tracker/](workout-tracker/) | Tiny CLI workout logger + stats analyzer over a shared CSV. | `cd workout-tracker && python workout_tracker.py` |
 
 ## Layout & conventions

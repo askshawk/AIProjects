@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aegean Trader — Merchant of the Middle Sea</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b1d2a; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fdf6e3; }
+    #game { width: 100vw; height: 100vh; }
+
+    .panel {
+      position: fixed; background: rgba(13, 28, 40, 0.92);
+      border: 1px solid rgba(212, 175, 90, 0.35); border-radius: 12px;
+      padding: 14px 16px; backdrop-filter: blur(4px); z-index: 10;
+    }
+    .hidden { display: none; }
+
+    /* Draggable / collapsible panel controls (ui.js) */
+    /* Panel controls styled as distinct little buttons so the minimize isn't mis-clicked */
+    .ui-ctrls { position: absolute; top: 5px; right: 6px; display: flex; gap: 5px; z-index: 3; }
+    .ui-grip, .ui-mini { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+      line-height: 1; user-select: none; border-radius: 4px; background: rgba(0,0,0,0.35); border: 1px solid rgba(212,175,90,0.35); }
+    .ui-grip { cursor: grab; color: #9fc3dd; font-size: 11px; touch-action: none; }
+    .ui-grip:active { cursor: grabbing; }
+    .ui-mini { cursor: pointer; color: #cdb98a; font-size: 14px; }
+    .ui-grip:hover, .ui-mini:hover { color: #f2c14e; border-color: #f2c14e; }
+    .panel.collapsed { width: auto !important; min-width: 0 !important; padding: 6px 58px 6px 12px !important; }
+    .panel.collapsed > *:not(.ui-ctrls) { display: none !important; }
+    .panel.collapsed::before { content: attr(data-label); color: #cdb98a; font-size: 12px; font-family: Georgia, serif; }
+    /* keep the menu + save controls reachable even when the Polis panel is minimized */
+    .panel.collapsed > #menu-row, .panel.collapsed > #sys-row { display: flex !important; margin-top: 8px; }
+
+    #hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+      color: #cdb98a; font-size: 13px; background: rgba(11,29,42,0.6);
+      padding: 7px 14px; border-radius: 8px; z-index: 10; }
+
+    /* Top-center: scoreboard, weather, transient event banner */
+    #topbar { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex;
+      flex-direction: column; align-items: center; gap: 6px; z-index: 10; pointer-events: none; }
+    #scoreboard { font-family: Georgia, serif; font-size: 15px; color: #cdb98a;
+      background: rgba(11,29,42,0.6); padding: 6px 14px; border-radius: 8px; }
+    #scoreboard .ahead { color: #f2c14e; font-weight: 700; }
+    #weather { font-size: 13px; color: #aac4d6; background: rgba(11,29,42,0.5);
+      padding: 4px 12px; border-radius: 8px; }
+    #event-banner { font-family: Georgia, serif; font-size: 18px; color: #f7e7b0;
+      background: rgba(40,24,10,0.85); border: 1px solid rgba(212,175,90,0.5);
+      padding: 10px 20px; border-radius: 10px; opacity: 0; transform: translateY(-8px);
+      transition: opacity .35s, transform .35s; }
+    #event-banner.show { opacity: 1; transform: translateY(0); }
+
+    /* Market (right) */
+    #market { top: 14px; right: 14px; width: 360px; }
+    #market h2 { margin: 0 0 4px; font-size: 15px; color: #f2c14e; font-family: Georgia, serif; }
+    #market-sub { font-size: 12px; color: #9fc3dd; margin-bottom: 10px; }
+    .mrow { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .mname { font-weight: 600; font-size: 13px; }
+    .mhave { font-size: 12px; color: #cdb98a; width: 50px; text-align: right; }
+    .mbtn { font-size: 11px; border: none; border-radius: 6px; padding: 5px 7px; cursor: pointer; color: #0b1d2a; font-weight: 600; }
+    .mbtn.buy  { background: #8ecae6; }
+    .mbtn.sell { background: #b5e48c; }
+    .mbtn.maxed { background: #555; color: #aaa; cursor: default; }
+    .mbtn:hover:not(.maxed) { filter: brightness(1.1); }
+    #market-foot { margin-top: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    #open-shipyard { background: #d4af5a; color: #2a1c08; border: none; border-radius: 6px;
+      padding: 5px 9px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    #open-shipyard:hover { filter: brightness(1.08); }
+    .flash { color: #ffb4a2; font-size: 12px; min-height: 14px; opacity: 0; transition: opacity .2s; }
+    .flash.show { opacity: 1; }
+
+    /* Shipyard (right, below market) */
+    #shipyard { top: 330px; right: 14px; width: 360px; }
+    #shipyard h2 { margin: 0 0 4px; font-size: 15px; color: #d4af5a; font-family: Georgia, serif; }
+    #shipyard-sub { font-size: 12px; color: #9fc3dd; margin-bottom: 10px; }
+    #shipyard .mbtn.buy { background: #d4af5a; }
+    #close-shipyard { float: right; cursor: pointer; color: #9fc3dd; font-size: 16px; line-height: 1; }
+
+    /* Oracle (bottom-left) */
+    #oracle { bottom: 56px; left: 14px; width: 320px; }
+    #ask-hm { background: #b08fd6; color: #1a0f2a; border: none; border-radius: 8px;
+      padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 13px; }
+    #ask-hm:hover { filter: brightness(1.07); }
+    #hm-out { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #e9ddf2; font-style: italic;
+      max-height: 180px; overflow-y: auto; }
+    #hm-out code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; font-size: 11px; font-style: normal; }
+
+    /* Minimap + wind (bottom-right) */
+    #minimap-wrap { bottom: 14px; right: 14px; padding: 8px; }
+    #minimap { display: block; border-radius: 6px; border: 1px solid rgba(212,175,90,0.25); }
+    #wind { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: #cdb98a; }
+    #wind-arrow { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+      font-size: 18px; color: #f2c14e; transition: transform 0.4s ease; }
+
+    /* Polis status + Pantheon powers (top-left) */
+    #pantheon { top: 12px; left: 14px; min-width: 236px; padding: 10px 12px; }
+    #stat-row { font-family: monospace; font-size: 14px; color: #fdf6e3; }
+    #status-tip { font-size: 12px; color: #9fc3dd; margin: 4px 0 8px; }
+    #pantheon-gods { display: flex; gap: 6px; }
+    .god { width: 36px; height: 34px; font-size: 17px; border: 1px solid rgba(212,175,90,0.35);
+      background: rgba(40,30,18,0.7); border-radius: 7px; cursor: pointer; transition: opacity .2s; }
+    .god:hover:not(:disabled):not(.cant) { background: rgba(70,52,28,0.9); }
+    .god:disabled, .god.cant { opacity: 0.32; }
+    .god:disabled { cursor: default; }
+    #standing-line { margin-top: 7px; font-size: 11px; }
+    #menu-row { display: flex; gap: 6px; margin-top: 8px; }
+    #menu-row button { flex: 1; font-size: 16px; padding: 4px 0; border: 1px solid rgba(212,175,90,0.3);
+      background: rgba(40,30,18,0.6); border-radius: 6px; cursor: pointer; }
+    #menu-row button:hover { background: rgba(70,52,28,0.9); }
+    .modal { top: 90px; left: 50%; transform: translateX(-50%); width: 360px; max-height: 78vh; overflow-y: auto; }
+    .modal h2 { margin: 0 0 10px; font-family: Georgia, serif; color: #f2c14e; font-size: 18px; }
+    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; color: #9fc3dd; font-size: 16px; }
+    .mrow .mbtn.act { background: #d4af5a; } .mrow .mbtn.bad { background: #c0584a; color: #fff; }
+    .mrow .mbtn.off { background: #5e574b; color: #cdbfae; cursor: default; }
+    .qdone { color: #9fe08f; } .qactive { color: #fdf6e3; }
+    #victory { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+      background: rgba(8,14,22,0.82); backdrop-filter: blur(3px); }
+    #victory.hidden { display: none; }
+    #victory-box { text-align: center; background: rgba(20,28,38,0.96); border: 1px solid rgba(212,175,90,0.5);
+      border-radius: 14px; padding: 30px 44px; }
+    #victory-box h1 { font-family: Georgia, serif; color: #f2c14e; margin: 0 0 8px; }
+    #victory-box p { color: #cdb98a; margin: 0 0 18px; }
+    #victory-box button { background: #d4af5a; color: #2a1c08; border: none; border-radius: 8px; padding: 9px 16px;
+      font-weight: 700; cursor: pointer; margin: 0 5px; }
+    #sys-row { display: flex; gap: 6px; margin-top: 8px; }
+    #sys-row button { flex: 1; font-size: 11px; padding: 4px 0; border: 1px solid rgba(212,175,90,0.3);
+      background: rgba(40,30,18,0.6); color: #cdb98a; border-radius: 6px; cursor: pointer; }
+    #sys-row button:hover { background: rgba(70,52,28,0.9); color: #f2c14e; }
+
+    /* Island inspector (modal, top-center) */
+    #island-panel { top: 110px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; }
+    #island-panel h2 { margin: 0 0 6px; font-family: Georgia, serif; color: #f2c14e; font-size: 17px; }
+    #island-owner, #island-garrison { font-size: 13px; color: #cdb98a; margin-bottom: 4px; }
+    #island-extra { font-size: 12px; color: #9fc3dd; margin-bottom: 4px; }
+    #island-actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+    #island-actions .mbtn { background: #d4af5a; }
+    #island-actions .mbtn:disabled { background: #555; color: #aaa; cursor: default; }
+    #close-island { position: absolute; top: 8px; right: 12px; cursor: pointer; color: #9fc3dd; font-size: 16px; }
+
+    /* Siege banner (top-center) */
+    #siege { font-family: Georgia, serif; font-size: 14px; color: #ffb37a;
+      background: rgba(60,18,10,0.7); padding: 4px 12px; border-radius: 8px; }
+    #siege:empty { display: none; }
+
+    /* Game over */
+    #gameover { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+      background: rgba(8,14,22,0.82); backdrop-filter: blur(3px); }
+    #gameover.hidden { display: none; }
+    #gameover-box { text-align: center; background: rgba(20,28,38,0.95); border: 1px solid rgba(212,175,90,0.4);
+      border-radius: 14px; padding: 30px 40px; }
+    #gameover-box h1 { font-family: Georgia, serif; color: #e08a6e; margin: 0 0 8px; }
+    #gameover-box p { color: #cdb98a; margin: 0 0 18px; }
+    #restart { background: #d4af5a; color: #2a1c08; border: none; border-radius: 8px; padding: 10px 18px;
+      font-weight: 700; font-size: 15px; cursor: pointer; }
+    #restart:hover { filter: brightness(1.08); }
+
+    /* While managing a city, hide all the sea-view overlays */
+    body.in-city #topbar, body.in-city #market, body.in-city #shipyard,
+    body.in-city #oracle, body.in-city #minimap-wrap, body.in-city #pantheon,
+    body.in-city #island-panel, body.in-city #hint { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- Top-center HUD: standings, weather, and divine-event banner -->
+  <div id="topbar">
+    <div id="scoreboard"></div>
+    <div id="weather">☀ Fair winds</div>
+    <div id="siege"></div>
+    <div id="event-banner"></div>
+  </div>
+
+  <!-- Polis status + Pantheon powers -->
+  <div id="pantheon" class="panel">
+    <div id="stat-row">💰 <b id="gold-val">240</b>d&nbsp;&nbsp;⚱ <b id="favor-val">0</b>&nbsp;&nbsp;🛡 <b id="army-val">25</b>&nbsp;&nbsp;📦 <b id="hold-val">0/30</b></div>
+    <div id="status-tip">Click the sea to set sail.</div>
+    <div id="pantheon-gods">
+      <button class="god" data-power="poseidon" title="Poseidon — Calm the Seas (8 Favor)">🔱</button>
+      <button class="god" data-power="zeus" title="Zeus — Thunderbolt (6 Favor)">⚡</button>
+      <button class="god" data-power="hermes" title="Hermes — Blessing, +25% sales (10 Favor)">☤</button>
+      <button class="god" data-power="athena" title="Athena — Oracle's Wisdom (5 Favor)">🦉</button>
+      <button class="god" data-power="ares" title="Ares — Rally the Defenders of a besieged island (15 Favor)">⚔</button>
+    </div>
+    <div id="standing-line"></div>
+    <div id="menu-row">
+      <button data-modal="quests-modal" title="Quests">📜</button>
+      <button data-modal="diplomacy-modal" title="Diplomacy">🤝</button>
+      <button data-modal="research-modal" title="Research">🔬</button>
+      <button data-modal="routes-modal" title="Trade Routes">⛵</button>
+      <button id="btn-mute" title="Sound on/off">🔊</button>
+    </div>
+    <div id="sys-row">
+      <button id="btn-save">💾 Save</button>
+      <button id="btn-load">⟳ Load</button>
+      <button id="btn-new">✦ New</button>
+    </div>
+  </div>
+
+  <!-- Quests / Diplomacy / Research / Trade-routes modals (filled by game.js) -->
+  <div id="quests-modal" class="panel modal hidden">
+    <span class="modal-close" data-modal="quests-modal">✕</span>
+    <h2>📜 Quests</h2><div id="quests-body"></div>
+  </div>
+  <div id="diplomacy-modal" class="panel modal hidden">
+    <span class="modal-close" data-modal="diplomacy-modal">✕</span>
+    <h2>🤝 Diplomacy</h2><div id="diplomacy-body"></div>
+  </div>
+  <div id="research-modal" class="panel modal hidden">
+    <span class="modal-close" data-modal="research-modal">✕</span>
+    <h2>🔬 Research</h2><div id="research-sub"></div><div id="research-body"></div>
+  </div>
+  <div id="routes-modal" class="panel modal hidden">
+    <span class="modal-close" data-modal="routes-modal">✕</span>
+    <h2>⛵ Trade Routes</h2><div id="routes-sub"></div><div id="routes-body"></div>
+  </div>
+
+  <!-- Victory -->
+  <div id="victory" class="hidden">
+    <div id="victory-box">
+      <h1>Hegemony of the Aegean!</h1>
+      <p>Your polis rules the Middle Sea. The age belongs to you.</p>
+      <button id="victory-continue">Keep playing</button>
+      <button id="victory-new">✦ New game</button>
+    </div>
+  </div>
+
+  <!-- Island inspector — click any island -->
+  <div id="island-panel" class="panel hidden">
+    <span id="close-island">✕</span>
+    <h2 id="island-name"></h2>
+    <div id="island-owner"></div>
+    <div id="island-garrison"></div>
+    <div id="island-extra"></div>
+    <div id="island-actions">
+      <button class="mbtn" id="btn-siege" disabled>⚔ Lay Siege</button>
+      <button class="mbtn" id="btn-city" disabled>🏛 Build City</button>
+    </div>
+  </div>
+
+  <!-- Agora (market) — shown when docked at a city -->
+  <div id="market" class="panel hidden">
+    <h2 id="market-title"></h2>
+    <div id="market-sub">Buy where a good is exported, sail it to a city that seeks it, sell high.</div>
+    <div id="market-rows"></div>
+    <div id="market-foot">
+      <span>Treasury: <b id="market-gold"></b></span>
+      <button id="open-shipyard">⚒ Shipyard</button>
+    </div>
+    <div id="market-flash" class="flash"></div>
+  </div>
+
+  <!-- Shipyard — buy upgrades with gold while docked -->
+  <div id="shipyard" class="panel hidden">
+    <span id="close-shipyard">✕</span>
+    <h2>⚒ The Shipyard</h2>
+    <div id="shipyard-sub">Invest your drachmae in a finer vessel.</div>
+    <div id="shipyard-rows"></div>
+    <div id="shipyard-flash" class="flash"></div>
+  </div>
+
+  <!-- Oracle of Delphi — optional AI advisor (needs the server) -->
+  <div id="oracle" class="panel">
+    <button id="ask-hm">🏛 Consult the Oracle</button>
+    <div id="hm-out">The Oracle of Delphi reads the markets and the winds, and foretells your most profitable voyage.</div>
+  </div>
+
+  <!-- Minimap + live wind -->
+  <div id="minimap-wrap" class="panel">
+    <canvas id="minimap" width="180" height="122"></canvas>
+    <div id="wind"><span id="wind-arrow">➤</span><span>wind: <b id="wind-strength">calm</b></span></div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" class="hidden">
+    <div id="gameover-box">
+      <h1>Your empire has fallen</h1>
+      <p>The last of your islands is lost to the powers of the Middle Sea.</p>
+      <button id="restart">⚓ Begin anew</button>
+    </div>
+  </div>
+
+  <div id="hint">WASD / arrows to sail &nbsp;•&nbsp; click sea to auto-route &nbsp;•&nbsp; click an island to inspect &nbsp;•&nbsp; dock to trade &amp; upgrade &nbsp;•&nbsp; spend Favor on the gods</div>
+
+  <script src="js/economy.js"></script>
+  <script src="js/pathfinding.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/city.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
