@@ -12,8 +12,10 @@ import Phaser from "phaser";
 import { CityScene } from "./phaser/CityScene";
 import { MapScene } from "./phaser/MapScene";
 
-const WIDTH = 560;
-const HEIGHT = 360;
+// Sized to fit half of the .grid-2 layout at our container width; Phaser FIT
+// mode handles scaling inside the frame on smaller viewports.
+const WIDTH = 896;
+const HEIGHT = 576;
 
 export default function PhaserGame({ kind, data }: { kind: "city" | "map"; data: unknown }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,12 @@ export default function PhaserGame({ kind, data }: { kind: "city" | "map"; data:
       width: WIDTH,
       height: HEIGHT,
       backgroundColor: "#e6ddcc",
+      // Crisp tile edges (no anti-alias seams between grass tiles) and pixel-
+      // snapped sprite positions. These two flags are what makes a 2D tilemap
+      // look clean instead of slightly blurry/seamed.
+      pixelArt: false,
+      roundPixels: true,
+      render: { antialias: false, pixelArt: false },
       scene: kind === "city" ? [CityScene] : [MapScene],
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     });
@@ -55,7 +63,14 @@ export default function PhaserGame({ kind, data }: { kind: "city" | "map"; data:
   return (
     <div
       ref={containerRef}
-      style={{ width: WIDTH, height: HEIGHT, maxWidth: "100%", borderRadius: 10, overflow: "hidden", border: "1px solid var(--line)" }}
+      style={{
+        width: "100%",
+        aspectRatio: `${WIDTH} / ${HEIGHT}`,
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1px solid var(--line-strong)",
+        boxShadow: "inset 0 0 0 3px var(--parchment), 0 2px 6px var(--shadow)",
+      }}
     />
   );
 }

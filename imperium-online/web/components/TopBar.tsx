@@ -9,9 +9,7 @@ export default function TopBar() {
   const router = useRouter();
   return (
     <header className="topbar">
-      <Link href="/" style={{ fontWeight: 700, textDecoration: "none", letterSpacing: "0.04em" }}>
-        IMPERIVM
-      </Link>
+      <Link href="/" className="brand">IMPERIVM</Link>
       <nav>
         <Link href="/play">City</Link>
         <Link href="/map">World map</Link>

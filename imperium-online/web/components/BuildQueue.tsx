@@ -58,7 +58,10 @@ export default function BuildQueue({
         const remaining = new Date(job.completes_at).getTime() - now;
         return (
           <div className="queue-item" key={job.id}>
-            <span>
+            <span className="thumb">
+              <img src={`/assets/medieval/${job.building}.png`} alt="" />
+            </span>
+            <span className="label">
               {BUILDING_LABELS[job.building] ?? job.building} → level {job.target_level}
             </span>
             <span className="countdown">{formatRemaining(remaining)}</span>

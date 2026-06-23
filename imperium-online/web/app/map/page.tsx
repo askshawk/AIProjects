@@ -41,11 +41,11 @@ export default function MapPage() {
       <div className="container">
         <h1>The known world</h1>
         <p className="muted">
-          Every <em>colonia</em> in the shared world. Yours is marked in terracotta. Drag to pan.
+          Every <em>colonia</em> in the shared world — yours encircled in laurel-gold. Drag to pan, scroll to zoom.
         </p>
         {error && <div className="error">{error}</div>}
         {data ? (
-          <div className="card" style={{ display: "inline-block" }}>
+          <div className="card">
             <PhaserGame kind="map" data={data} />
           </div>
         ) : (

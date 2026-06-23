@@ -93,6 +93,14 @@ web/                     Next.js + Phaser client
   lib/                   api.ts (typed fetch + JWT), auth.tsx (auth context)
 ```
 
+## Credits
+
+All third-party assets are public-domain (CC0) or open-font-license (OFL); no attribution is legally required, but credit where credit's due:
+
+- **Sprite art** — Kenney "Medieval RTS" pack ([kenney.nl/assets/medieval-rts](https://kenney.nl/assets/medieval-rts)), CC0.
+- **Fonts** — [Cinzel](https://fonts.google.com/specimen/Cinzel) and [Marcellus SC](https://fonts.google.com/specimen/Marcellus+SC) from Google Fonts, OFL, self-hosted under `web/public/assets/fonts/` so there's no runtime CDN dependency.
+- **Resource icons** — hand-drawn inline SVGs in `web/components/ResourceIcons.tsx`, no third-party source.
+
 ## What's next (the roadmap this spine supports)
 
 Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
