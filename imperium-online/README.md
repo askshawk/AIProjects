@@ -105,8 +105,11 @@ All third-party assets are public-domain (CC0) or open-font-license (OFL); no at
 
 Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
 
-1. **Resource costs & limits** — charge `game_config.building_cost` on build (one check in
-   the router), warehouse/population caps.
+1. ~~**Resource costs & limits**~~ ✅ **Done.** Builds charge wood/stone/silver up front
+   (`game_config.building_cost`), and a Farm provides population that every building draws
+   from — you can't queue past the cap until you raise the Farm. The server previews each
+   building's next-upgrade economics (`UpgradeOut`) so the client renders costs and disables
+   unaffordable/pop-blocked buttons without duplicating any balance math.
 2. **Units & recruitment** — same timer pattern as builds.
 3. **Movement & combat** — `send army` → a `Movement` event with `arrives_at`; the worker
    resolves battles while both players are offline. This is where the worker earns its keep.

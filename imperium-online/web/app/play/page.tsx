@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { getMyCity, queueBuild, type City } from "@/lib/api";
 import BuildQueue from "@/components/BuildQueue";
+import BuildCostPanel from "@/components/BuildCostPanel";
 import TopBar from "@/components/TopBar";
 import { RESOURCE_ICONS } from "@/components/ResourceIcons";
 
@@ -17,6 +18,7 @@ const BUILDINGS: { key: keyof City; building: string; label: string }[] = [
   { key: "timber_camp_level", building: "timber_camp", label: "Timber Camp" },
   { key: "quarry_level", building: "quarry", label: "Quarry" },
   { key: "silver_mine_level", building: "silver_mine", label: "Silver Mine" },
+  { key: "farm_level", building: "farm", label: "Farm" },
 ];
 
 const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
@@ -59,11 +61,15 @@ export default function PlayPage() {
   async function build(building: string) {
     if (!token || !city) return;
     try {
+      setError(null);
       setCity(await queueBuild(token, city.id, building));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Build failed");
     }
   }
+
+  // Look up the server-computed next-upgrade preview for a building.
+  const upgradeFor = (building: string) => city?.upgrades.find((u) => u.building === building);
 
   if (!ready || !token) return null;
 
@@ -105,18 +111,34 @@ export default function PlayPage() {
 
               <div className="card">
                 <h3>Buildings</h3>
-                {BUILDINGS.map((b) => (
-                  <div className="building-row" key={b.building}>
-                    <div className="thumb">
-                      <img src={`/assets/medieval/${b.building}.png`} alt="" />
-                    </div>
-                    <div>
-                      <span className="name">{b.label}</span>
-                      <span className="lvl">level {city[b.key] as number}</span>
-                    </div>
-                    <button className="btn" onClick={() => build(b.building)}>Upgrade</button>
+
+                <div className="population">
+                  <span>Population</span>
+                  <div className={`track${city.population_used >= city.population_cap ? " full" : ""}`}>
+                    <span style={{ width: `${Math.min(100, (city.population_used / city.population_cap) * 100)}%` }} />
                   </div>
-                ))}
+                  <span className="count">{city.population_used} / {city.population_cap}</span>
+                </div>
+
+                {BUILDINGS.map((b) => {
+                  const up = upgradeFor(b.building);
+                  const blocked = !up || up.maxed || !up.affordable || !up.pop_ok;
+                  return (
+                    <div className="building-row" key={b.building}>
+                      <div className="thumb">
+                        <img src={`/assets/medieval/${b.building}.png`} alt="" />
+                      </div>
+                      <div>
+                        <span className="name">{b.label}</span>
+                        <span className="lvl">level {city[b.key] as number}</span>
+                        {up && <BuildCostPanel upgrade={up} city={city} />}
+                      </div>
+                      <button className="btn" onClick={() => build(b.building)} disabled={blocked}>
+                        Upgrade
+                      </button>
+                    </div>
+                  );
+                })}
 
                 <h3 style={{ marginTop: 24 }}>Build queue</h3>
                 <BuildQueue jobs={city.build_jobs} onComplete={refresh} />

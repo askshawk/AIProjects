@@ -310,6 +310,35 @@ input:focus {
   transition: width 0.4s ease;
 }
 
+/* -------------------------------- population ---------------------------- */
+
+.population {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-family: "Marcellus SC", serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.population .track {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.population .track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--laurel), #74854f);
+  transition: width 0.4s ease;
+}
+.population .track.full > span { background: linear-gradient(90deg, var(--terracotta-dark), var(--terracotta)); }
+.population .count { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* --------------------------------- buildings ---------------------------- */
 
 .building-row {
@@ -321,6 +350,20 @@ input:focus {
   border-bottom: 1px dashed var(--line);
 }
 .building-row:last-child { border-bottom: none; }
+
+.cost-line {
+  display: flex;
+  gap: 12px;
+  margin-top: 3px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.cost-line .ci { display: inline-flex; align-items: center; gap: 3px; }
+.cost-line .ci.short { color: var(--terracotta-dark); font-weight: 600; }
+.cost-line .ci svg { width: 14px; height: 14px; }
+.cost-line .meta { color: var(--muted); }
+.cost-line .blocked { color: var(--terracotta-dark); font-weight: 600; }
 .building-row .thumb {
   width: 40px;
   height: 40px;

@@ -1,8 +1,9 @@
 """
-City endpoints — the gameplay surface of the slice.
+City endpoints — the gameplay surface.
 
   GET  /cities/me              → your city, fast-forwarded to right now.
-  POST /cities/{id}/builds     → queue an upgrade.
+  POST /cities/{id}/builds     → queue an upgrade (charges resources, gated by
+                                 population).
 
 Every handler runs catch_up FIRST so it always operates on current state. The
 client is never trusted to tell us how much time passed — the server reads it
@@ -11,27 +12,66 @@ from the stored timestamps.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from .. import game_config
+from .. import economy, game_config
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import BuildJob, City, User, utcnow
-from ..schemas import BuildJobOut, BuildRequest, CityOut
+from ..schemas import BuildJobOut, BuildRequest, CityOut, UpgradeOut
 from ..simulation import catch_up
 
 router = APIRouter(prefix="/cities", tags=["cities"])
 
 
-def _serialize(city: City, session: Session) -> CityOut:
-    """City → wire format, including only still-pending build jobs (the active
-    timers the client cares about)."""
-    pending = session.exec(
+def _pending_jobs(session: Session, city: City) -> list[BuildJob]:
+    return session.exec(
         select(BuildJob)
         .where(BuildJob.city_id == city.id, BuildJob.status == "queued")
         .order_by(BuildJob.completes_at)
     ).all()
+
+
+def _upgrade_previews(city: City, pending: list[BuildJob]) -> list[UpgradeOut]:
+    """For each building, describe the next upgrade: cost, time, population
+    impact, and whether it's currently allowed. This is what powers the cost
+    panel and the enabled/disabled state of the Upgrade buttons."""
+    counts = economy.pending_counts(pending)
+    previews: list[UpgradeOut] = []
+    for building in game_config.BUILDINGS:
+        target = economy.next_target_level(city, counts, building)
+        maxed = target > game_config.MAX_LEVEL
+        cost = game_config.building_cost(building, target)
+        # Population if we DID queue this upgrade (this building +1).
+        after_levels = economy.effective_levels(city, counts, extra=building)
+        pop_after = economy.total_population_used(after_levels)
+        pop_cap_after = economy.population_cap(after_levels)
+        previews.append(
+            UpgradeOut(
+                building=building,
+                target_level=target,
+                cost=cost,
+                seconds=game_config.build_seconds(building, target, city.forum_level),
+                population_after=pop_after,
+                affordable=economy.can_afford(city, cost),
+                pop_ok=pop_after <= pop_cap_after,
+                maxed=maxed,
+            )
+        )
+    return previews
+
+
+def _serialize(city: City, session: Session) -> CityOut:
+    """City → wire format: resources, building levels, population, per-building
+    upgrade previews, and the active build queue."""
+    pending = _pending_jobs(session, city)
+    counts = economy.pending_counts(pending)
+    # Population reflects everything queued (upgrades are committed the moment
+    # you pay for them), so use effective levels.
+    eff = economy.effective_levels(city, counts)
     return CityOut(
         id=city.id,
         name=city.name,
@@ -45,7 +85,11 @@ def _serialize(city: City, session: Session) -> CityOut:
         timber_camp_level=city.timber_camp_level,
         quarry_level=city.quarry_level,
         silver_mine_level=city.silver_mine_level,
+        farm_level=city.farm_level,
         capacity=game_config.warehouse_capacity(city.forum_level),
+        population_used=economy.total_population_used(eff),
+        population_cap=economy.population_cap(eff),
+        upgrades=_upgrade_previews(city, pending),
         build_jobs=[
             BuildJobOut(
                 id=j.id,
@@ -92,33 +136,48 @@ def queue_build(
     if body.building not in game_config.BUILDINGS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown building: {body.building}")
 
-    # Resolve anything already finished before we reason about the queue.
+    # Resolve anything already finished before we reason about cost/queue.
     now = utcnow()
     catch_up(session, city, now)
 
-    # Single city-wide sequential build queue (Grepolis-style): a new job starts
-    # when the last queued one finishes, and its target stacks on top of any
-    # pending upgrades to the same building.
-    pending = session.exec(
-        select(BuildJob)
-        .where(BuildJob.city_id == city.id, BuildJob.status == "queued")
-        .order_by(BuildJob.completes_at)
-    ).all()
-
-    already_queued_for_building = sum(1 for j in pending if j.building == body.building)
-    target_level = city.level_of(body.building) + already_queued_for_building + 1
+    pending = _pending_jobs(session, city)
+    counts = economy.pending_counts(pending)
+    target_level = economy.next_target_level(city, counts, body.building)
     if target_level > game_config.MAX_LEVEL:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             f"{body.building} is already at or queued to max level ({game_config.MAX_LEVEL})",
         )
 
-    # NOTE: resource costs (game_config.building_cost) are intentionally NOT
-    # charged yet — that's the first roadmap step, a check right here.
+    # --- gate 1: resources (charged up front) ---------------------------------
+    cost = game_config.building_cost(body.building, target_level)
+    if not economy.can_afford(city, cost):
+        need = ", ".join(
+            f"{int(amount)} {res}"
+            for res, amount in cost.items()
+            if city.resource(res) < amount
+        )
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Not enough resources for {body.building} → level {target_level} (need {need})",
+        )
+
+    # --- gate 2: population ---------------------------------------------------
+    after_levels = economy.effective_levels(city, counts, extra=body.building)
+    pop_after = economy.total_population_used(after_levels)
+    pop_cap = economy.population_cap(after_levels)
+    if pop_after > pop_cap:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Not enough population ({pop_after}/{pop_cap}) — upgrade the Farm first",
+        )
+
+    # Both gates passed: deduct resources, then queue the job. The single
+    # city-wide queue is sequential, so this job starts when the last one ends.
+    for res, amount in cost.items():
+        city.set_resource(res, city.resource(res) - amount)
 
     start_at = pending[-1].completes_at if pending else now
-    from datetime import timedelta
-
     duration = game_config.build_seconds(body.building, target_level, city.forum_level)
     job = BuildJob(
         city_id=city.id,
@@ -128,6 +187,7 @@ def queue_build(
         completes_at=start_at + timedelta(seconds=duration),
     )
     session.add(job)
+    session.add(city)
     session.commit()
     session.refresh(city)
     return _serialize(city, session)

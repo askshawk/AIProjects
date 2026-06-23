@@ -27,15 +27,46 @@ PRODUCERS = {
 
 # Every building a city can have, with its starting level. New cities are
 # founded with everything at level 1 so there's something producing from t=0.
-BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine")
+# The Farm produces no resources — it provides the population that every other
+# building consumes (see population_provided / population_used below).
+BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm")
 STARTING_LEVELS = {b: 1 for b in BUILDINGS}
 
 # Max level so the client can grey out the button and the server can reject the
 # command. Keeps the slice bounded.
 MAX_LEVEL = 30
 
-# Starting resources for a freshly founded city.
-STARTING_RESOURCES = {"wood": 200.0, "stone": 200.0, "silver": 100.0}
+# Starting resources for a freshly founded city — enough to fund a couple of
+# upgrades immediately, then you must wait on production (the core loop).
+STARTING_RESOURCES = {"wood": 500.0, "stone": 500.0, "silver": 250.0}
+
+
+def population_provided(farm_level: int) -> int:
+    """Total population the Farm feeds at a given level.
+
+    Level 1 supports 100 citizens; each level adds 40. This is the hard cap on
+    how much you can build — queue an upgrade that would exceed it and the
+    server rejects the command until you raise the Farm.
+    """
+    return 100 + 40 * (farm_level - 1)
+
+
+# How much population each building occupies *per level* (cumulative: a level-3
+# timber camp uses 3x this). The Farm tends itself cheaply.
+_POPULATION_PER_LEVEL = {
+    "forum": 5,
+    "timber_camp": 4,
+    "quarry": 4,
+    "silver_mine": 5,
+    "farm": 3,
+}
+
+
+def population_used(building: str, level: int) -> int:
+    """Population occupied by `building` when it sits at `level` (cumulative)."""
+    if level <= 0:
+        return 0
+    return _POPULATION_PER_LEVEL.get(building, 4) * level
 
 
 def production_per_hour(building_level: int) -> float:

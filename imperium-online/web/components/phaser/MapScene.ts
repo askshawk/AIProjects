@@ -4,7 +4,7 @@
 // "island" patches (grass tile + rocks/trees + the Forum sprite) — yours
 // highlighted with a laurel-gold ring. Drag-pan and wheel-zoom supported.
 
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { WorldCity } from "@/lib/api";
 
 const ASSETS = "/assets/medieval";

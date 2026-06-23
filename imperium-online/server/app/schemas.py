@@ -48,6 +48,20 @@ class BuildJobOut(BaseModel):
     _ser_completes = field_serializer("completes_at")(_as_utc_iso)
 
 
+class UpgradeOut(BaseModel):
+    """Per-building preview of the next upgrade — everything the client needs to
+    render a cost panel and decide whether to enable the button. Computed
+    server-side so the client never duplicates the balance formulas."""
+    building: str
+    target_level: int
+    cost: dict[str, float]
+    seconds: int
+    population_after: int  # total city population if this upgrade is queued
+    affordable: bool       # can pay the cost from current resources
+    pop_ok: bool           # population_after fits under the (post-upgrade) cap
+    maxed: bool            # already at/above MAX_LEVEL
+
+
 class CityOut(BaseModel):
     id: int
     name: str
@@ -61,7 +75,11 @@ class CityOut(BaseModel):
     timber_camp_level: int
     quarry_level: int
     silver_mine_level: int
+    farm_level: int
     capacity: float  # current per-resource warehouse cap (derived)
+    population_used: int
+    population_cap: int
+    upgrades: list[UpgradeOut]
     build_jobs: list[BuildJobOut]
 
     _ser_tick = field_serializer("last_tick_at")(_as_utc_iso)

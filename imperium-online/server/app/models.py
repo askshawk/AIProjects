@@ -73,6 +73,7 @@ class City(SQLModel, table=True):
     timber_camp_level: int = game_config.STARTING_LEVELS["timber_camp"]
     quarry_level: int = game_config.STARTING_LEVELS["quarry"]
     silver_mine_level: int = game_config.STARTING_LEVELS["silver_mine"]
+    farm_level: int = game_config.STARTING_LEVELS["farm"]
 
     user: User = Relationship(back_populates="city")
     build_jobs: List["BuildJob"] = Relationship(

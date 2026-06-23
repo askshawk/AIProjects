@@ -8,7 +8,10 @@
 // This keeps the canvas in sync with server state without recreating the game.
 
 import { useEffect, useRef } from "react";
-import Phaser from "phaser";
+// Namespace import: Phaser's ESM build has no default export under Next's
+// bundler, so `import Phaser from "phaser"` warns. `import * as` is the
+// supported form and gives us Phaser.Game, Phaser.Scene, etc.
+import * as Phaser from "phaser";
 import { CityScene } from "./phaser/CityScene";
 import { MapScene } from "./phaser/MapScene";
 

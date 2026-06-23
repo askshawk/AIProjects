@@ -6,7 +6,7 @@
 // tween; chimney smoke particles drift from the Forum. The whole scene reads
 // from the city data pushed in by React via the game registry.
 
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { City, BuildJob } from "@/lib/api";
 
 const ASSETS = "/assets/medieval";
@@ -16,7 +16,7 @@ const ROWS = 9;
 
 // Per-building scene placement (in tile units). Picked so the Forum sits at
 // the path crossing, with the producers fanning out around it.
-type BuildingKey = "forum" | "timber_camp" | "quarry" | "silver_mine";
+type BuildingKey = "forum" | "timber_camp" | "quarry" | "silver_mine" | "farm";
 type Placement = {
   key: BuildingKey;
   levelField: keyof City;
@@ -30,6 +30,7 @@ const PLACEMENTS: Placement[] = [
   { key: "timber_camp", levelField: "timber_camp_level", label: "Timber Camp", col: 3, row: 2 },
   { key: "quarry",      levelField: "quarry_level",      label: "Quarry",      col: 11, row: 2 },
   { key: "silver_mine", levelField: "silver_mine_level", label: "Silver Mine", col: 3, row: 7 },
+  { key: "farm",        levelField: "farm_level",        label: "Farm",        col: 11, row: 7 },
 ];
 
 // Tiles that aren't pure grass — drawn on top of the grass base layer.
