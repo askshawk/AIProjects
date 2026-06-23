@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlmodel>=0.0.22
+bcrypt>=4.1
+python-jose[cryptography]>=3.3
+python-multipart>=0.0.9
+APScheduler>=3.10
+pydantic[email]>=2.7

@@ -1,0 +1,18 @@
+# Python
+server/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local database (state is disposable in dev)
+*.db
+
+# Secrets
+.env
+.env.local
+
+# Node / Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
