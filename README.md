@@ -11,6 +11,7 @@ A collection of my AI/Python learning projects. Each project lives in its own se
 | [newsletter-digest/](newsletter-digest/) | Automated daily digest that pulls newsletters from Gmail, summarizes them with Claude, and emails a clean digest. | `cd newsletter-digest && python main.py` (needs Gmail credentials) |
 | [focus-timer/](focus-timer/) | A self-contained single-page focus/Pomodoro timer. | `open focus-timer/index.html` |
 | [trade-route-tycoon/](trade-route-tycoon/) | *Aegean Trader* — a Greek/Roman ship-trading **and** city-building game (Phaser 3): a real WebGL ocean, dynamic economy, isometric cities, sieges, diplomacy & research, rival factions, save/load, and an optional Oracle (Claude) advisor. | `open trade-route-tycoon/index.html` |
+| [simrefinery/](simrefinery/) | A web-based oil-refinery management sim (a replica of Maxis's lost *SimRefinery*): balance crude input, refining speed, safety, and environmental compliance against random disasters and a daily P&L. | `open simrefinery/index.html` |
 | [workout-tracker/](workout-tracker/) | Tiny CLI workout logger + stats analyzer over a shared CSV. | `cd workout-tracker && python workout_tracker.py` |
 
 ## Layout & conventions
