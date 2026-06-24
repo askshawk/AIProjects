@@ -62,6 +62,30 @@ class UpgradeOut(BaseModel):
     maxed: bool            # already at/above MAX_LEVEL
 
 
+class RecruitJobOut(BaseModel):
+    id: int
+    unit_type: str
+    count: int
+    completes_at: datetime
+    status: str
+
+    _ser_completes = field_serializer("completes_at")(_as_utc_iso)
+
+
+class UnitTypeOut(BaseModel):
+    """Static catalog entry for a unit type + this city's live recruit economics
+    (cost for one, per-unit time, whether the barracks/resources allow it)."""
+    unit_type: str
+    label: str
+    cost: dict[str, float]   # cost for ONE unit
+    population: int
+    seconds: int             # to train ONE, at this city's barracks level
+    attack: int
+    defense: int
+    have: int                # how many the city currently fields
+    can_recruit: bool        # barracks built + at least one affordable + pop room
+
+
 class CityOut(BaseModel):
     id: int
     name: str
@@ -76,17 +100,25 @@ class CityOut(BaseModel):
     quarry_level: int
     silver_mine_level: int
     farm_level: int
+    barracks_level: int
     capacity: float  # current per-resource warehouse cap (derived)
     population_used: int
     population_cap: int
     upgrades: list[UpgradeOut]
     build_jobs: list[BuildJobOut]
+    units: list[UnitTypeOut]
+    recruit_jobs: list[RecruitJobOut]
 
     _ser_tick = field_serializer("last_tick_at")(_as_utc_iso)
 
 
 class BuildRequest(BaseModel):
     building: str  # one of game_config.BUILDINGS
+
+
+class RecruitRequest(BaseModel):
+    unit_type: str  # one of game_config.UNIT_TYPES
+    count: int
 
 
 class WorldCityOut(BaseModel):

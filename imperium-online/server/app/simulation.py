@@ -27,7 +27,7 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from . import game_config
-from .models import BuildJob, City
+from .models import BuildJob, City, RecruitJob, Unit
 
 
 def _accrue(city: City, seconds: float) -> None:
@@ -45,8 +45,25 @@ def _accrue(city: City, seconds: float) -> None:
         city.set_resource(resource, new_amount)
 
 
+def _grant_units(session: Session, city: City, unit_type: str, count: int) -> None:
+    """Add freshly-trained units to the standing army, creating the Unit row on
+    first recruitment of that type."""
+    row = session.exec(
+        select(Unit).where(Unit.city_id == city.id, Unit.unit_type == unit_type)
+    ).first()
+    if row is None:
+        row = Unit(city_id=city.id, unit_type=unit_type, count=0)
+    row.count += count
+    session.add(row)
+
+
 def catch_up(session: Session, city: City, now: datetime) -> City:
     """Fast-forward `city` to `now`. Returns the same (mutated) city.
+
+    Resolves BOTH build and recruit jobs that came due, merged into a single
+    timeline ordered by completion. Builds change production rates, so resources
+    must be accrued up to each event before it's applied; recruit jobs just add
+    units (no rate change) but still resolve in order so the timeline is exact.
 
     Caller is responsible for committing the session afterwards — keeping the
     commit out of here lets a request bundle catch_up + a new command into one
@@ -61,30 +78,42 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         city.last_tick_at = now
         return city
 
-    # Pending builds that finish at or before `now`, oldest first. Resolving in
-    # completion order is what makes step 1 correct.
-    due_jobs = session.exec(
-        select(BuildJob)
-        .where(
+    due_builds = session.exec(
+        select(BuildJob).where(
             BuildJob.city_id == city.id,
             BuildJob.status == "queued",
             BuildJob.completes_at <= now,
         )
-        .order_by(BuildJob.completes_at)
+    ).all()
+    due_recruits = session.exec(
+        select(RecruitJob).where(
+            RecruitJob.city_id == city.id,
+            RecruitJob.status == "queued",
+            RecruitJob.completes_at <= now,
+        )
     ).all()
 
-    for job in due_jobs:
-        # Produce at the OLD rates up to the moment this build lands...
-        _accrue(city, (job.completes_at - cursor).total_seconds())
-        cursor = job.completes_at
-        # ...then apply the upgrade so subsequent accrual uses the NEW rate.
-        # Guard against a stale/duplicate job lowering a level.
-        if job.target_level > city.level_of(job.building):
-            city.set_level(job.building, job.target_level)
-        job.status = "done"
-        session.add(job)
+    # One merged timeline. Ties resolve builds before recruits, which is
+    # harmless (recruits don't depend on levels).
+    events = sorted(
+        [*due_builds, *due_recruits],
+        key=lambda e: (e.completes_at, isinstance(e, RecruitJob)),
+    )
 
-    # Finally, produce over whatever time remains after the last build.
+    for event in events:
+        # Produce at the CURRENT rates up to the moment this event lands...
+        _accrue(city, (event.completes_at - cursor).total_seconds())
+        cursor = event.completes_at
+        # ...then apply it. A build may change rates for subsequent accrual.
+        if isinstance(event, BuildJob):
+            if event.target_level > city.level_of(event.building):
+                city.set_level(event.building, event.target_level)
+        else:  # RecruitJob
+            _grant_units(session, city, event.unit_type, event.count)
+        event.status = "done"
+        session.add(event)
+
+    # Finally, produce over whatever time remains after the last event.
     _accrue(city, (now - cursor).total_seconds())
 
     city.last_tick_at = now

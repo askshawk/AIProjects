@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
-import { getMyCity, queueBuild, type City } from "@/lib/api";
+import { getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/api";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
+import BarracksPanel from "@/components/BarracksPanel";
 import TopBar from "@/components/TopBar";
 import { RESOURCE_ICONS } from "@/components/ResourceIcons";
 
@@ -19,6 +20,7 @@ const BUILDINGS: { key: keyof City; building: string; label: string }[] = [
   { key: "quarry_level", building: "quarry", label: "Quarry" },
   { key: "silver_mine_level", building: "silver_mine", label: "Silver Mine" },
   { key: "farm_level", building: "farm", label: "Farm" },
+  { key: "barracks_level", building: "barracks", label: "Barracks" },
 ];
 
 const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
@@ -65,6 +67,16 @@ export default function PlayPage() {
       setCity(await queueBuild(token, city.id, building));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Build failed");
+    }
+  }
+
+  async function recruit(unitType: string, count: number) {
+    if (!token || !city) return;
+    try {
+      setError(null);
+      setCity(await recruitApi(token, city.id, unitType, count));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recruit failed");
     }
   }
 
@@ -130,11 +142,13 @@ export default function PlayPage() {
                       </div>
                       <div>
                         <span className="name">{b.label}</span>
-                        <span className="lvl">level {city[b.key] as number}</span>
+                        <span className="lvl">
+                          {(city[b.key] as number) === 0 ? "not built" : `level ${city[b.key] as number}`}
+                        </span>
                         {up && <BuildCostPanel upgrade={up} city={city} />}
                       </div>
                       <button className="btn" onClick={() => build(b.building)} disabled={blocked}>
-                        Upgrade
+                        {(city[b.key] as number) === 0 ? "Build" : "Upgrade"}
                       </button>
                     </div>
                   );
@@ -143,6 +157,10 @@ export default function PlayPage() {
                 <h3 style={{ marginTop: 24 }}>Build queue</h3>
                 <BuildQueue jobs={city.build_jobs} onComplete={refresh} />
               </div>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <BarracksPanel city={city} onRecruit={recruit} onQueueComplete={refresh} />
             </div>
           </>
         )}

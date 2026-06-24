@@ -19,7 +19,7 @@ Two gates on every upgrade:
 from __future__ import annotations
 
 from . import game_config
-from .models import BuildJob, City
+from .models import BuildJob, City, RecruitJob, Unit
 
 
 def pending_counts(pending: list[BuildJob]) -> dict[str, int]:
@@ -57,3 +57,26 @@ def population_cap(levels: dict[str, int]) -> int:
 
 def can_afford(city: City, cost: dict[str, float]) -> bool:
     return all(city.resource(r) >= amount for r, amount in cost.items())
+
+
+# --- military population accounting ---------------------------------------
+# Soldiers occupy population just like building levels. "Effective" unit counts
+# include both the standing army (Unit rows) and everything still in the recruit
+# queue (already paid for, so reserved against the cap).
+
+
+def effective_unit_counts(
+    units: list[Unit], recruits: list[RecruitJob], extra_type: str | None = None, extra_count: int = 0
+) -> dict[str, int]:
+    counts: dict[str, int] = {t: 0 for t in game_config.UNIT_TYPES}
+    for u in units:
+        counts[u.unit_type] = counts.get(u.unit_type, 0) + u.count
+    for r in recruits:
+        counts[r.unit_type] = counts.get(r.unit_type, 0) + r.count
+    if extra_type:
+        counts[extra_type] = counts.get(extra_type, 0) + extra_count
+    return counts
+
+
+def army_population(unit_counts: dict[str, int]) -> int:
+    return sum(game_config.unit_population(t) * c for t, c in unit_counts.items())

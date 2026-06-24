@@ -20,7 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlmodel import Session, select
 
 from .db import engine
-from .models import BuildJob, City, utcnow
+from .models import BuildJob, City, RecruitJob, utcnow
 from .simulation import catch_up
 
 WORKER_INTERVAL_SECONDS = 30
@@ -29,8 +29,9 @@ _scheduler: BackgroundScheduler | None = None
 
 
 def resolve_due_events() -> None:
-    """Advance every city that has a build job due by now. Cheap: cities with
-    nothing pending are skipped entirely."""
+    """Advance every city that has a build OR recruit job due by now. Cheap:
+    cities with nothing pending are skipped entirely. catch_up does the actual
+    resolution — this just finds which cities need it."""
     now = utcnow()
     with Session(engine) as session:
         due_city_ids = set(
@@ -38,6 +39,14 @@ def resolve_due_events() -> None:
                 select(BuildJob.city_id).where(
                     BuildJob.status == "queued",
                     BuildJob.completes_at <= now,
+                )
+            ).all()
+        )
+        due_city_ids |= set(
+            session.exec(
+                select(RecruitJob.city_id).where(
+                    RecruitJob.status == "queued",
+                    RecruitJob.completes_at <= now,
                 )
             ).all()
         )

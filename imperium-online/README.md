@@ -110,7 +110,11 @@ Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
    from — you can't queue past the cap until you raise the Farm. The server previews each
    building's next-upgrade economics (`UpgradeOut`) so the client renders costs and disables
    unaffordable/pop-blocked buttons without duplicating any balance math.
-2. **Units & recruitment** — same timer pattern as builds.
+2. ~~**Units & recruitment**~~ ✅ **Done.** Build a Barracks, then recruit Legionaries,
+   Archers, and Scouts. Recruitment uses the exact same timer pattern as builds — recruit
+   jobs resolve through `catch_up` (and the background worker) on a queue parallel to
+   construction, and both streams merge into one ordered timeline. Soldiers draw population
+   from the same Farm cap as buildings.
 3. **Movement & combat** — `send army` → a `Movement` event with `arrives_at`; the worker
    resolves battles while both players are offline. This is where the worker earns its keep.
 4. **Real-time pushes** — swap the safety-net poll for WebSockets ("build done", "under attack").

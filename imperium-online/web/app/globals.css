@@ -385,6 +385,66 @@ input:focus {
   margin-left: 6px;
 }
 
+/* --------------------------------- army --------------------------------- */
+
+.roster {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.unit-card {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.12s ease, transform 0.05s ease;
+}
+.unit-card:hover { border-color: var(--gold); }
+.unit-card.selected {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 2px rgba(181, 83, 47, 0.2);
+}
+.unit-card .unit-icon { width: 40px; height: 40px; }
+.unit-card .unit-icon svg { width: 40px; height: 40px; }
+.unit-card .unit-name {
+  font-family: "Marcellus SC", serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+.unit-card .unit-have {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.unit-card .unit-stats { font-size: 0.72rem; color: var(--muted); }
+
+.recruit-form {
+  padding: 12px 14px;
+  background: var(--marble);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.recruit-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.recruit-controls label {
+  margin: 0;
+  flex: 1;
+  min-width: 120px;
+}
+
 /* --------------------------------- build queue -------------------------- */
 
 .queue-item {

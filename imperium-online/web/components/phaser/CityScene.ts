@@ -16,7 +16,7 @@ const ROWS = 9;
 
 // Per-building scene placement (in tile units). Picked so the Forum sits at
 // the path crossing, with the producers fanning out around it.
-type BuildingKey = "forum" | "timber_camp" | "quarry" | "silver_mine" | "farm";
+type BuildingKey = "forum" | "timber_camp" | "quarry" | "silver_mine" | "farm" | "barracks";
 type Placement = {
   key: BuildingKey;
   levelField: keyof City;
@@ -31,6 +31,7 @@ const PLACEMENTS: Placement[] = [
   { key: "quarry",      levelField: "quarry_level",      label: "Quarry",      col: 11, row: 2 },
   { key: "silver_mine", levelField: "silver_mine_level", label: "Silver Mine", col: 3, row: 7 },
   { key: "farm",        levelField: "farm_level",        label: "Farm",        col: 11, row: 7 },
+  { key: "barracks",    levelField: "barracks_level",    label: "Barracks",    col: 9, row: 6 },
 ];
 
 // Tiles that aren't pure grass — drawn on top of the grass base layer.
@@ -195,12 +196,17 @@ export class CityScene extends Phaser.Scene {
     for (const p of PLACEMENTS) {
       const level = city[p.levelField] as number;
       const label = this.buildingLabels.get(p.key);
-      label?.setText(`${p.label} · ${level}`);
+      const sprite = this.buildingSprites.get(p.key);
 
+      // A not-yet-built building (level 0, e.g. the Barracks) shows nothing —
+      // until it's under construction, when the scaffold marks the empty plot.
+      const exists = level > 0;
       const isUnderConstruction = pendingByBuilding.has(p.key);
+      sprite?.setVisible(exists);
+      label?.setVisible(exists || isUnderConstruction);
+      label?.setText(`${p.label} · ${level}`);
       let scaffold = this.scaffolds.get(p.key);
-      if (isUnderConstruction && !scaffold) {
-        const sprite = this.buildingSprites.get(p.key)!;
+      if (isUnderConstruction && !scaffold && sprite) {
         scaffold = this.add
           .image(sprite.x, sprite.y - 6, "scaffold")
           .setOrigin(0.5, 0.85)
@@ -220,7 +226,6 @@ export class CityScene extends Phaser.Scene {
         scaffold.destroy();
         this.scaffolds.delete(p.key);
         // Brief "I finished!" punch on the underlying building.
-        const sprite = this.buildingSprites.get(p.key);
         if (sprite) {
           this.tweens.add({
             targets: sprite,

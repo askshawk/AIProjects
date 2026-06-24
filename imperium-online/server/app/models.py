@@ -74,9 +74,18 @@ class City(SQLModel, table=True):
     quarry_level: int = game_config.STARTING_LEVELS["quarry"]
     silver_mine_level: int = game_config.STARTING_LEVELS["silver_mine"]
     farm_level: int = game_config.STARTING_LEVELS["farm"]
+    barracks_level: int = game_config.STARTING_LEVELS["barracks"]  # 0 = not built
 
     user: User = Relationship(back_populates="city")
     build_jobs: List["BuildJob"] = Relationship(
+        back_populates="city",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    units: List["Unit"] = Relationship(
+        back_populates="city",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    recruit_jobs: List["RecruitJob"] = Relationship(
         back_populates="city",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
@@ -110,3 +119,33 @@ class BuildJob(SQLModel, table=True):
     status: str = Field(default="queued", index=True)
 
     city: City = Relationship(back_populates="build_jobs")
+
+
+class Unit(SQLModel, table=True):
+    """Standing army: one row per (city, unit_type) holding a count. Created
+    lazily the first time a city finishes recruiting that type."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    city_id: int = Field(foreign_key="city.id", index=True)
+    unit_type: str  # one of game_config.UNIT_TYPES
+    count: int = 0
+
+    city: City = Relationship(back_populates="units")
+
+
+class RecruitJob(SQLModel, table=True):
+    """A batch of units in training. Same timer pattern as BuildJob: resolved by
+    completes_at, either on read (catch_up) or by the background worker. The
+    Barracks has its own queue, parallel to the construction queue."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    city_id: int = Field(foreign_key="city.id", index=True)
+
+    unit_type: str
+    count: int
+
+    started_at: datetime = Field(default_factory=utcnow)
+    completes_at: datetime = Field(index=True)
+    status: str = Field(default="queued", index=True)
+
+    city: City = Relationship(back_populates="recruit_jobs")

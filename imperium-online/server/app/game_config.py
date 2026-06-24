@@ -25,12 +25,19 @@ PRODUCERS = {
     "silver": "silver_mine",
 }
 
-# Every building a city can have, with its starting level. New cities are
-# founded with everything at level 1 so there's something producing from t=0.
-# The Farm produces no resources — it provides the population that every other
-# building consumes (see population_provided / population_used below).
-BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm")
-STARTING_LEVELS = {b: 1 for b in BUILDINGS}
+# Every building a city can have. The Farm produces no resources — it provides
+# the population every other building (and unit) consumes. The Barracks starts
+# at level 0 (not built): you must construct it before you can recruit, which
+# demonstrates a prerequisite gate on top of the build system.
+BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm", "barracks")
+STARTING_LEVELS = {
+    "forum": 1,
+    "timber_camp": 1,
+    "quarry": 1,
+    "silver_mine": 1,
+    "farm": 1,
+    "barracks": 0,
+}
 
 # Max level so the client can grey out the button and the server can reject the
 # command. Keeps the slice bounded.
@@ -59,6 +66,7 @@ _POPULATION_PER_LEVEL = {
     "quarry": 4,
     "silver_mine": 5,
     "farm": 3,
+    "barracks": 6,
 }
 
 
@@ -67,6 +75,58 @@ def population_used(building: str, level: int) -> int:
     if level <= 0:
         return 0
     return _POPULATION_PER_LEVEL.get(building, 4) * level
+
+
+# --- military ---------------------------------------------------------------
+# The three starting unit types. Each costs resources + population to recruit,
+# takes time per unit (shortened by the Barracks level), and carries attack /
+# defense values that Phase 5's combat will use. Population is the long-run
+# constraint: every soldier occupies a citizen slot just like a building level.
+UNITS: dict[str, dict] = {
+    "legionary": {
+        "label": "Legionary",
+        "cost": {"wood": 0.0, "stone": 40.0, "silver": 60.0},
+        "population": 1,
+        "seconds": 75,       # per unit, at barracks level 1
+        "attack": 12,
+        "defense": 14,
+    },
+    "archer": {
+        "label": "Archer",
+        "cost": {"wood": 50.0, "stone": 0.0, "silver": 55.0},
+        "population": 1,
+        "seconds": 60,
+        "attack": 14,
+        "defense": 7,
+    },
+    "scout": {
+        "label": "Scout",
+        "cost": {"wood": 25.0, "stone": 0.0, "silver": 45.0},
+        "population": 1,
+        "seconds": 35,
+        "attack": 3,
+        "defense": 3,
+    },
+}
+
+UNIT_TYPES = tuple(UNITS.keys())
+
+
+def unit_cost(unit_type: str, count: int) -> dict[str, float]:
+    """Total resource cost to recruit `count` of a unit type."""
+    per = UNITS[unit_type]["cost"]
+    return {res: round(amount * count, 1) for res, amount in per.items()}
+
+
+def unit_population(unit_type: str) -> int:
+    return UNITS[unit_type]["population"]
+
+
+def recruit_seconds(unit_type: str, count: int, barracks_level: int) -> int:
+    """Time to recruit `count` units. Each Barracks level past the first shaves
+    ~5% off the per-unit time (so a bigger barracks trains faster)."""
+    per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, barracks_level - 1))
+    return max(1, int(per_unit * count))
 
 
 def production_per_hour(building_level: int) -> float:
