@@ -18,7 +18,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from .. import economy, game_config
+from .. import economy, game_config, military
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import BuildJob, City, RecruitJob, Unit, User, utcnow
@@ -179,7 +179,11 @@ def get_my_city(
     user: User = Depends(get_current_user),
 ) -> CityOut:
     city = _load_my_city(session, user)
-    catch_up(session, city, utcnow())
+    now = utcnow()
+    catch_up(session, city, now)
+    # Resolve any battles that landed on (or armies that returned to) this city,
+    # so a player who logs in sees the outcome without waiting for the worker.
+    military.resolve_due_movements(session, now, city_id=city.id)
     session.commit()
     session.refresh(city)
     return _serialize(city, session)

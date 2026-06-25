@@ -126,3 +126,43 @@ class WorldCityOut(BaseModel):
     y: int
     name: str
     owner: str  # owner's email local-part, for a friendly map label
+
+
+# --- movement & combat ------------------------------------------------------
+class SendArmyRequest(BaseModel):
+    target_x: int
+    target_y: int
+    units: dict[str, int]  # {unit_type: count}
+
+
+class MovementOut(BaseModel):
+    """A moving army, described from the viewer's perspective."""
+    id: int
+    kind: str               # "attack" | "return"
+    payload: dict[str, int]
+    departs_at: datetime
+    arrives_at: datetime
+    mine: bool              # do I own the marching troops?
+    incoming_attack: bool   # an enemy attack inbound to my city
+    from_name: str
+    to_name: str
+    to_x: int
+    to_y: int
+
+    _ser_dep = field_serializer("departs_at")(_as_utc_iso)
+    _ser_arr = field_serializer("arrives_at")(_as_utc_iso)
+
+
+class BattleReportOut(BaseModel):
+    id: int
+    outcome: str            # "attacker_won" | "defender_won"
+    i_attacked: bool        # was I the attacker (vs. the defender)?
+    attacker_city_name: str
+    defender_city_name: str
+    attacker_sent: dict[str, int]
+    attacker_survivors: dict[str, int]
+    defender_before: dict[str, int]
+    defender_survivors: dict[str, int]
+    created_at: datetime
+
+    _ser_created = field_serializer("created_at")(_as_utc_iso)

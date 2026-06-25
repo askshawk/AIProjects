@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
-from .routers import auth, cities, world
+from .routers import auth, cities, movements, world
 from .worker import start_worker, stop_worker
 
 
@@ -54,6 +54,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(cities.router)
 app.include_router(world.router)
+app.include_router(movements.router)
 
 
 @app.get("/health", tags=["meta"])

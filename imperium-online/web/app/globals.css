@@ -473,6 +473,102 @@ input:focus {
   font-size: 1.05rem;
 }
 
+/* --------------------------------- movements ---------------------------- */
+
+.notice {
+  background: #eef3e6;
+  border: 1px solid #c4d3a8;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  color: var(--laurel-dark);
+  font-size: 0.92rem;
+}
+
+.movement-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: var(--marble-dark);
+  border: 1px solid var(--line);
+}
+.movement-row.threat {
+  background: #fbe9e2;
+  border-color: #e7b4a3;
+}
+.movement-row .mv-kind {
+  font-family: "Marcellus SC", serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.movement-row.threat .mv-kind { color: var(--terracotta-dark); font-weight: 700; }
+.movement-row .mv-detail { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* --------------------------------- send army ---------------------------- */
+
+.send-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.send-unit {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: var(--marble);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.send-unit .su-icon { grid-row: 1 / span 2; width: 32px; height: 32px; }
+.send-unit .su-icon svg { width: 32px; height: 32px; }
+.send-unit .su-label { font-family: "Marcellus SC", serif; font-size: 0.85rem; }
+.send-unit .su-have { font-size: 0.72rem; }
+.send-unit input { grid-column: 1 / span 2; margin-top: 6px; }
+
+/* --------------------------------- reports ------------------------------ */
+
+.report.win { border-left: 4px solid var(--laurel); }
+.report.loss { border-left: 4px solid var(--terracotta); }
+.report-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.report-result {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.report.win .report-result { color: var(--laurel-dark); }
+.report.loss .report-result { color: var(--terracotta-dark); }
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  font-size: 0.9rem;
+}
+.report-grid h4 {
+  font-family: "Marcellus SC", serif;
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 640px) {
+  .report-grid { grid-template-columns: 1fr; }
+}
+
 /* --------------------------------- hero --------------------------------- */
 
 .hero {

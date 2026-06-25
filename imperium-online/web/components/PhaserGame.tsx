@@ -20,11 +20,22 @@ import { MapScene } from "./phaser/MapScene";
 const WIDTH = 896;
 const HEIGHT = 576;
 
-export default function PhaserGame({ kind, data }: { kind: "city" | "map"; data: unknown }) {
+export default function PhaserGame({
+  kind,
+  data,
+  onCitySelect,
+}: {
+  kind: "city" | "map";
+  data: unknown;
+  onCitySelect?: (city: { x: number; y: number; name: string; owner: string }) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const dataRef = useRef<unknown>(data);
   dataRef.current = data;
+  // Ref so the scene's event handler always calls the latest callback.
+  const onCitySelectRef = useRef(onCitySelect);
+  onCitySelectRef.current = onCitySelect;
 
   // Create the game once.
   useEffect(() => {
@@ -46,6 +57,10 @@ export default function PhaserGame({ kind, data }: { kind: "city" | "map"; data:
     });
     // Seed the registry so the scene has data the instant it boots.
     game.registry.set("data", dataRef.current);
+    // Bridge scene → React: the map scene emits "city-selected" on a click.
+    game.events.on("city-selected", (c: { x: number; y: number; name: string; owner: string }) => {
+      onCitySelectRef.current?.(c);
+    });
     gameRef.current = game;
     return () => {
       game.destroy(true);

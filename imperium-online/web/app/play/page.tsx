@@ -8,6 +8,7 @@ import { getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/a
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
+import MovementsPanel from "@/components/MovementsPanel";
 import TopBar from "@/components/TopBar";
 import { RESOURCE_ICONS } from "@/components/ResourceIcons";
 
@@ -159,8 +160,9 @@ export default function PlayPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: 22 }}>
+            <div className="grid-2" style={{ marginTop: 22 }}>
               <BarracksPanel city={city} onRecruit={recruit} onQueueComplete={refresh} />
+              <MovementsPanel token={token} />
             </div>
           </>
         )}

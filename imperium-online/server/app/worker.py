@@ -20,6 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlmodel import Session, select
 
 from .db import engine
+from .military import resolve_due_movements
 from .models import BuildJob, City, RecruitJob, utcnow
 from .simulation import catch_up
 
@@ -29,9 +30,9 @@ _scheduler: BackgroundScheduler | None = None
 
 
 def resolve_due_events() -> None:
-    """Advance every city that has a build OR recruit job due by now. Cheap:
-    cities with nothing pending are skipped entirely. catch_up does the actual
-    resolution — this just finds which cities need it."""
+    """Advance the world: resolve every build/recruit job AND every army
+    movement that has come due. This is the unattended heartbeat — battles land
+    and troops finish training here even with nobody online."""
     now = utcnow()
     with Session(engine) as session:
         due_city_ids = set(
@@ -54,7 +55,11 @@ def resolve_due_events() -> None:
             city = session.get(City, city_id)
             if city is not None:
                 catch_up(session, city, now)
-        if due_city_ids:
+
+        # Movements are cross-city, so they're resolved globally (not per-city).
+        due_movements = resolve_due_movements(session, now)
+
+        if due_city_ids or due_movements:
             session.commit()
 
 

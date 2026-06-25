@@ -16,6 +16,7 @@ completes_at), so we are religious about UTC and never store naive local time.
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from . import game_config
@@ -149,3 +150,43 @@ class RecruitJob(SQLModel, table=True):
     status: str = Field(default="queued", index=True)
 
     city: City = Relationship(back_populates="recruit_jobs")
+
+
+class Movement(SQLModel, table=True):
+    """An army on the road. Always origin → target. An "attack" carries a stack
+    of units to an enemy city; on arrival the worker resolves a battle and (if
+    any attackers survive) spawns a "return" movement carrying them home. The
+    payload is a {unit_type: count} dict stored as JSON.
+
+    This is THE event the background worker exists for: it must resolve while
+    BOTH players are offline, so it cannot wait for either to log in."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    origin_city_id: int = Field(foreign_key="city.id", index=True)
+    target_city_id: int = Field(foreign_key="city.id", index=True)
+    kind: str  # "attack" | "return"
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+    departs_at: datetime = Field(default_factory=utcnow)
+    arrives_at: datetime = Field(index=True)  # ★ when the worker resolves it
+    status: str = Field(default="traveling", index=True)  # traveling | done
+
+
+class BattleReport(SQLModel, table=True):
+    """The permanent record of a resolved battle, readable by both sides. Stores
+    snapshots of who was sent and who survived so the UI can show losses."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    movement_id: int = Field(foreign_key="movement.id", index=True)
+    attacker_user_id: int = Field(index=True)
+    defender_user_id: int = Field(index=True)
+    attacker_city_name: str
+    defender_city_name: str
+    outcome: str  # "attacker_won" | "defender_won"
+
+    attacker_sent: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    attacker_survivors: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    defender_before: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    defender_survivors: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+    created_at: datetime = Field(default_factory=utcnow, index=True)

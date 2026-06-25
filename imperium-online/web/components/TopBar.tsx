@@ -13,6 +13,7 @@ export default function TopBar() {
       <nav>
         <Link href="/play">City</Link>
         <Link href="/map">World map</Link>
+        <Link href="/reports">Reports</Link>
         <a
           href="#"
           onClick={(e) => {

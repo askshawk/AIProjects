@@ -90,6 +90,7 @@ UNITS: dict[str, dict] = {
         "seconds": 75,       # per unit, at barracks level 1
         "attack": 12,
         "defense": 14,
+        "speed": 0.8,        # march speed multiplier (heavy infantry = slow)
     },
     "archer": {
         "label": "Archer",
@@ -98,6 +99,7 @@ UNITS: dict[str, dict] = {
         "seconds": 60,
         "attack": 14,
         "defense": 7,
+        "speed": 1.0,
     },
     "scout": {
         "label": "Scout",
@@ -106,6 +108,7 @@ UNITS: dict[str, dict] = {
         "seconds": 35,
         "attack": 3,
         "defense": 3,
+        "speed": 1.6,        # fast — outruns the legion
     },
 }
 
@@ -127,6 +130,28 @@ def recruit_seconds(unit_type: str, count: int, barracks_level: int) -> int:
     ~5% off the per-unit time (so a bigger barracks trains faster)."""
     per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, barracks_level - 1))
     return max(1, int(per_unit * count))
+
+
+# --- movement & combat ------------------------------------------------------
+SECONDS_PER_TILE = 75  # base march time per grid tile, before unit speed
+
+
+def army_speed(units: dict[str, int]) -> float:
+    """An army moves at the pace of its slowest present unit."""
+    present = [UNITS[t]["speed"] for t, c in units.items() if c > 0]
+    return min(present) if present else 1.0
+
+
+def travel_seconds(distance: float, units: dict[str, int]) -> int:
+    """Marching time for `units` to cross `distance` tiles. Slower units
+    (legionaries) lengthen the journey; scouts shorten it."""
+    return max(1, int(distance * SECONDS_PER_TILE / army_speed(units)))
+
+
+def fortification_multiplier(forum_level: int) -> float:
+    """Home-defense bonus. The Forum doubles as the citadel: defenders fight a
+    little harder for every level of it (no separate Wall building yet)."""
+    return 1.0 + 0.05 * (forum_level - 1)
 
 
 def production_per_hour(building_level: int) -> float:

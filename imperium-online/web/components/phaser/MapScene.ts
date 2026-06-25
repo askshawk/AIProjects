@@ -93,6 +93,19 @@ export class MapScene extends Phaser.Scene {
           .setStrokeStyle(3, 0xb7892f, 1);
       }
 
+      // An invisible hit-zone over each city. Clicking emits a selection event
+      // that React (the map page) turns into a "send army" form. Enemy cities
+      // get a hover highlight to signal they're attackable.
+      const hit = this.add
+        .rectangle(x, y, CELL * 0.9, CELL * 0.9, 0xffffff, 0.001)
+        .setInteractive({ useHandCursor: !isMine });
+      hit.on("pointerover", () => { if (!isMine) hit.setFillStyle(0xb5532f, 0.12); });
+      hit.on("pointerout", () => hit.setFillStyle(0xffffff, 0.001));
+      hit.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+        // Ignore the pointerup that ends a drag-pan — only true clicks select.
+        if (pointer.getDistance() < 8) this.game.events.emit("city-selected", c);
+      });
+
       // city sprite
       this.add.image(x, y + 4, "forum").setOrigin(0.5, 0.7).setScale(0.85);
 

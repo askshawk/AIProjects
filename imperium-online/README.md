@@ -115,8 +115,12 @@ Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
    jobs resolve through `catch_up` (and the background worker) on a queue parallel to
    construction, and both streams merge into one ordered timeline. Soldiers draw population
    from the same Farm cap as buildings.
-3. **Movement & combat** — `send army` → a `Movement` event with `arrives_at`; the worker
-   resolves battles while both players are offline. This is where the worker earns its keep.
+3. ~~**Movement & combat**~~ ✅ **Done.** March an army from the world map onto a rival
+   colonia. A `Movement` event carries the stack with an `arrives_at`; on arrival the
+   background worker (or a defender's read) resolves a deterministic battle, writes a
+   permanent `BattleReport`, and sends survivors home as a return movement. **This is where
+   the worker earns its keep** — battles land while *both* players are offline. Pure combat
+   math lives in `combat.py`; movement resolution in `military.py`.
 4. **Real-time pushes** — swap the safety-net poll for WebSockets ("build done", "under attack").
 5. **Multiple cities, founding, conquest, alliances.**
 6. **Hardening** — JWT in httpOnly cookies, rate limiting, SQLite → Postgres.
