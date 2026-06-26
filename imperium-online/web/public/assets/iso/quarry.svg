@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 176" width="176" height="176">
+  <!-- Quarry: a low cutting shed beside a stack of hewn travertine blocks and a
+       timber lifting crane. Light from top-left. Anchor bottom-centre. -->
+  <g stroke="#352a1c" stroke-width="1.5" stroke-linejoin="round">
+    <!-- low stone shed (short walls) -->
+    <polygon points="96,96 138,117 138,140 96,119" fill="#ddcfa8"/>
+    <polygon points="138,117 168,102 168,125 138,140" fill="#bfae84"/>
+    <polygon points="96,96 138,117 168,102 126,81" fill="#a8966c"/>
+    <!-- cut travertine blocks, stacked iso cubes -->
+    <g>
+      <!-- block 1 -->
+      <polygon points="34,128 56,139 56,156 34,145" fill="#e7dab6"/>
+      <polygon points="56,139 78,128 78,145 56,156" fill="#c6b78c"/>
+      <polygon points="34,128 56,139 78,128 56,117" fill="#f1e7c8"/>
+      <!-- block 2 (left) -->
+      <polygon points="18,140 36,149 36,163 18,154" fill="#e7dab6"/>
+      <polygon points="36,149 54,140 54,154 36,163" fill="#c6b78c"/>
+      <polygon points="18,140 36,149 54,140 36,131" fill="#f1e7c8"/>
+      <!-- block 3 (top) -->
+      <polygon points="46,108 64,117 64,131 46,122" fill="#ece0bf"/>
+      <polygon points="64,117 82,108 82,122 64,131" fill="#cabb90"/>
+      <polygon points="46,108 64,117 82,108 64,99" fill="#f4ecce"/>
+    </g>
+    <!-- timber crane -->
+    <line x1="120" y1="128" x2="120" y2="58" stroke="#7c5128" stroke-width="4"/>
+    <line x1="120" y1="62" x2="78" y2="48" stroke="#8a5a2a" stroke-width="4"/>
+    <line x1="82" y1="50" x2="82" y2="92" stroke="#5e3a1a" stroke-width="1.6"/>
+    <polygon points="74,92 90,92 88,104 76,104" fill="#a8966c"/>
+  </g>
+</svg>

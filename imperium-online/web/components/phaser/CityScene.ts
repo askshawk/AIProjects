@@ -1,66 +1,53 @@
-// City view — top-down Stronghold/Civ-mobile style.
+// City view — TRUE isometric (2.5D), Grepolis-style.
 //
-// Lays a 14x9 grass tilemap, runs a dirt path through it, plants trees and
-// rocks for atmosphere, then drops the four buildings as Kenney sprites at
-// fixed positions. Pending builds get a translucent scaffold overlay + bob
-// tween; chimney smoke particles drift from the Forum. The whole scene reads
-// from the city data pushed in by React via the game registry.
+// Lays a diamond grass grid with a dirt-path cross, then places each building
+// as an isometric sprite with bottom-centre anchored on its tile and a soft
+// contact shadow beneath it. Depth is painter's-order (back-to-front) so closer
+// buildings correctly overlap farther ones. The scene reads city data pushed in
+// from React via the registry; building art comes from the manifest so painted
+// sprites can be dropped in later (see ART.md).
 
 import * as Phaser from "phaser";
 import type { City, BuildJob } from "@/lib/api";
+import { TILE_W, TILE_H, toScreen, depthOf } from "./iso";
+import { BUILDINGS, TERRAIN, isSvg, type AssetSlot } from "./assetManifest";
 
-const ASSETS = "/assets/medieval";
-const TILE = 64;
-const COLS = 14;
-const ROWS = 9;
+const GRID = 6; // GRID×GRID diamond of tiles
 
-// Per-building scene placement (in tile units). Picked so the Forum sits at
-// the path crossing, with the producers fanning out around it.
 type BuildingKey = "forum" | "timber_camp" | "quarry" | "silver_mine" | "farm" | "barracks";
 type Placement = {
   key: BuildingKey;
   levelField: keyof City;
   label: string;
-  col: number;
-  row: number;
+  gx: number;
+  gy: number;
   smoke?: boolean;
 };
+
+// Placed on the diamond grid (gx grows down-right, gy down-left).
 const PLACEMENTS: Placement[] = [
-  { key: "forum",       levelField: "forum_level",       label: "Forum",       col: 7, row: 4, smoke: true },
-  { key: "timber_camp", levelField: "timber_camp_level", label: "Timber Camp", col: 3, row: 2 },
-  { key: "quarry",      levelField: "quarry_level",      label: "Quarry",      col: 11, row: 2 },
-  { key: "silver_mine", levelField: "silver_mine_level", label: "Silver Mine", col: 3, row: 7 },
-  { key: "farm",        levelField: "farm_level",        label: "Farm",        col: 11, row: 7 },
-  { key: "barracks",    levelField: "barracks_level",    label: "Barracks",    col: 9, row: 6 },
+  { key: "forum",       levelField: "forum_level",       label: "Forum",       gx: 2, gy: 3, smoke: true },
+  { key: "barracks",    levelField: "barracks_level",    label: "Barracks",    gx: 4, gy: 2 },
+  { key: "timber_camp", levelField: "timber_camp_level", label: "Timber Camp", gx: 0, gy: 1 },
+  { key: "quarry",      levelField: "quarry_level",      label: "Quarry",      gx: 4, gy: 0 },
+  { key: "silver_mine", levelField: "silver_mine_level", label: "Silver Mine", gx: 1, gy: 5 },
+  { key: "farm",        levelField: "farm_level",        label: "Farm",        gx: 5, gy: 4 },
 ];
 
-// Tiles that aren't pure grass — drawn on top of the grass base layer.
-const PATHS: { col: number; row: number; tile: "h" | "v" | "x" }[] = [
-  { col: 7, row: 0, tile: "v" }, { col: 7, row: 1, tile: "v" },
-  { col: 7, row: 2, tile: "v" }, { col: 7, row: 3, tile: "v" },
-  { col: 7, row: 5, tile: "v" }, { col: 7, row: 6, tile: "v" },
-  { col: 7, row: 7, tile: "v" }, { col: 7, row: 8, tile: "v" },
-  { col: 0, row: 4, tile: "h" }, { col: 1, row: 4, tile: "h" },
-  { col: 2, row: 4, tile: "h" }, { col: 3, row: 4, tile: "h" },
-  { col: 4, row: 4, tile: "h" }, { col: 5, row: 4, tile: "h" },
-  { col: 6, row: 4, tile: "h" }, { col: 7, row: 4, tile: "x" },
-  { col: 8, row: 4, tile: "h" }, { col: 9, row: 4, tile: "h" },
-  { col: 10, row: 4, tile: "h" }, { col: 11, row: 4, tile: "h" },
-  { col: 12, row: 4, tile: "h" }, { col: 13, row: 4, tile: "h" },
-];
+// Dirt-path cells: a cross through the centre. (Cells under buildings still get
+// grass so the footprint reads cleanly.)
+const PATH_CELLS = new Set<string>();
+for (let g = 0; g < GRID; g++) {
+  PATH_CELLS.add(`3,${g}`); // one axis
+  PATH_CELLS.add(`${g},3`); // the other
+}
 
-// Decorative props — trees near the forest edge, rocks near the quarry.
-const DECOR: { x: number; y: number; key: "tree_pine" | "tree_fir" | "rock_grey" | "rock_brown" }[] = [
-  { x: 1.2, y: 1.0, key: "tree_fir" }, { x: 0.5, y: 2.4, key: "tree_pine" },
-  { x: 1.8, y: 3.2, key: "tree_pine" }, { x: 0.7, y: 0.6, key: "tree_fir" },
-  { x: 4.6, y: 1.1, key: "tree_fir" }, { x: 5.7, y: 0.5, key: "tree_pine" },
-  { x: 12.6, y: 0.6, key: "rock_brown" }, { x: 13.2, y: 1.8, key: "rock_grey" },
-  { x: 10.2, y: 0.8, key: "rock_grey" }, { x: 9.4, y: 1.5, key: "rock_brown" },
-  { x: 12.2, y: 3.2, key: "rock_grey" },
-  { x: 0.5, y: 6.4, key: "tree_pine" }, { x: 1.5, y: 6.0, key: "tree_fir" },
-  { x: 1.0, y: 8.2, key: "tree_fir" }, { x: 4.6, y: 8.1, key: "tree_pine" },
-  { x: 12.8, y: 7.0, key: "tree_fir" }, { x: 11.4, y: 8.3, key: "tree_pine" },
-  { x: 9.8, y: 7.6, key: "tree_fir" }, { x: 13.0, y: 5.4, key: "tree_pine" },
+// Decorative props at free cells (cypress / rocks / amphora).
+const DECOR: { gx: number; gy: number; key: "cypress" | "rocks" | "amphora" }[] = [
+  { gx: 0, gy: 0, key: "cypress" }, { gx: 5, gy: 0, key: "rocks" },
+  { gx: 0, gy: 5, key: "rocks" },   { gx: 5, gy: 5, key: "cypress" },
+  { gx: 2, gy: 0, key: "cypress" }, { gx: 4, gy: 5, key: "amphora" },
+  { gx: 0, gy: 3, key: "amphora" },
 ];
 
 export class CityScene extends Phaser.Scene {
@@ -68,101 +55,106 @@ export class CityScene extends Phaser.Scene {
   private buildingLabels = new Map<BuildingKey, Phaser.GameObjects.Text>();
   private scaffolds = new Map<BuildingKey, Phaser.GameObjects.Image>();
   private titleText?: Phaser.GameObjects.Text;
+  private originX = 0;
+  private originY = 0;
 
   constructor() {
     super("city");
   }
 
   preload() {
-    this.load.image("grass", `${ASSETS}/grass.png`);
-    this.load.image("path_h", `${ASSETS}/path_horiz.png`);
-    this.load.image("path_v", `${ASSETS}/path_vert.png`);
-    this.load.image("path_x", `${ASSETS}/path_cross.png`);
-    this.load.image("tree_pine", `${ASSETS}/tree_pine.png`);
-    this.load.image("tree_fir", `${ASSETS}/tree_fir.png`);
-    this.load.image("rock_grey", `${ASSETS}/rock_grey.png`);
-    this.load.image("rock_brown", `${ASSETS}/rock_brown.png`);
-    this.load.image("scaffold", `${ASSETS}/scaffold.png`);
-    for (const p of PLACEMENTS) {
-      this.load.image(p.key, `${ASSETS}/${p.key}.png`);
-    }
+    const load = (key: string, slot: AssetSlot) => {
+      if (isSvg(slot)) this.load.svg(key, slot.src, { width: slot.w, height: slot.h });
+      else this.load.image(key, slot.src);
+    };
+    for (const [key, slot] of Object.entries(TERRAIN)) load(key, slot);
+    for (const [key, slot] of Object.entries(BUILDINGS)) load(key, slot);
+  }
+
+  private place(gx: number, gy: number): { x: number; y: number } {
+    const s = toScreen(gx, gy);
+    return { x: s.x + this.originX, y: s.y + this.originY };
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#3f5832");
+    this.cameras.main.setBackgroundColor("#4f8aa8"); // surrounding sea
 
-    // --- ground -----------------------------------------------------------
-    // Grass everywhere first, then path tiles on top of the affected cells.
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        this.add.image(c * TILE, r * TILE, "grass").setOrigin(0, 0);
+    // Centre the diamond. x spans ±(GRID-1)*TILE_W/2; y spans 0..(2(GRID-1))*TILE_H/2.
+    this.originX = this.scale.width / 2;
+    this.originY = this.scale.height / 2 - (GRID - 1) * (TILE_H / 2) + 40;
+
+    // --- ground: grass everywhere, path over the cross cells ---------------
+    for (let gx = 0; gx < GRID; gx++) {
+      for (let gy = 0; gy < GRID; gy++) {
+        const { x, y } = this.place(gx, gy);
+        const tex = PATH_CELLS.has(`${gx},${gy}`) ? "path" : "grass";
+        this.add.image(x, y, tex).setOrigin(0.5, 0.5).setDepth(depthOf(gx, gy));
       }
     }
-    for (const p of PATHS) {
-      const tex = p.tile === "h" ? "path_h" : p.tile === "v" ? "path_v" : "path_x";
-      this.add.image(p.col * TILE, p.row * TILE, tex).setOrigin(0, 0);
-    }
 
-    // --- decor (rocks + trees) -------------------------------------------
+    // --- decor ------------------------------------------------------------
     for (const d of DECOR) {
-      this.add.image(d.x * TILE + TILE / 2, d.y * TILE + TILE / 2, d.key).setOrigin(0.5, 1).setDepth(d.y);
+      const { x, y } = this.place(d.gx, d.gy);
+      this.add.image(x, y + TILE_H * 0.25, d.key)
+        .setOrigin(0.5, 1)
+        .setDepth(depthOf(d.gx, d.gy) * 10 + 5);
     }
 
-    // --- city title plaque -----------------------------------------------
+    // --- city title plaque (HUD, fixed) -----------------------------------
     this.titleText = this.add
-      .text(this.scale.width / 2, 18, "", {
+      .text(this.scale.width / 2, 16, "", {
         fontFamily: '"Cinzel", serif',
-        fontSize: "20px",
+        fontSize: "22px",
         fontStyle: "bold",
         color: "#fff8e6",
       })
       .setOrigin(0.5, 0)
-      .setShadow(0, 1, "rgba(0,0,0,0.7)", 2)
-      .setDepth(1000)
+      .setShadow(0, 2, "rgba(0,0,0,0.6)", 3)
+      .setDepth(10000)
       .setScrollFactor(0);
 
-    // --- buildings -------------------------------------------------------
+    // --- buildings: shadow + sprite + label -------------------------------
     for (const p of PLACEMENTS) {
-      const px = p.col * TILE + TILE / 2;
-      const py = p.row * TILE + TILE / 2;
+      const { x, y } = this.place(p.gx, p.gy);
+      const d = depthOf(p.gx, p.gy) * 10;
+
+      this.add.image(x, y + 6, "shadow").setOrigin(0.5, 0.5).setDepth(d + 1).setName(`shadow_${p.key}`);
+
       const sprite = this.add
-        .image(px, py, p.key)
-        .setOrigin(0.5, 0.85)
-        .setScale(1.6)
-        .setDepth(p.row + 0.5);
+        .image(x, y + TILE_H * 0.32, p.key)
+        .setOrigin(0.5, 1)
+        .setDepth(d + 5);
       this.buildingSprites.set(p.key, sprite);
 
       const label = this.add
-        .text(px, py + 22, p.label, {
+        .text(x, y + TILE_H * 0.5, p.label, {
           fontFamily: '"Marcellus SC", serif',
           fontSize: "11px",
           color: "#2b2620",
-          backgroundColor: "rgba(247,238,213,0.85)",
-          padding: { x: 4, y: 1 },
+          backgroundColor: "rgba(247,238,213,0.88)",
+          padding: { x: 5, y: 1 },
         })
         .setOrigin(0.5, 0)
-        .setDepth(p.row + 0.6);
+        .setDepth(d + 6);
       this.buildingLabels.set(p.key, label);
 
-      // Forum chimney smoke — subtle, additive blend, low rate.
       if (p.smoke) {
         const tex = this.makeSoftCircle();
         this.add
-          .particles(px, py - 18, tex, {
-            lifespan: 2400,
-            speed: { min: 6, max: 16 },
+          .particles(x, y - 90, tex, {
+            lifespan: 2600,
+            speed: { min: 5, max: 14 },
             angle: { min: -110, max: -70 },
             scale: { start: 0.5, end: 0 },
-            alpha: { start: 0.5, end: 0 },
+            alpha: { start: 0.45, end: 0 },
             quantity: 1,
-            frequency: 800,
+            frequency: 900,
             blendMode: "ADD",
           })
-          .setDepth(p.row + 0.7);
+          .setDepth(d + 7);
       }
     }
 
-    // First render uses whatever React already pushed into the registry.
     this.redraw(this.registry.get("data") as City | undefined);
     this.game.events.on("data-updated", (data: City) => this.redraw(data), this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -170,8 +162,7 @@ export class CityScene extends Phaser.Scene {
     });
   }
 
-  /** Generate a 16×16 soft white circle texture once for the smoke emitter
-      (saves loading another asset). */
+  /** A soft white circle texture for the smoke emitter (no extra asset). */
   private makeSoftCircle(): string {
     const key = "soft-circle";
     if (this.textures.exists(key)) return key;
@@ -182,57 +173,53 @@ export class CityScene extends Phaser.Scene {
     return key;
   }
 
-  /** React-driven update: refresh the city title, building level labels,
-      and the scaffold overlay state. Cheap — no recreation, just mutation. */
+  /** React-driven update: title, level labels, scaffold state, build punch.
+      A level-0 (unbuilt) building shows nothing until it's under construction. */
   private redraw(city?: City) {
     if (!city) return;
     if (this.titleText) this.titleText.setText(city.name.toUpperCase());
 
-    const pendingByBuilding = new Map<string, BuildJob>();
-    for (const j of city.build_jobs) {
-      if (!pendingByBuilding.has(j.building)) pendingByBuilding.set(j.building, j);
-    }
+    const pending = new Map<string, BuildJob>();
+    for (const j of city.build_jobs) if (!pending.has(j.building)) pending.set(j.building, j);
 
     for (const p of PLACEMENTS) {
       const level = city[p.levelField] as number;
-      const label = this.buildingLabels.get(p.key);
       const sprite = this.buildingSprites.get(p.key);
+      const label = this.buildingLabels.get(p.key);
+      const shadow = this.children.getByName(`shadow_${p.key}`) as Phaser.GameObjects.Image | null;
 
-      // A not-yet-built building (level 0, e.g. the Barracks) shows nothing —
-      // until it's under construction, when the scaffold marks the empty plot.
       const exists = level > 0;
-      const isUnderConstruction = pendingByBuilding.has(p.key);
+      const underConstruction = pending.has(p.key);
       sprite?.setVisible(exists);
-      label?.setVisible(exists || isUnderConstruction);
+      shadow?.setVisible(exists || underConstruction);
+      label?.setVisible(exists || underConstruction);
       label?.setText(`${p.label} · ${level}`);
+
+      // Building tier: a base scale (so buildings sit on their tiles without
+      // crowding neighbours) plus a gentle bump at higher level bands.
+      if (sprite && exists) {
+        const BASE = 0.82;
+        const band = level >= 8 ? 1.16 : level >= 4 ? 1.07 : 1.0;
+        if (!underConstruction) sprite.setScale(BASE * band);
+      }
+
       let scaffold = this.scaffolds.get(p.key);
-      if (isUnderConstruction && !scaffold && sprite) {
+      if (underConstruction && !scaffold && sprite) {
+        // A translucent "ghost" of the building itself, gently bobbing — reads
+        // as a structure going up. Works even for the still-unbuilt Barracks.
         scaffold = this.add
-          .image(sprite.x, sprite.y - 6, "scaffold")
-          .setOrigin(0.5, 0.85)
-          .setScale(1.6)
-          .setAlpha(0.85)
+          .image(sprite.x, sprite.y, p.key)
+          .setOrigin(0.5, 1)
+          .setAlpha(0.4)
+          .setTint(0xbfa46a)
           .setDepth(sprite.depth + 0.1);
-        this.tweens.add({
-          targets: scaffold,
-          y: scaffold.y - 3,
-          duration: 900,
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-        });
+        this.tweens.add({ targets: scaffold, y: scaffold.y - 4, duration: 900, yoyo: true, repeat: -1, ease: "sine.inOut" });
         this.scaffolds.set(p.key, scaffold);
-      } else if (!isUnderConstruction && scaffold) {
+      } else if (!underConstruction && scaffold) {
         scaffold.destroy();
         this.scaffolds.delete(p.key);
-        // Brief "I finished!" punch on the underlying building.
         if (sprite) {
-          this.tweens.add({
-            targets: sprite,
-            scale: { from: 1.15, to: 1 },
-            duration: 400,
-            ease: "back.out",
-          });
+          this.tweens.add({ targets: sprite, scale: { from: sprite.scale * 1.12, to: sprite.scale }, duration: 420, ease: "back.out" });
         }
       }
     }

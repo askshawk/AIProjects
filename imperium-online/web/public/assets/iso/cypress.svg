@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 110" width="64" height="110">
+  <!-- Mediterranean cypress. Anchor at bottom-centre (the trunk base). -->
+  <ellipse cx="32" cy="104" rx="15" ry="5" fill="#241c12" opacity="0.18"/>
+  <rect x="29" y="86" width="6" height="20" rx="2" fill="#6e4a26"/>
+  <path d="M32 6 C20 34 22 70 24 92 L40 92 C42 70 44 34 32 6 Z" fill="#3f6b3a"/>
+  <path d="M32 6 C26 30 27 64 28 92 L24 92 C22 70 20 34 32 6 Z" fill="#4f7d45"/>
+  <path d="M32 12 C28 36 29 66 30 90 L34 90 C35 66 36 36 32 12 Z" fill="#5c8b4f" opacity="0.55"/>
+</svg>

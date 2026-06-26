@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
 import TopBar from "@/components/TopBar";
+import OrnateHeader from "@/components/OrnateHeader";
 import SendArmyForm from "@/components/SendArmyForm";
 import type { MapData } from "@/components/phaser/MapScene";
 
@@ -57,11 +58,10 @@ export default function MapPage() {
     <>
       <TopBar />
       <div className="container">
-        <h1>The known world</h1>
-        <p className="muted">
-          Every <em>colonia</em> in the shared world — yours encircled in laurel-gold. Drag to pan,
-          scroll to zoom, <strong>click an enemy city to march on it</strong>.
-        </p>
+        <OrnateHeader
+          title="The Known World"
+          subtitle="Every colonia in the shared world — yours encircled in laurel-gold. Drag to pan, scroll to zoom, click an enemy city to march on it."
+        />
         {error && <div className="error">{error}</div>}
         {sentMsg && <div className="notice">{sentMsg}</div>}
 

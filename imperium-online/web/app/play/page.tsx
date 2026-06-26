@@ -9,6 +9,7 @@ import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
 import MovementsPanel from "@/components/MovementsPanel";
+import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
 import { RESOURCE_ICONS } from "@/components/ResourceIcons";
 
@@ -95,10 +96,10 @@ export default function PlayPage() {
           <p className="muted">Surveying your city…</p>
         ) : (
           <>
-            <h1 style={{ marginBottom: 4 }}>{city.name}</h1>
-            <p className="muted" style={{ marginTop: 0, marginBottom: 20 }}>
-              Founded at grid ({city.x}, {city.y}) · warehouse cap {Math.round(city.capacity)} per resource
-            </p>
+            <OrnateHeader
+              title={city.name}
+              subtitle={`Founded at grid (${city.x}, ${city.y}) · warehouse cap ${Math.round(city.capacity)} per resource`}
+            />
 
             <ul className="resources">
               {RESOURCES.map((r) => {
@@ -139,7 +140,7 @@ export default function PlayPage() {
                   return (
                     <div className="building-row" key={b.building}>
                       <div className="thumb">
-                        <img src={`/assets/medieval/${b.building}.png`} alt="" />
+                        <img src={`/assets/iso/${b.building}.svg`} alt="" />
                       </div>
                       <div>
                         <span className="name">{b.label}</span>

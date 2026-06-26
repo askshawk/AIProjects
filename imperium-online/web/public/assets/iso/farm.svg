@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 176" width="176" height="176">
+  <!-- Farm: a stone granary at the back with tilled fields of grain in front.
+       Light from top-left. Anchor bottom-centre. -->
+  <!-- tilled fields (front of the plot) -->
+  <g stroke="#7a5a30" stroke-width="1.2">
+    <polygon points="26,128 88,160 88,170 26,138" fill="#c9a86a"/>
+    <polygon points="88,160 150,128 150,138 88,170" fill="#b89657"/>
+    <g stroke="#caa84e" stroke-width="2.2" stroke-linecap="round">
+      <line x1="40" y1="133" x2="84" y2="156"/>
+      <line x1="54" y1="130" x2="98" y2="153"/>
+      <line x1="68" y1="127" x2="112" y2="150"/>
+    </g>
+  </g>
+  <!-- granary -->
+  <g stroke="#352a1c" stroke-width="1.5" stroke-linejoin="round">
+    <polygon points="60,70 96,88 96,118 60,100" fill="#e2d3ab"/>
+    <polygon points="96,88 128,72 128,102 96,118" fill="#c2af82"/>
+    <!-- door + window -->
+    <polygon points="70,92 82,98 82,116 70,110" fill="#6e4a26"/>
+    <polygon points="104,86 116,80 116,90 104,96" fill="#8a6a3a"/>
+    <!-- terracotta hip roof -->
+    <polygon points="60,70 96,88 96,40" fill="#cf6f4a"/>
+    <polygon points="96,88 128,72 96,40" fill="#a8472a"/>
+    <line x1="96" y1="40" x2="96" y2="88" stroke="#7d3320" stroke-width="1.4"/>
+  </g>
+  <!-- a couple of wheat sheaves -->
+  <g stroke="#9a7b32" stroke-width="1.2">
+    <path d="M120,150 l3,-14 l3,14 z" fill="#d8b85a"/>
+    <path d="M128,156 l3,-14 l3,14 z" fill="#cba94a"/>
+  </g>
+</svg>

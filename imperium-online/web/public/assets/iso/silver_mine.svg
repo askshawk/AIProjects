@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 176" width="176" height="176">
+  <!-- Silver Mine: a timber-framed adit cut into a rocky hill, ore glinting at
+       the mouth, a loaded cart. Light from top-left. Anchor bottom-centre. -->
+  <g stroke="#352a1c" stroke-width="1.5" stroke-linejoin="round">
+    <!-- rocky hill mound -->
+    <path d="M30 132 C24 96 52 64 92 62 C134 60 160 92 150 130 C140 150 44 152 30 132 Z" fill="#9a958a"/>
+    <path d="M30 132 C24 96 52 64 92 62 C108 61 120 66 128 76 C96 78 70 104 70 138 C54 140 38 140 30 132 Z" fill="#aaa599"/>
+    <path d="M150 130 C140 150 44 152 30 132 C70 142 120 142 150 130 Z" fill="#7f7a70"/>
+    <!-- adit (mine mouth) with timber frame -->
+    <path d="M70 142 L70 104 Q88 92 106 104 L106 142 Z" fill="#2c261d"/>
+    <line x1="70" y1="104" x2="70" y2="142" stroke="#6e4a26" stroke-width="5"/>
+    <line x1="106" y1="104" x2="106" y2="142" stroke="#6e4a26" stroke-width="5"/>
+    <path d="M66 104 Q88 88 110 104" fill="none" stroke="#7c5128" stroke-width="5"/>
+    <!-- silver ore glints -->
+    <g stroke="none">
+      <circle cx="120" cy="100" r="3.4" fill="#cfd8df"/>
+      <circle cx="128" cy="108" r="2.4" fill="#e7eef2"/>
+      <circle cx="58" cy="112" r="2.8" fill="#cfd8df"/>
+    </g>
+    <!-- ore cart -->
+    <g>
+      <polygon points="112,150 132,150 128,138 116,138" fill="#6e4a26"/>
+      <polygon points="116,138 128,138 126,132 118,132" fill="#9aa6b0"/>
+      <circle cx="117" cy="151" r="4" fill="#3a2814"/>
+      <circle cx="129" cy="151" r="4" fill="#3a2814"/>
+    </g>
+  </g>
+</svg>

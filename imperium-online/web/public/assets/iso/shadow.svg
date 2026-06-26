@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
+  <!-- Soft contact shadow placed under buildings (own depth, below sprite). -->
+  <defs>
+    <radialGradient id="sh" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#241c12" stop-opacity="0.34"/>
+      <stop offset="0.7" stop-color="#241c12" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#241c12" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="60" cy="30" rx="58" ry="28" fill="url(#sh)"/>
+</svg>

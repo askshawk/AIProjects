@@ -613,3 +613,102 @@ input:focus {
 @media (max-width: 820px) {
   .grid-2 { grid-template-columns: 1fr; }
 }
+
+/* =========================================================================
+   Ornate classical layer (Visual Overhaul 2.0)
+   Greek-key (meander) motifs, gilded frames, capsule resource bar. Appended
+   last so these rules win over the base styles above.
+   ========================================================================= */
+
+:root {
+  --gild: #c79a3a;
+  --gild-bright: #e6c266;
+  --gild-dark: #8a6a1f;
+}
+
+/* A repeating Greek-key band, drawn as an inline SVG background. */
+.meander-rule {
+  height: 14px;
+  margin: 8px auto 0;
+  max-width: 360px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M0 12 H28 M3 12 V3 H20 V9 H10 V6 H15' fill='none' stroke='%23c79a3a' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: center;
+  opacity: 0.9;
+}
+
+/* ----- ornate page header (city / view name plaque) ----- */
+.ornate-header { text-align: center; margin: 8px 0 22px; }
+.ornate-header .oh-plaque {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 28px;
+  background: linear-gradient(180deg, #fbf3dd 0%, #efe0b6 100%);
+  border: 2px solid var(--gild);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px var(--gild-bright),
+    0 2px 8px var(--shadow);
+}
+.ornate-header h1 { margin: 0; font-size: 2rem; letter-spacing: 0.12em; }
+.ornate-header .oh-laurel { color: var(--gild-dark); font-size: 1.2rem; }
+.ornate-header .oh-sub { margin: 10px 0 0; font-style: italic; }
+
+/* ----- gilded card frame + meander accent under section headers ----- */
+.card {
+  border-color: var(--gild);
+  box-shadow:
+    inset 0 0 0 3px var(--parchment),
+    inset 0 0 0 4px var(--gild-bright),
+    0 3px 12px var(--shadow);
+}
+.card > h3:first-child,
+.card > h2:first-child { position: relative; }
+.card h3 {
+  border-bottom: 2px solid transparent;
+  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M0 12 H28 M3 12 V3 H20 V9 H10 V6 H15' fill='none' stroke='%23c79a3a' stroke-width='2'/%3E%3C/svg%3E") 0 0 14 0 repeat;
+  padding-bottom: 8px;
+}
+
+/* ----- gilded capsule resource bar (Grepolis top-strip feel) ----- */
+.resource {
+  background: linear-gradient(180deg, #2b2620 0%, #3a342a 100%);
+  border: 2px solid var(--gild);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 150, 0.25), 0 2px 5px var(--shadow);
+  grid-template-columns: 40px 1fr;
+  padding: 8px 18px 8px 8px;
+}
+.resource .icon {
+  width: 40px; height: 40px;
+  background: radial-gradient(circle at 35% 30%, #4a4334, #241f18);
+  border: 2px solid var(--gild);
+  border-radius: 50%;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+}
+.resource .amount { color: #f6e7c2; }
+.resource .label { color: var(--gild-bright); }
+.resource .bar { background: rgba(0,0,0,0.35); }
+.resource .bar > span { background: linear-gradient(90deg, var(--gild), var(--gild-bright)); }
+
+/* ----- richer gilded buttons ----- */
+.btn {
+  border: 1px solid var(--gild-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 180, 0.45),
+    inset 0 0 0 1px rgba(199, 154, 58, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+    0 2px 4px var(--shadow);
+}
+.btn-ghost {
+  border-color: var(--gild);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 0 0 1px var(--gild-bright),
+    0 2px 4px var(--shadow);
+}
+
+/* ----- topbar gilded underline ----- */
+.topbar { border-bottom: 3px solid var(--gild); }
+.topbar .brand { color: var(--terracotta-dark); }
