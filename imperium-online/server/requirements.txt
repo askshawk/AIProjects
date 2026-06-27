@@ -1,5 +1,6 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
+websockets>=12  # WebSocket protocol implementation FastAPI uses for the /ws route
 sqlmodel>=0.0.22
 bcrypt>=4.1
 python-jose[cryptography]>=3.3

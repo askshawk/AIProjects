@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMovements, type Movement } from "@/lib/api";
+import { realtime } from "@/lib/realtime";
 
 const UNIT_LABEL: Record<string, string> = { legionary: "Leg.", archer: "Arc.", scout: "Sct." };
 
@@ -39,11 +40,22 @@ export default function MovementsPanel({ token }: { token: string }) {
 
   useEffect(() => {
     refresh();
-    const poll = setInterval(refresh, 8000);
+    // Per-second tick for the countdown rendering — not for polling.
     const tick = setInterval(() => setNow(Date.now()), 1000);
+    // Refetch on realtime events that change the in-flight army list. The
+    // earlier 8s poll is gone; the countdown-zero refetch below is the
+    // belt-and-braces fallback if the WebSocket is briefly down.
+    const unsubscribe = realtime.subscribe((evt) => {
+      switch (evt.type) {
+        case "attack_resolved":
+        case "army_returned":
+        case "queued":
+          refresh();
+      }
+    });
     return () => {
-      clearInterval(poll);
       clearInterval(tick);
+      unsubscribe();
     };
   }, [refresh]);
 

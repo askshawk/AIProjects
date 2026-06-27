@@ -121,7 +121,14 @@ Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
    permanent `BattleReport`, and sends survivors home as a return movement. **This is where
    the worker earns its keep** — battles land while *both* players are offline. Pure combat
    math lives in `combat.py`; movement resolution in `military.py`.
-4. **Real-time pushes** — swap the safety-net poll for WebSockets ("build done", "under attack").
+4. ~~**Real-time pushes**~~ ✅ **Done.** The 10s/8s polling intervals are gone. A single
+   WebSocket from `AuthProvider` opens on login; pages subscribe via `realtime.subscribe(...)`.
+   The server pushes tiny JSON events (`build_done`, `recruit_done`, `attack_resolved`,
+   `army_returned`, `queued`) the moment a state change resolves inside `catch_up` or
+   `resolve_movement` — works whether triggered by a request or the background worker. A
+   defender sees an attack land the instant it lands. Auth via `?token=<jwt>` query param;
+   reconnects with exponential backoff. `server/app/realtime.py` + `web/lib/realtime.ts`.
+   (In-process registry; horizontal scaling needs Redis pub/sub — flagged for later.)
 5. **Multiple cities, founding, conquest, alliances.**
 6. **Hardening** — JWT in httpOnly cookies, rate limiting, SQLite → Postgres.
 

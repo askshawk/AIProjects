@@ -26,7 +26,7 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
-from . import game_config
+from . import game_config, realtime
 from .models import BuildJob, City, RecruitJob, Unit
 
 
@@ -108,8 +108,10 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         if isinstance(event, BuildJob):
             if event.target_level > city.level_of(event.building):
                 city.set_level(event.building, event.target_level)
+            realtime.emit_build_done(city.user_id, city.id, event.building, event.target_level)
         else:  # RecruitJob
             _grant_units(session, city, event.unit_type, event.count)
+            realtime.emit_recruit_done(city.user_id, city.id, event.unit_type, event.count)
         event.status = "done"
         session.add(event)
 

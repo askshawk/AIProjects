@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from . import game_config
+from . import game_config, realtime
 from .combat import resolve_battle
 from .models import BattleReport, City, Movement, Unit
 from .simulation import _grant_units, catch_up
@@ -70,7 +70,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         # Apply the aftermath to the defender's standing army.
         _set_army(session, target, result.defender_survivors)
 
-        session.add(BattleReport(
+        report = BattleReport(
             movement_id=movement.id,
             attacker_user_id=origin.user_id,
             defender_user_id=target.user_id,
@@ -81,7 +81,16 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             attacker_survivors=result.attacker_survivors,
             defender_before=defender_before,
             defender_survivors=result.defender_survivors,
-        ))
+        )
+        session.add(report)
+        # Flush so the report has an id we can include in the push event.
+        session.flush()
+        # Push to both sides — defender's app shows the loud warning, attacker's
+        # gets the report immediately too. Skip self-attacks (origin == target
+        # owner) by ensuring distinct user_ids.
+        realtime.emit_attack_resolved(origin.user_id, report.id, result.outcome, "attacker")
+        if target.user_id != origin.user_id:
+            realtime.emit_attack_resolved(target.user_id, report.id, result.outcome, "defender")
 
         # Survivors march home.
         survivors = {t: c for t, c in result.attacker_survivors.items() if c > 0}
@@ -106,6 +115,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             catch_up(session, home, now)
             for unit_type, count in movement.payload.items():
                 _grant_units(session, home, unit_type, count)
+            realtime.emit_army_returned(home.user_id, home.id)
         movement.status = "done"
         session.add(movement)
 

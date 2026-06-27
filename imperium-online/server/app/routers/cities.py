@@ -18,7 +18,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from .. import economy, game_config, military
+from .. import economy, game_config, military, realtime
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import BuildJob, City, RecruitJob, Unit, User, utcnow
@@ -250,6 +250,7 @@ def queue_build(
     session.add(city)
     session.commit()
     session.refresh(city)
+    realtime.emit_queued(user.id)  # nudge any other open tab to refresh
     return _serialize(city, session)
 
 
@@ -316,4 +317,5 @@ def recruit(
     session.add(city)
     session.commit()
     session.refresh(city)
+    realtime.emit_queued(user.id)
     return _serialize(city, session)

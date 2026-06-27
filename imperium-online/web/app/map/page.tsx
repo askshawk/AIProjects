@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
+import { realtime } from "@/lib/realtime";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
 import SendArmyForm from "@/components/SendArmyForm";
@@ -40,6 +41,12 @@ export default function MapPage() {
 
   useEffect(() => {
     load();
+    // The world map mostly cares about attack outcomes (e.g. a city changing
+    // hands once conquest exists). Subscribing now is cheap and futureproof.
+    const unsubscribe = realtime.subscribe((evt) => {
+      if (evt.type === "attack_resolved") load();
+    });
+    return unsubscribe;
   }, [load]);
 
   // Selecting your own city does nothing; an enemy opens the march form.

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from .. import game_config, military
+from .. import game_config, military, realtime
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import BattleReport, City, Movement, Unit, User, utcnow
@@ -90,6 +90,7 @@ def send_army(
     session.add(movement)
     session.commit()
     session.refresh(movement)
+    realtime.emit_queued(user.id)  # attacker's tabs refresh their movements panel
 
     return MovementOut(
         id=movement.id,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/api";
+import { realtime } from "@/lib/realtime";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
@@ -55,11 +56,23 @@ export default function PlayPage() {
     }
   }, [token, logout, router]);
 
+  // Initial fetch + subscribe to realtime events. The 10s safety-net poll is
+  // gone — refresh-on-countdown-zero in BuildQueue/RecruitQueue stays in as a
+  // belt-and-braces fallback if the WebSocket is briefly down.
   useEffect(() => {
     if (!token) return;
     refresh();
-    const id = setInterval(refresh, 10000);
-    return () => clearInterval(id);
+    const unsubscribe = realtime.subscribe((evt) => {
+      switch (evt.type) {
+        case "build_done":
+        case "recruit_done":
+        case "attack_resolved":
+        case "army_returned":
+        case "queued":
+          refresh();
+      }
+    });
+    return unsubscribe;
   }, [token, refresh]);
 
   async function build(building: string) {

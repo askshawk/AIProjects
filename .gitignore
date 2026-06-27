@@ -10,30 +10,33 @@ token.json
 # Claude Code local state (worktrees, agent data)
 .claude/
 
-# Python
+# Python — these are Python packaging/build artefacts. Scope them so they
+# don't accidentally match source dirs in JS projects (notably web/lib/).
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 MANIFEST
+# venv / build dirs (rooted so they only match at the repo root and inside
+# Python project subdirs that opt in via their own .gitignore)
+/build/
+/develop-eggs/
+/dist/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/pip-wheel-metadata/
+/share/python-wheels/
+.installed.cfg
 
 # Virtual environments
 venv/
