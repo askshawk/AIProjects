@@ -110,9 +110,27 @@ UNITS: dict[str, dict] = {
         "defense": 3,
         "speed": 1.6,        # fast — outruns the legion
     },
+    "settler": {
+        "label": "Settler",
+        "cost": {"wood": 200.0, "stone": 200.0, "silver": 200.0},
+        "population": 8,     # a whole household leaves the city
+        "seconds": 600,      # 10 min at barracks 1 — a serious commitment
+        "attack": 0,
+        "defense": 2,
+        "speed": 0.5,        # slow, lumbering wagon train
+    },
 }
 
 UNIT_TYPES = tuple(UNITS.keys())
+
+# A city can recruit Settlers (to found/conquer) only once its Forum is decent.
+SETTLER_FORUM_REQUIREMENT = 2
+
+
+def can_recruit_unit(unit_type: str, forum_level: int) -> bool:
+    if unit_type == "settler":
+        return forum_level >= SETTLER_FORUM_REQUIREMENT
+    return True
 
 
 def unit_cost(unit_type: str, count: int) -> dict[str, float]:

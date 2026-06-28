@@ -96,6 +96,7 @@ def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) ->
         one_cost = game_config.unit_cost(unit_type, 1)
         can = (
             built
+            and game_config.can_recruit_unit(unit_type, city.forum_level)
             and economy.can_afford(city, one_cost)
             and army_pop + spec["population"] <= pop_cap
         )
@@ -313,6 +314,12 @@ def recruit(
     # prerequisite: a Barracks must exist
     if city.barracks_level < 1:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Build a Barracks before recruiting")
+    # Settlers need a developed Forum.
+    if not game_config.can_recruit_unit(body.unit_type, city.forum_level):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Settlers require Forum level {game_config.SETTLER_FORUM_REQUIREMENT}",
+        )
 
     # gate 1: resources
     cost = game_config.unit_cost(body.unit_type, body.count)

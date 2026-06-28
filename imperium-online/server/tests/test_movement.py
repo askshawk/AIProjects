@@ -74,8 +74,8 @@ def test_send_validations(ctx):
     att, dfn, ac, dc = _setup(ctx)
     _garrison(ctx, ac["id"], legionary=10)
 
-    # No city at those coords.
-    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": 99, "target_y": 99, "units": {"legionary": 1}}).status_code == 404
+    # Empty cell with no settler → can't found, can't attack (400).
+    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": 99, "target_y": 99, "units": {"legionary": 1}}).status_code == 400
     # Can't attack yourself.
     assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": ac["x"], "target_y": ac["y"], "units": {"legionary": 1}}).status_code == 400
     # Can't send units you don't have.

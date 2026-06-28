@@ -47,12 +47,66 @@ def _set_army(session: Session, city: City, survivors: dict[str, int]) -> None:
         session.add(row)
 
 
+def _deposit_home(session: Session, origin: City | None, payload: dict[str, int]) -> None:
+    """A trip that can't complete (cell taken, target gone) puts the whole stack
+    back into the origin city's army and pings the owner."""
+    if origin is None:
+        return
+    for unit_type, count in payload.items():
+        if count > 0:
+            _grant_units(session, origin, unit_type, count)
+    realtime.emit_army_returned(origin.user_id, origin.id)
+
+
+def _resolve_found(session: Session, origin: City | None, movement: Movement, now: datetime) -> None:
+    """A Settler-led stack reaches an empty cell → a new colony is born. If the
+    cell was taken in the meantime, the army marches home instead."""
+    tx, ty = movement.target_x, movement.target_y
+    occupied = session.exec(select(City).where(City.x == tx, City.y == ty)).first()
+    payload = {t: c for t, c in movement.payload.items() if c > 0}
+    if occupied is not None or origin is None or payload.get("settler", 0) < 1:
+        _deposit_home(session, origin, payload)
+        return
+    # Consume one settler; the rest of the stack becomes the new garrison.
+    payload["settler"] -= 1
+    new_city = City(user_id=origin.user_id, name=f"Colonia ({tx},{ty})", x=tx, y=ty)
+    session.add(new_city)
+    session.flush()  # assign id for _grant_units + the event
+    for unit_type, count in payload.items():
+        if count > 0:
+            _grant_units(session, new_city, unit_type, count)
+    realtime.emit_city_founded(origin.user_id, new_city.id)
+
+
+def _resolve_reinforce(session: Session, origin: City | None, target: City | None, now: datetime, payload: dict[str, int]) -> None:
+    if target is None:
+        _deposit_home(session, origin, payload)
+        return
+    catch_up(session, target, now)
+    for unit_type, count in payload.items():
+        if count > 0:
+            _grant_units(session, target, unit_type, count)
+    realtime.emit_army_returned(target.user_id, target.id)
+
+
 def resolve_movement(session: Session, movement: Movement, now: datetime) -> None:
     if movement.status != "traveling":
         return  # already resolved (worker/read race) — skip
 
     origin = session.get(City, movement.origin_city_id)
-    target = session.get(City, movement.target_city_id)
+    target = session.get(City, movement.target_city_id) if movement.target_city_id else None
+
+    if movement.kind == "found":
+        _resolve_found(session, origin, movement, now)
+        movement.status = "done"
+        session.add(movement)
+        return
+
+    if movement.kind == "reinforce":
+        _resolve_reinforce(session, origin, target, now, {t: c for t, c in movement.payload.items() if c > 0})
+        movement.status = "done"
+        session.add(movement)
+        return
 
     if movement.kind == "attack":
         if target is None or origin is None:
@@ -100,6 +154,8 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             session.add(Movement(
                 origin_city_id=target.id,
                 target_city_id=origin.id,
+                target_x=origin.x,
+                target_y=origin.y,
                 kind="return",
                 payload=survivors,
                 departs_at=now,

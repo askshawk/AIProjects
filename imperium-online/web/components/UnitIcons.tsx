@@ -44,8 +44,25 @@ export function ScoutIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+export function SettlerIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="#5e3a1a" strokeWidth="1.4" strokeLinejoin="round" {...props}>
+      {/* a covered colonist's wagon */}
+      <path d="M6 22 C6 14 26 14 26 22 Z" fill="#e8dcc0" stroke="#8a6a3a" />
+      <path d="M6 22 L26 22 L24 25 L8 25 Z" fill="#9a6a3a" />
+      <path d="M11 15 L11 22 M16 14 L16 22 M21 15 L21 22" stroke="#caa06a" strokeWidth="0.9" />
+      <circle cx="10" cy="26" r="2.6" fill="#4a3018" />
+      <circle cx="22" cy="26" r="2.6" fill="#4a3018" />
+      {/* founding pennant */}
+      <path d="M16 14 L16 6" stroke="#5e3a1a" strokeWidth="1.4" />
+      <path d="M16 7 L23 9 L16 11 Z" fill="#b5532f" stroke="#7d3320" />
+    </svg>
+  );
+}
+
 export const UNIT_ICONS: Record<string, (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element> = {
   legionary: LegionaryIcon,
   archer: ArcherIcon,
   scout: ScoutIcon,
+  settler: SettlerIcon,
 };

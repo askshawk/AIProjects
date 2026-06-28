@@ -725,3 +725,15 @@ input:focus {
   cursor: pointer;
   margin-right: 6px;
 }
+
+/* found-a-colony bar under the world map */
+.found-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-family: "Marcellus SC", serif;
+  font-size: 0.85rem;
+}
+.found-bar input { margin: 0; }

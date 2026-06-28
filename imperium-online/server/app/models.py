@@ -164,8 +164,13 @@ class Movement(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     origin_city_id: int = Field(foreign_key="city.id", index=True)
-    target_city_id: int = Field(foreign_key="city.id", index=True)
-    kind: str  # "attack" | "return"
+    # Coordinate target (always set). target_city_id is the city currently there
+    # at SEND time, if any — null for a "found" movement to an empty cell, since
+    # the city doesn't exist yet.
+    target_x: int = 0
+    target_y: int = 0
+    target_city_id: int | None = Field(default=None, foreign_key="city.id", index=True)
+    kind: str  # "attack" | "return" | "found" | "reinforce"
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     departs_at: datetime = Field(default_factory=utcnow)

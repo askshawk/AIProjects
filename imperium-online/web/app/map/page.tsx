@@ -56,11 +56,22 @@ export default function MapPage() {
     return unsubscribe;
   }, [load, reloadCities]);
 
-  // Clicking one of your own cities does nothing; an enemy opens the march form.
+  // Clicking any city opens the send form — your own becomes a reinforcement,
+  // an enemy an attack (the server classifies the order).
   const onCitySelect = useCallback((c: Selected) => {
     setSentMsg(null);
-    setSelected(mineCoords.includes(`${c.x},${c.y}`) ? null : c);
-  }, [mineCoords]);
+    setSelected(c);
+  }, []);
+
+  // "Found a colony" — pick an empty cell to march settlers to.
+  const [foundX, setFoundX] = useState("");
+  const [foundY, setFoundY] = useState("");
+  function openFound() {
+    const x = Number(foundX), y = Number(foundY);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) return;
+    setSentMsg(null);
+    setSelected({ x, y, name: "New colony", owner: "empty" });
+  }
 
   if (!ready || !token) return null;
 
@@ -78,6 +89,12 @@ export default function MapPage() {
         {data ? (
           <div className="card">
             <PhaserGame kind="map" data={data} onCitySelect={onCitySelect} />
+            <div className="found-bar">
+              <span className="muted">Found a colony at</span>
+              <input type="number" placeholder="x" value={foundX} onChange={(e) => setFoundX(e.target.value)} style={{ width: 64 }} />
+              <input type="number" placeholder="y" value={foundY} onChange={(e) => setFoundY(e.target.value)} style={{ width: 64 }} />
+              <button className="btn btn-ghost" type="button" onClick={openFound}>Send settlers →</button>
+            </div>
           </div>
         ) : (
           <p className="muted">Surveying the provinces…</p>

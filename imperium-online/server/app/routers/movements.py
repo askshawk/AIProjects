@@ -47,13 +47,8 @@ def send_army(
     now = utcnow()
     catch_up(session, origin, now)  # resolve any just-finished recruits first
 
-    target = session.exec(
-        select(City).where(City.x == body.target_x, City.y == body.target_y)
-    ).first()
-    if target is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No city at those coordinates")
-    if target.id == origin.id:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't attack your own city")
+    tx, ty = body.target_x, body.target_y
+    target = session.exec(select(City).where(City.x == tx, City.y == ty)).first()
 
     # Validate the requested stack against the standing army.
     units = {t: int(c) for t, c in body.units.items() if int(c) > 0}
@@ -62,6 +57,23 @@ def send_army(
     for unit_type in units:
         if unit_type not in game_config.UNIT_TYPES:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown unit: {unit_type}")
+    has_settler = units.get("settler", 0) > 0
+
+    # Classify the order from what's at the destination.
+    if target is not None:
+        if target.id == origin.id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "That army is already in this city")
+        kind = "reinforce" if target.user_id == user.id else "attack"
+        to_name = target.name
+    else:
+        # Empty cell — only a Settler can do anything here (found a colony).
+        if not has_settler:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Nothing there to attack — send a Settler to found a colony",
+            )
+        kind = "found"
+        to_name = f"({tx},{ty})"
 
     have = {
         u.unit_type: u
@@ -79,12 +91,15 @@ def send_army(
         have[unit_type].count -= count
         session.add(have[unit_type])
 
-    dist = military.distance(origin, target)
+    import math
+    dist = military.distance(origin, target) if target else math.hypot(origin.x - tx, origin.y - ty)
     secs = game_config.travel_seconds(dist, units)
     movement = Movement(
         origin_city_id=origin.id,
-        target_city_id=target.id,
-        kind="attack",
+        target_city_id=target.id if target else None,
+        target_x=tx,
+        target_y=ty,
+        kind=kind,
         payload=units,
         departs_at=now,
         arrives_at=now + timedelta(seconds=secs),
@@ -92,7 +107,7 @@ def send_army(
     session.add(movement)
     session.commit()
     session.refresh(movement)
-    realtime.emit_queued(user.id)  # attacker's tabs refresh their movements panel
+    realtime.emit_queued(user.id)  # actor's tabs refresh their movements panel
 
     return MovementOut(
         id=movement.id,
@@ -103,9 +118,9 @@ def send_army(
         mine=True,
         incoming_attack=False,
         from_name=origin.name,
-        to_name=target.name,
-        to_x=target.x,
-        to_y=target.y,
+        to_name=to_name,
+        to_x=tx,
+        to_y=ty,
     )
 
 
@@ -141,12 +156,12 @@ def my_movements(
     out: list[MovementOut] = []
     for m in rows:
         origin = session.get(City, m.origin_city_id)
-        target = session.get(City, m.target_city_id)
+        target = session.get(City, m.target_city_id) if m.target_city_id else None
         origin_mine = origin is not None and origin.user_id == user.id
         target_mine = target is not None and target.user_id == user.id
-        # The marching troops belong to: the origin (attack) or the destination
-        # home city (return). "mine" means those troops are yours.
-        mine = origin_mine if m.kind == "attack" else target_mine
+        # The marching troops belong to: the origin (attack/found/reinforce) or
+        # the destination home city (return). "mine" means those troops are yours.
+        mine = target_mine if m.kind == "return" else origin_mine
         incoming_attack = m.kind == "attack" and target_mine and not origin_mine
         out.append(MovementOut(
             id=m.id,
@@ -157,9 +172,9 @@ def my_movements(
             mine=mine,
             incoming_attack=incoming_attack,
             from_name=origin.name if origin else "?",
-            to_name=target.name if target else "?",
-            to_x=target.x if target else 0,
-            to_y=target.y if target else 0,
+            to_name=target.name if target else f"({m.target_x},{m.target_y})",
+            to_x=m.target_x,
+            to_y=m.target_y,
         ))
     return out
 

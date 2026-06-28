@@ -71,6 +71,11 @@ class ConnectionManager:
         if not sockets:
             self._by_user.pop(user_id, None)
 
+    def push_to_users(self, user_ids, event: dict[str, Any]) -> None:
+        """push_to_user for several recipients (alliance chat, conquest)."""
+        for uid in set(user_ids):
+            self.push_to_user(uid, event)
+
     def push_to_user(self, user_id: int, event: dict[str, Any]) -> None:
         """Fire-and-forget. Safe to call from any thread (the worker, a sync
         route handler, etc.). If no one is connected, nothing happens — events
@@ -172,6 +177,15 @@ def emit_army_returned(user_id: int, city_id: int) -> None:
         "type": "army_returned",
         "city_id": city_id,
     })
+
+
+def emit_city_founded(user_id: int, city_id: int) -> None:
+    manager.push_to_user(user_id, {"type": "city_founded", "city_id": city_id})
+
+
+def emit_city_captured(captor_id: int, loser_id: int, city_id: int) -> None:
+    manager.push_to_user(captor_id, {"type": "city_captured", "city_id": city_id, "role": "captor"})
+    manager.push_to_user(loser_id, {"type": "city_captured", "city_id": city_id, "role": "loser"})
 
 
 def emit_queued(user_id: int) -> None:

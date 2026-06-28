@@ -50,8 +50,11 @@ export default function SendArmyForm({
   return (
     <div className="card" style={{ marginTop: 18 }}>
       <h3>
-        March on {target.name} <span className="muted" style={{ fontSize: "0.8rem" }}>· {target.owner} · ({target.x}, {target.y})</span>
+        Send army → {target.name} <span className="muted" style={{ fontSize: "0.8rem" }}>· {target.owner} · ({target.x}, {target.y}) · from {city.name}</span>
       </h3>
+      <p className="muted" style={{ marginTop: -4, fontSize: "0.82rem" }}>
+        Attack an enemy, reinforce your own/allied city, or include a <strong>Settler</strong> to found a colony on an empty cell.
+      </p>
 
       {available.length === 0 ? (
         <p className="muted">You have no troops at home to send. Recruit some first.</p>
