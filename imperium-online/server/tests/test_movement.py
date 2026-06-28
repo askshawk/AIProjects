@@ -75,13 +75,13 @@ def test_send_validations(ctx):
     _garrison(ctx, ac["id"], legionary=10)
 
     # No city at those coords.
-    assert ctx.post("/movements", headers=att, json={"target_x": 99, "target_y": 99, "units": {"legionary": 1}}).status_code == 404
+    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": 99, "target_y": 99, "units": {"legionary": 1}}).status_code == 404
     # Can't attack yourself.
-    assert ctx.post("/movements", headers=att, json={"target_x": ac["x"], "target_y": ac["y"], "units": {"legionary": 1}}).status_code == 400
+    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": ac["x"], "target_y": ac["y"], "units": {"legionary": 1}}).status_code == 400
     # Can't send units you don't have.
-    assert ctx.post("/movements", headers=att, json={"target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 999}}).status_code == 400
+    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 999}}).status_code == 400
     # Must send something.
-    assert ctx.post("/movements", headers=att, json={"target_x": dc["x"], "target_y": dc["y"], "units": {}}).status_code == 400
+    assert ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {}}).status_code == 400
 
 
 def test_full_attack_cycle(ctx):
@@ -90,7 +90,7 @@ def test_full_attack_cycle(ctx):
     _garrison(ctx, dc["id"], legionary=5)
 
     # Send → units leave the city immediately.
-    r = ctx.post("/movements", headers=att, json={"target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 20}})
+    r = ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 20}})
     assert r.status_code == 201
     home = ctx.get("/cities/me", headers=att).json()
     assert next(u["have"] for u in home["units"] if u["unit_type"] == "legionary") == 0
@@ -124,7 +124,7 @@ def test_battle_resolves_while_everyone_is_offline(ctx):
     _garrison(ctx, ac["id"], legionary=10)
     _garrison(ctx, dc["id"], scout=3)
 
-    ctx.post("/movements", headers=att, json={"target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 10}})
+    ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 10}})
     _rush_movements(ctx, kind="attack")
 
     # No player read — drive the worker's resolver directly.

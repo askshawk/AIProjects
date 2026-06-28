@@ -142,7 +142,7 @@ def test_attack_resolved_pushes_to_both_sides(ctx):
          ctx.websocket_connect(f"/ws?token={tok_b}") as ws_b:
 
         ctx.post("/movements", headers=ha, json={
-            "target_x": city_b["x"], "target_y": city_b["y"], "units": {"legionary": 10},
+            "origin_city_id": city_a["id"], "target_x": city_b["x"], "target_y": city_b["y"], "units": {"legionary": 10},
         })
         # send_army emits a "queued" to A.
         assert ws_a.receive_json()["type"] == "queued"

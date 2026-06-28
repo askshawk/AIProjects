@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
-import { getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/api";
+import { useCities } from "@/lib/cityStore";
+import { getCity, getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
@@ -34,6 +35,7 @@ const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
 
 export default function PlayPage() {
   const { token, ready, logout } = useAuth();
+  const { activeId, reload: reloadCities } = useCities();
   const router = useRouter();
   const [city, setCity] = useState<City | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +44,11 @@ export default function PlayPage() {
     if (ready && !token) router.replace("/login");
   }, [ready, token, router]);
 
+  // Load the active city (or the primary one until the switcher resolves).
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      setCity(await getMyCity(token));
+      setCity(activeId != null ? await getCity(token, activeId) : await getMyCity(token));
     } catch (err) {
       if (err instanceof Error && /credential/i.test(err.message)) {
         logout();
@@ -54,11 +57,11 @@ export default function PlayPage() {
         setError(err instanceof Error ? err.message : "Failed to load city");
       }
     }
-  }, [token, logout, router]);
+  }, [token, activeId, logout, router]);
 
-  // Initial fetch + subscribe to realtime events. The 10s safety-net poll is
-  // gone — refresh-on-countdown-zero in BuildQueue/RecruitQueue stays in as a
-  // belt-and-braces fallback if the WebSocket is briefly down.
+  // Refetch whenever the active city changes (switcher) or a realtime event
+  // lands. founded/captured also refresh the switcher list itself. The 10s
+  // safety-net poll is gone; refresh-on-countdown-zero stays as a fallback.
   useEffect(() => {
     if (!token) return;
     refresh();
@@ -70,10 +73,16 @@ export default function PlayPage() {
         case "army_returned":
         case "queued":
           refresh();
+          break;
+        case "city_founded":
+        case "city_captured":
+          reloadCities();
+          refresh();
+          break;
       }
     });
     return unsubscribe;
-  }, [token, refresh]);
+  }, [token, refresh, reloadCities]);
 
   async function build(building: string) {
     if (!token || !city) return;

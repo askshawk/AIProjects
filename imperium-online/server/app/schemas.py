@@ -86,6 +86,15 @@ class UnitTypeOut(BaseModel):
     can_recruit: bool        # barracks built + at least one affordable + pop room
 
 
+class CitySummaryOut(BaseModel):
+    """Lightweight entry for the city-switcher list (no catch_up)."""
+    id: int
+    name: str
+    x: int
+    y: int
+    forum_level: int
+
+
 class CityOut(BaseModel):
     id: int
     name: str
@@ -130,6 +139,7 @@ class WorldCityOut(BaseModel):
 
 # --- movement & combat ------------------------------------------------------
 class SendArmyRequest(BaseModel):
+    origin_city_id: int
     target_x: int
     target_y: int
     units: dict[str, int]  # {unit_type: count}

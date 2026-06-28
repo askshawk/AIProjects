@@ -12,6 +12,9 @@ export type ServerEvent =
   | { type: "recruit_done"; city_id: number; unit_type: string; count: number }
   | { type: "attack_resolved"; report_id: number; outcome: "attacker_won" | "defender_won"; role: "attacker" | "defender" }
   | { type: "army_returned"; city_id: number }
+  | { type: "city_founded"; city_id: number }
+  | { type: "city_captured"; city_id: number; role: "captor" | "loser" }
+  | { type: "alliance_message"; alliance_id: number; user: string; body: string; created_at: string }
   | { type: "queued" }
   | { type: "ping" };
 

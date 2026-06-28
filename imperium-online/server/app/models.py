@@ -14,7 +14,7 @@ completes_at), so we are religious about UTC and never store naive local time.
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
@@ -40,10 +40,11 @@ class User(SQLModel, table=True):
     password_hash: str
     created_at: datetime = Field(default_factory=utcnow)
 
-    # One city per user in the slice. cascade so deleting a user is clean.
-    city: Optional["City"] = Relationship(
+    # A user owns one or more cities (founded or conquered). cascade so deleting
+    # a user is clean.
+    cities: List["City"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"uselist": False, "cascade": "all, delete-orphan"},
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
 
@@ -77,7 +78,7 @@ class City(SQLModel, table=True):
     farm_level: int = game_config.STARTING_LEVELS["farm"]
     barracks_level: int = game_config.STARTING_LEVELS["barracks"]  # 0 = not built
 
-    user: User = Relationship(back_populates="city")
+    user: User = Relationship(back_populates="cities")
     build_jobs: List["BuildJob"] = Relationship(
         back_populates="city",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

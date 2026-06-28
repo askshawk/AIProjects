@@ -712,3 +712,16 @@ input:focus {
 /* ----- topbar gilded underline ----- */
 .topbar { border-bottom: 3px solid var(--gild); }
 .topbar .brand { color: var(--terracotta-dark); }
+
+/* city switcher in the top bar */
+.city-switcher {
+  font-family: "Marcellus SC", serif;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+  border: 1px solid var(--gild);
+  border-radius: 5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-right: 6px;
+}

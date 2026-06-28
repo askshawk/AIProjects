@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
-import { getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
+import { useCities } from "@/lib/cityStore";
+import { getCity, getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
@@ -17,12 +18,16 @@ type Selected = { x: number; y: number; name: string; owner: string };
 
 export default function MapPage() {
   const { token, ready } = useAuth();
+  const { cities, activeId, reload: reloadCities } = useCities();
   const router = useRouter();
   const [data, setData] = useState<MapData | null>(null);
-  const [city, setCity] = useState<City | null>(null);
+  const [origin, setOrigin] = useState<City | null>(null);  // active city = army origin
   const [selected, setSelected] = useState<Selected | null>(null);
   const [sentMsg, setSentMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Coords of all my cities, for the laurel ring + "is this mine?" check.
+  const mineCoords = cities.map((c) => `${c.x},${c.y}`);
 
   useEffect(() => {
     if (ready && !token) router.replace("/login");
@@ -31,33 +36,31 @@ export default function MapPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [cities, me] = await Promise.all([getWorld(token), getMyCity(token)]);
-      setData({ cities: cities as WorldCity[], mine: { x: me.x, y: me.y } });
-      setCity(me);
+      const world = await getWorld(token);
+      setData({ cities: world as WorldCity[], mine: cities.map((c) => `${c.x},${c.y}`) });
+      // The active city is the origin armies march from.
+      setOrigin(activeId != null ? await getCity(token, activeId) : await getMyCity(token));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load map");
     }
-  }, [token]);
+  }, [token, activeId, cities]);
 
   useEffect(() => {
     load();
-    // The world map mostly cares about attack outcomes (e.g. a city changing
-    // hands once conquest exists). Subscribing now is cheap and futureproof.
     const unsubscribe = realtime.subscribe((evt) => {
-      if (evt.type === "attack_resolved") load();
+      if (evt.type === "attack_resolved" || evt.type === "city_captured" || evt.type === "city_founded") {
+        reloadCities();
+        load();
+      }
     });
     return unsubscribe;
-  }, [load]);
+  }, [load, reloadCities]);
 
-  // Selecting your own city does nothing; an enemy opens the march form.
+  // Clicking one of your own cities does nothing; an enemy opens the march form.
   const onCitySelect = useCallback((c: Selected) => {
     setSentMsg(null);
-    if (city && c.x === city.x && c.y === city.y) {
-      setSelected(null);
-    } else {
-      setSelected(c);
-    }
-  }, [city]);
+    setSelected(mineCoords.includes(`${c.x},${c.y}`) ? null : c);
+  }, [mineCoords]);
 
   if (!ready || !token) return null;
 
@@ -80,10 +83,10 @@ export default function MapPage() {
           <p className="muted">Surveying the provinces…</p>
         )}
 
-        {selected && city && (
+        {selected && origin && (
           <SendArmyForm
             token={token}
-            city={city}
+            city={origin}
             target={selected}
             onSent={() => {
               setSelected(null);

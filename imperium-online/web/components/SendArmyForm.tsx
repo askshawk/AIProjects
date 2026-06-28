@@ -39,7 +39,7 @@ export default function SendArmyForm({
     setBusy(true);
     setError(null);
     try {
-      await sendArmy(token, target.x, target.y, units);
+      await sendArmy(token, city.id, target.x, target.y, units);
       onSent();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send army");

@@ -26,6 +26,7 @@ from ..schemas import (
     BuildJobOut,
     BuildRequest,
     CityOut,
+    CitySummaryOut,
     RecruitJobOut,
     RecruitRequest,
     UnitTypeOut,
@@ -165,20 +166,29 @@ def _serialize(city: City, session: Session) -> CityOut:
     )
 
 
-def _load_my_city(session: Session, user: User) -> City:
-    city = session.exec(select(City).where(City.user_id == user.id)).first()
-    if city is None:  # shouldn't happen — every user gets a city at register
+def _owned_city(session: Session, user: User, city_id: int) -> City:
+    """Load a city by id and verify the caller owns it. 404 if it doesn't
+    exist, 403 if it belongs to someone else."""
+    city = session.get(City, city_id)
+    if city is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "City not found")
+    if city.user_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your city")
+    return city
+
+
+def _primary_city(session: Session, user: User) -> City:
+    """The user's oldest city — used by the convenience /cities/me endpoint."""
+    city = session.exec(
+        select(City).where(City.user_id == user.id).order_by(City.founded_at)
+    ).first()
+    if city is None:  # shouldn't happen — every user is founded with a city
         raise HTTPException(status.HTTP_404_NOT_FOUND, "City not found")
     return city
 
 
-# --- endpoints -------------------------------------------------------------
-@router.get("/me", response_model=CityOut)
-def get_my_city(
-    session: Session = Depends(get_session),
-    user: User = Depends(get_current_user),
-) -> CityOut:
-    city = _load_my_city(session, user)
+def _read_city(session: Session, city: City) -> CityOut:
+    """catch_up + resolve due movements for one city, then serialize."""
     now = utcnow()
     catch_up(session, city, now)
     # Resolve any battles that landed on (or armies that returned to) this city,
@@ -189,6 +199,38 @@ def get_my_city(
     return _serialize(city, session)
 
 
+# --- endpoints -------------------------------------------------------------
+@router.get("", response_model=list[CitySummaryOut])
+def list_my_cities(
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> list[CitySummaryOut]:
+    """All cities the caller owns — drives the city switcher. Lightweight (no
+    catch_up): just identity + position for the dropdown."""
+    cities = session.exec(
+        select(City).where(City.user_id == user.id).order_by(City.founded_at)
+    ).all()
+    return [CitySummaryOut(id=c.id, name=c.name, x=c.x, y=c.y, forum_level=c.forum_level) for c in cities]
+
+
+@router.get("/me", response_model=CityOut)
+def get_my_city(
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> CityOut:
+    """Convenience: the caller's primary (oldest) city, fully resolved."""
+    return _read_city(session, _primary_city(session, user))
+
+
+@router.get("/{city_id}", response_model=CityOut)
+def get_city(
+    city_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> CityOut:
+    return _read_city(session, _owned_city(session, user, city_id))
+
+
 @router.post("/{city_id}/builds", response_model=CityOut, status_code=status.HTTP_201_CREATED)
 def queue_build(
     city_id: int,
@@ -196,9 +238,7 @@ def queue_build(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> CityOut:
-    city = _load_my_city(session, user)
-    if city.id != city_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your city")
+    city = _owned_city(session, user, city_id)
     if body.building not in game_config.BUILDINGS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown building: {body.building}")
 
@@ -261,9 +301,7 @@ def recruit(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> CityOut:
-    city = _load_my_city(session, user)
-    if city.id != city_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your city")
+    city = _owned_city(session, user, city_id)
     if body.unit_type not in game_config.UNIT_TYPES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown unit: {body.unit_type}")
     if body.count < 1 or body.count > MAX_RECRUIT_BATCH:

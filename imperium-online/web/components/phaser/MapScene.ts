@@ -9,7 +9,9 @@ import * as Phaser from "phaser";
 import type { WorldCity } from "@/lib/api";
 import { TERRAIN, BUILDINGS, isSvg, type AssetSlot } from "./assetManifest";
 
-export type MapData = { cities: WorldCity[]; mine: { x: number; y: number } | null };
+// `mine` is the set of the viewer's own city coordinates ("x,y") — a user can
+// own several, and they all wear the laurel-gold ring.
+export type MapData = { cities: WorldCity[]; mine: string[] };
 
 // Island spacing on screen (wider than a tile so open sea shows between them).
 const ISO_X = 150;
@@ -79,7 +81,7 @@ export class MapScene extends Phaser.Scene {
 
     for (const c of data.cities) {
       const { x, y } = toScreen(c.x, c.y);
-      const isMine = !!(data.mine && c.x === data.mine.x && c.y === data.mine.y);
+      const isMine = data.mine.includes(`${c.x},${c.y}`);
       const depth = (c.x + c.y) * 10 + 100;
 
       this.add.image(x, y, "island").setOrigin(0.5, 0.5).setDepth(depth);

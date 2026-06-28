@@ -28,10 +28,12 @@ from ..simulation import catch_up
 router = APIRouter(tags=["movements"])
 
 
-def _my_city(session: Session, user: User) -> City:
-    city = session.exec(select(City).where(City.user_id == user.id)).first()
+def _owned_city(session: Session, user: User, city_id: int) -> City:
+    city = session.get(City, city_id)
     if city is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "City not found")
+    if city.user_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your city")
     return city
 
 
@@ -41,7 +43,7 @@ def send_army(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> MovementOut:
-    origin = _my_city(session, user)
+    origin = _owned_city(session, user, body.origin_city_id)
     now = utcnow()
     catch_up(session, origin, now)  # resolve any just-finished recruits first
 
@@ -112,17 +114,26 @@ def my_movements(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> list[MovementOut]:
-    city = _my_city(session, user)
+    my_city_ids = set(
+        session.exec(select(City.id).where(City.user_id == user.id)).all()
+    )
     now = utcnow()
-    # Resolve anything that has already arrived so the list is current.
-    military.resolve_due_movements(session, now, city_id=city.id)
+    # Resolve anything that has already arrived so the list is current — across
+    # all of the user's cities.
+    for cid in my_city_ids:
+        military.resolve_due_movements(session, now, city_id=cid)
     session.commit()
 
+    if not my_city_ids:
+        return []
     rows = session.exec(
         select(Movement)
         .where(
             Movement.status == "traveling",
-            or_(Movement.origin_city_id == city.id, Movement.target_city_id == city.id),
+            or_(
+                Movement.origin_city_id.in_(my_city_ids),
+                Movement.target_city_id.in_(my_city_ids),
+            ),
         )
         .order_by(Movement.arrives_at)
     ).all()

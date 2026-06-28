@@ -134,6 +134,16 @@ export function login(email: string, password: string) {
 }
 
 // --- gameplay ---
+export type CitySummary = { id: number; name: string; x: number; y: number; forum_level: number };
+
+export function getMyCities(token: string) {
+  return apiFetch<CitySummary[]>("/cities", {}, token);
+}
+
+export function getCity(token: string, cityId: number) {
+  return apiFetch<City>(`/cities/${cityId}`, {}, token);
+}
+
 export function getMyCity(token: string) {
   return apiFetch<City>("/cities/me", {}, token);
 }
@@ -157,10 +167,10 @@ export function getWorld(token: string) {
 }
 
 // --- movement & combat ---
-export function sendArmy(token: string, targetX: number, targetY: number, units: UnitStack) {
+export function sendArmy(token: string, originCityId: number, targetX: number, targetY: number, units: UnitStack) {
   return apiFetch<Movement>("/movements", {
     method: "POST",
-    body: JSON.stringify({ target_x: targetX, target_y: targetY, units }),
+    body: JSON.stringify({ origin_city_id: originCityId, target_x: targetX, target_y: targetY, units }),
   }, token);
 }
 
