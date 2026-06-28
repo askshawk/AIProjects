@@ -69,7 +69,11 @@ export type City = {
   recruit_jobs: RecruitJob[];
 };
 
-export type WorldCity = { x: number; y: number; name: string; owner: string };
+export type WorldCity = { x: number; y: number; name: string; owner: string; alliance: string | null };
+
+export type AllianceMember = { user: string; role: string };
+export type Alliance = { id: number; name: string; members: AllianceMember[]; mine_role: string | null };
+export type AllianceMessage = { id: number; user: string; body: string; created_at: string };
 
 export type UnitStack = Record<string, number>;
 
@@ -184,4 +188,27 @@ export function getMovements(token: string) {
 
 export function getReports(token: string) {
   return apiFetch<BattleReport[]>("/reports/me", {}, token);
+}
+
+// --- alliances ---
+export function getMyAlliance(token: string) {
+  return apiFetch<Alliance | null>("/alliances/me", {}, token);
+}
+export function listAlliances(token: string) {
+  return apiFetch<Alliance[]>("/alliances", {}, token);
+}
+export function createAlliance(token: string, name: string) {
+  return apiFetch<Alliance>("/alliances", { method: "POST", body: JSON.stringify({ name }) }, token);
+}
+export function joinAlliance(token: string, id: number) {
+  return apiFetch<Alliance>(`/alliances/${id}/join`, { method: "POST" }, token);
+}
+export async function leaveAlliance(token: string) {
+  await apiFetch<unknown>("/alliances/leave", { method: "POST" }, token).catch(() => {});
+}
+export function getMessages(token: string, id: number) {
+  return apiFetch<AllianceMessage[]>(`/alliances/${id}/messages`, {}, token);
+}
+export function postMessage(token: string, id: number, body: string) {
+  return apiFetch<AllianceMessage>(`/alliances/${id}/messages`, { method: "POST", body: JSON.stringify({ body }) }, token);
 }

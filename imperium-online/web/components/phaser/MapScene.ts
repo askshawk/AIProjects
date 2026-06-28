@@ -9,9 +9,9 @@ import * as Phaser from "phaser";
 import type { WorldCity } from "@/lib/api";
 import { TERRAIN, BUILDINGS, isSvg, type AssetSlot } from "./assetManifest";
 
-// `mine` is the set of the viewer's own city coordinates ("x,y") — a user can
-// own several, and they all wear the laurel-gold ring.
-export type MapData = { cities: WorldCity[]; mine: string[] };
+// `mine`/`allies` are sets of "x,y" coords: own cities wear the laurel-gold
+// ring, allied cities a blue ring.
+export type MapData = { cities: WorldCity[]; mine: string[]; allies: string[] };
 
 // Island spacing on screen (wider than a tile so open sea shows between them).
 const ISO_X = 150;
@@ -81,13 +81,17 @@ export class MapScene extends Phaser.Scene {
 
     for (const c of data.cities) {
       const { x, y } = toScreen(c.x, c.y);
-      const isMine = data.mine.includes(`${c.x},${c.y}`);
+      const key = `${c.x},${c.y}`;
+      const isMine = data.mine.includes(key);
+      const isAllied = !isMine && data.allies.includes(key);
       const depth = (c.x + c.y) * 10 + 100;
 
       this.add.image(x, y, "island").setOrigin(0.5, 0.5).setDepth(depth);
 
       if (isMine) {
         this.add.circle(x, y - 6, 56, 0xb7892f, 0).setStrokeStyle(4, 0xb7892f, 1).setDepth(depth + 1);
+      } else if (isAllied) {
+        this.add.circle(x, y - 6, 56, 0x3f7fa6, 0).setStrokeStyle(4, 0x4d9fd0, 1).setDepth(depth + 1);
       }
 
       this.add.image(x - 34, y - 6, "cypress").setOrigin(0.5, 1).setScale(0.5).setDepth(depth + 1);

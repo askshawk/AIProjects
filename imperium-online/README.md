@@ -129,7 +129,14 @@ Each layer reuses `catch_up` + scheduled events; none requires re-architecting.
    defender sees an attack land the instant it lands. Auth via `?token=<jwt>` query param;
    reconnects with exponential backoff. `server/app/realtime.py` + `web/lib/realtime.ts`.
    (In-process registry; horizontal scaling needs Redis pub/sub — flagged for later.)
-5. **Multiple cities, founding, conquest, alliances.**
+5. ~~**Multiple cities, founding, conquest, alliances**~~ ✅ **Done.** A user owns many cities
+   (city switcher; every endpoint loads by id + ownership). Recruit **Settlers** to found new
+   colonies on empty map cells or reinforce friendly ones. Cities have **loyalty** that
+   regenerates in `catch_up`; a settler-led assault erodes it and at 0 the city flips owner —
+   resolved by the worker even while both players are offline. **Alliances** with one-per-user
+   membership and **live chat over the WebSocket** (`alliance_message`); allied cities show in
+   alliance colour and count as friendly for reinforcement. `routers/alliances.py`,
+   loyalty/conquest in `military.py`, founding/reinforce branches in `resolve_movement`.
 6. **Hardening** — JWT in httpOnly cookies, rate limiting, SQLite → Postgres.
 
 ## Notes & deliberate choices

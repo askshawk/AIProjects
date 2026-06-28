@@ -759,3 +759,27 @@ input:focus {
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
+
+/* alliances + chat */
+.member-list { list-style: none; margin: 0; padding: 0; }
+.member-list li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.member-list li:last-child { border-bottom: none; }
+.join-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.chat-log {
+  height: 300px;
+  overflow-y: auto;
+  background: var(--marble);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.chat-msg { margin-bottom: 7px; font-size: 0.92rem; }
+.chat-user {
+  font-family: "Marcellus SC", serif;
+  color: var(--terracotta-dark);
+  margin-right: 8px;
+}
+.chat-input { display: flex; gap: 8px; align-items: center; }
+.chat-input input { margin: 0; }

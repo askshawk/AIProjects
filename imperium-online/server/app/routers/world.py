@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from ..auth import get_current_user
 from ..db import get_session
-from ..models import City, User
+from ..models import Alliance, AllianceMembership, City, User
 from ..schemas import WorldCityOut
 
 router = APIRouter(prefix="/world", tags=["world"])
@@ -23,12 +23,19 @@ def list_world_cities(
     _user: User = Depends(get_current_user),  # must be logged in, but any account sees all
 ) -> list[WorldCityOut]:
     rows = session.exec(select(City, User).join(User, City.user_id == User.id)).all()
+    # Map each user_id → alliance name, so the client can colour allied cities.
+    alliance_of: dict[int, str] = {}
+    for membership, alliance in session.exec(
+        select(AllianceMembership, Alliance).join(Alliance, AllianceMembership.alliance_id == Alliance.id)
+    ).all():
+        alliance_of[membership.user_id] = alliance.name
     return [
         WorldCityOut(
             x=city.x,
             y=city.y,
             name=city.name,
             owner=user.email.split("@", 1)[0],  # friendly label, not the full email
+            alliance=alliance_of.get(user.id),
         )
         for city, user in rows
     ]

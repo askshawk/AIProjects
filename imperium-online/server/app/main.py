@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import realtime
 from .db import init_db
-from .routers import auth, cities, movements, world
+from .routers import alliances, auth, cities, movements, world
 from .worker import start_worker, stop_worker
 
 
@@ -60,6 +60,7 @@ app.include_router(auth.router)
 app.include_router(cities.router)
 app.include_router(world.router)
 app.include_router(movements.router)
+app.include_router(alliances.router)
 app.include_router(realtime.router)
 
 

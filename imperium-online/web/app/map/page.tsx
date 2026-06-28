@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { useCities } from "@/lib/cityStore";
-import { getCity, getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
+import { getCity, getMyAlliance, getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
@@ -36,8 +36,16 @@ export default function MapPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const world = await getWorld(token);
-      setData({ cities: world as WorldCity[], mine: cities.map((c) => `${c.x},${c.y}`) });
+      const [world, alliance] = await Promise.all([getWorld(token), getMyAlliance(token)]);
+      const mineSet = new Set(cities.map((c) => `${c.x},${c.y}`));
+      const mine = [...mineSet];
+      // Allied = cities in my alliance that aren't my own.
+      const allies = alliance
+        ? (world as WorldCity[])
+            .filter((c) => c.alliance === alliance.name && !mineSet.has(`${c.x},${c.y}`))
+            .map((c) => `${c.x},${c.y}`)
+        : [];
+      setData({ cities: world as WorldCity[], mine, allies });
       // The active city is the origin armies march from.
       setOrigin(activeId != null ? await getCity(token, activeId) : await getMyCity(token));
     } catch (err) {

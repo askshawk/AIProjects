@@ -21,7 +21,7 @@ from sqlmodel import Session, select
 from .. import game_config, military, realtime
 from ..auth import get_current_user
 from ..db import get_session
-from ..models import BattleReport, City, Movement, Unit, User, utcnow
+from ..models import AllianceMembership, BattleReport, City, Movement, Unit, User, utcnow
 from ..schemas import BattleReportOut, MovementOut, SendArmyRequest
 from ..simulation import catch_up
 
@@ -35,6 +35,20 @@ def _owned_city(session: Session, user: User, city_id: int) -> City:
     if city.user_id != user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your city")
     return city
+
+
+def _are_allied(session: Session, a_id: int, b_id: int) -> bool:
+    """True if two users share an alliance (so a march between them reinforces
+    rather than attacks)."""
+    if a_id == b_id:
+        return True
+    mine = session.exec(
+        select(AllianceMembership.alliance_id).where(AllianceMembership.user_id == a_id)
+    ).first()
+    theirs = session.exec(
+        select(AllianceMembership.alliance_id).where(AllianceMembership.user_id == b_id)
+    ).first()
+    return mine is not None and mine == theirs
 
 
 @router.post("/movements", response_model=MovementOut, status_code=status.HTTP_201_CREATED)
@@ -63,7 +77,8 @@ def send_army(
     if target is not None:
         if target.id == origin.id:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "That army is already in this city")
-        kind = "reinforce" if target.user_id == user.id else "attack"
+        # Your own or an allied city → reinforce; anyone else → attack.
+        kind = "reinforce" if _are_allied(session, user.id, target.user_id) else "attack"
         to_name = target.name
     else:
         # Empty cell — only a Settler can do anything here (found a colony).

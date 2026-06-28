@@ -137,6 +137,37 @@ class WorldCityOut(BaseModel):
     y: int
     name: str
     owner: str  # owner's email local-part, for a friendly map label
+    alliance: str | None = None  # alliance name, for map colouring
+
+
+# --- alliances ---------------------------------------------------------------
+class AllianceCreateRequest(BaseModel):
+    name: str
+
+
+class MessageRequest(BaseModel):
+    body: str
+
+
+class MemberOut(BaseModel):
+    user: str  # email local-part
+    role: str
+
+
+class AllianceOut(BaseModel):
+    id: int
+    name: str
+    members: list[MemberOut]
+    mine_role: str | None = None  # the caller's role, if a member
+
+
+class MessageOut(BaseModel):
+    id: int
+    user: str
+    body: str
+    created_at: datetime
+
+    _ser_created = field_serializer("created_at")(_as_utc_iso)
 
 
 # --- movement & combat ------------------------------------------------------

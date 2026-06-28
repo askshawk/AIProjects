@@ -28,6 +28,7 @@ export default function TopBar() {
         <Link href="/play">City</Link>
         <Link href="/map">World map</Link>
         <Link href="/reports">Reports</Link>
+        <Link href="/alliances">Alliance</Link>
         <a
           href="#"
           onClick={(e) => {
