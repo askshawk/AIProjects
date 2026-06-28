@@ -78,6 +78,10 @@ class City(SQLModel, table=True):
     farm_level: int = game_config.STARTING_LEVELS["farm"]
     barracks_level: int = game_config.STARTING_LEVELS["barracks"]  # 0 = not built
 
+    # Conquest morale (0–100). Regenerates over time in catch_up; a settler-led
+    # assault erodes it, and at 0 the city flips to the attacker.
+    loyalty: int = 100
+
     user: User = Relationship(back_populates="cities")
     build_jobs: List["BuildJob"] = Relationship(
         back_populates="city",
@@ -194,5 +198,11 @@ class BattleReport(SQLModel, table=True):
     attacker_survivors: dict = Field(default_factory=dict, sa_column=Column(JSON))
     defender_before: dict = Field(default_factory=dict, sa_column=Column(JSON))
     defender_survivors: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+    # Loyalty before/after the assault (so reports show siege progress), and
+    # whether this battle captured the city.
+    loyalty_before: int = 100
+    loyalty_after: int = 100
+    captured: bool = False
 
     created_at: datetime = Field(default_factory=utcnow, index=True)

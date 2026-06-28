@@ -156,6 +156,14 @@ export default function PlayPage() {
                   <span className="count">{city.population_used} / {city.population_cap}</span>
                 </div>
 
+                <div className="population loyalty">
+                  <span title="Loyalty falls under settler-led assault; at 0 the city is captured.">Loyalty</span>
+                  <div className={`track${city.loyalty <= 25 ? " full" : ""}`}>
+                    <span style={{ width: `${city.loyalty}%` }} />
+                  </div>
+                  <span className="count">{city.loyalty} / 100</span>
+                </div>
+
                 {BUILDINGS.map((b) => {
                   const up = upgradeFor(b.building);
                   const blocked = !up || up.maxed || !up.affordable || !up.pop_ok;

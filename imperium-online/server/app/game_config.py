@@ -172,6 +172,19 @@ def fortification_multiplier(forum_level: int) -> float:
     return 1.0 + 0.05 * (forum_level - 1)
 
 
+# --- conquest / loyalty -----------------------------------------------------
+LOYALTY_MAX = 100
+LOYALTY_REGEN_PER_HOUR = 2.0   # a city slowly returns to full allegiance
+LOYALTY_HIT = 25               # drop per settler-led successful assault
+LOYALTY_AFTER_CAPTURE = 25     # a freshly conquered city starts shaky
+
+
+def loyalty_regen(loyalty: float, seconds: float) -> float:
+    """Loyalty drifts back up toward LOYALTY_MAX over time. Pure function of
+    elapsed seconds, mirroring how resources accrue in the catch-up tick."""
+    return min(LOYALTY_MAX, loyalty + LOYALTY_REGEN_PER_HOUR * (seconds / 3600.0))
+
+
 def production_per_hour(building_level: int) -> float:
     """Units/hour a producer yields at a given level.
 

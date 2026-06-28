@@ -145,6 +145,7 @@ def _serialize(city: City, session: Session) -> CityOut:
         silver_mine_level=city.silver_mine_level,
         farm_level=city.farm_level,
         barracks_level=city.barracks_level,
+        loyalty=city.loyalty,
         capacity=game_config.warehouse_capacity(city.forum_level),
         population_used=pop_used,
         population_cap=pop_cap,
@@ -211,7 +212,7 @@ def list_my_cities(
     cities = session.exec(
         select(City).where(City.user_id == user.id).order_by(City.founded_at)
     ).all()
-    return [CitySummaryOut(id=c.id, name=c.name, x=c.x, y=c.y, forum_level=c.forum_level) for c in cities]
+    return [CitySummaryOut(id=c.id, name=c.name, x=c.x, y=c.y, forum_level=c.forum_level, loyalty=c.loyalty) for c in cities]
 
 
 @router.get("/me", response_model=CityOut)

@@ -59,6 +59,7 @@ export type City = {
   silver_mine_level: number;
   farm_level: number;
   barracks_level: number;
+  loyalty: number;
   capacity: number;
   population_used: number;
   population_cap: number;
@@ -74,7 +75,7 @@ export type UnitStack = Record<string, number>;
 
 export type Movement = {
   id: number;
-  kind: "attack" | "return";
+  kind: "attack" | "return" | "found" | "reinforce";
   payload: UnitStack;
   departs_at: string;
   arrives_at: string;
@@ -96,6 +97,9 @@ export type BattleReport = {
   attacker_survivors: UnitStack;
   defender_before: UnitStack;
   defender_survivors: UnitStack;
+  loyalty_before: number;
+  loyalty_after: number;
+  captured: boolean;
   created_at: string;
 };
 
@@ -134,7 +138,7 @@ export function login(email: string, password: string) {
 }
 
 // --- gameplay ---
-export type CitySummary = { id: number; name: string; x: number; y: number; forum_level: number };
+export type CitySummary = { id: number; name: string; x: number; y: number; forum_level: number; loyalty: number };
 
 export function getMyCities(token: string) {
   return apiFetch<CitySummary[]>("/cities", {}, token);

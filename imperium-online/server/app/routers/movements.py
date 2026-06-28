@@ -204,6 +204,9 @@ def my_reports(
             attacker_survivors=r.attacker_survivors,
             defender_before=r.defender_before,
             defender_survivors=r.defender_survivors,
+            loyalty_before=r.loyalty_before,
+            loyalty_after=r.loyalty_after,
+            captured=r.captured,
             created_at=r.created_at,
         )
         for r in rows

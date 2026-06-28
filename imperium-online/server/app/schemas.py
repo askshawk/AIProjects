@@ -93,6 +93,7 @@ class CitySummaryOut(BaseModel):
     x: int
     y: int
     forum_level: int
+    loyalty: int
 
 
 class CityOut(BaseModel):
@@ -110,6 +111,7 @@ class CityOut(BaseModel):
     silver_mine_level: int
     farm_level: int
     barracks_level: int
+    loyalty: int
     capacity: float  # current per-resource warehouse cap (derived)
     population_used: int
     population_cap: int
@@ -173,6 +175,9 @@ class BattleReportOut(BaseModel):
     attacker_survivors: dict[str, int]
     defender_before: dict[str, int]
     defender_survivors: dict[str, int]
+    loyalty_before: int
+    loyalty_after: int
+    captured: bool
     created_at: datetime
 
     _ser_created = field_serializer("created_at")(_as_utc_iso)

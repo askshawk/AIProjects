@@ -54,11 +54,18 @@ export default function ReportsPage() {
               <div className={`card report${iWon ? " win" : " loss"}`} key={r.id} style={{ marginBottom: 14 }}>
                 <div className="report-head">
                   <span className="report-result">{iWon ? "Victory" : "Defeat"}</span>
+                  {r.captured && <span className="captured-badge">{r.i_attacked ? "City captured!" : "City lost!"}</span>}
                   <span className="muted">
                     {r.attacker_city_name} attacked {r.defender_city_name}
                     {r.i_attacked ? " · you attacked" : " · you defended"}
                   </span>
                 </div>
+                {r.loyalty_before !== r.loyalty_after && (
+                  <div className="loyalty-line">
+                    Loyalty of {r.defender_city_name}: {r.loyalty_before} → <strong>{r.loyalty_after}</strong>
+                    {r.captured ? " — fell, the city changes hands." : " (capture at 0)."}
+                  </div>
+                )}
                 <div className="report-grid">
                   <div>
                     <h4>Attacker — {r.attacker_city_name}</h4>

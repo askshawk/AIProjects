@@ -78,6 +78,11 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         city.last_tick_at = now
         return city
 
+    # Loyalty drifts back toward full over the whole elapsed gap (independent of
+    # build/recruit events, so it doesn't need the per-event timeline).
+    elapsed = (now - cursor).total_seconds()
+    city.loyalty = int(round(game_config.loyalty_regen(city.loyalty, elapsed)))
+
     due_builds = session.exec(
         select(BuildJob).where(
             BuildJob.city_id == city.id,
