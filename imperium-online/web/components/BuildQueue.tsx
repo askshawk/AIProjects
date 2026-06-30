@@ -59,7 +59,7 @@ export default function BuildQueue({
         return (
           <div className="queue-item" key={job.id}>
             <span className="thumb">
-              <img src={`/assets/iso/${job.building}.svg`} alt="" />
+              <img src={`/assets/iso/${job.building}.png`} alt="" />
             </span>
             <span className="label">
               {BUILDING_LABELS[job.building] ?? job.building} → level {job.target_level}

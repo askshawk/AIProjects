@@ -84,11 +84,16 @@ export class CityScene extends Phaser.Scene {
     this.originY = this.scale.height / 2 - (GRID - 1) * (TILE_H / 2) + 40;
 
     // --- ground: grass everywhere, path over the cross cells ---------------
+    // Painted tiles are big 2:1 diamonds — display each at the tile footprint
+    // (+1px to avoid hairline seams between diamonds).
     for (let gx = 0; gx < GRID; gx++) {
       for (let gy = 0; gy < GRID; gy++) {
         const { x, y } = this.place(gx, gy);
         const tex = PATH_CELLS.has(`${gx},${gy}`) ? "path" : "grass";
-        this.add.image(x, y, tex).setOrigin(0.5, 0.5).setDepth(depthOf(gx, gy));
+        this.add.image(x, y, tex)
+          .setOrigin(0.5, 0.5)
+          .setDisplaySize(TILE_W + 1, TILE_H + 1)
+          .setDepth(depthOf(gx, gy));
       }
     }
 
@@ -97,6 +102,7 @@ export class CityScene extends Phaser.Scene {
       const { x, y } = this.place(d.gx, d.gy);
       this.add.image(x, y + TILE_H * 0.25, d.key)
         .setOrigin(0.5, 1)
+        .setScale(TERRAIN[d.key].scale ?? 1)
         .setDepth(depthOf(d.gx, d.gy) * 10 + 5);
     }
 
@@ -118,11 +124,16 @@ export class CityScene extends Phaser.Scene {
       const { x, y } = this.place(p.gx, p.gy);
       const d = depthOf(p.gx, p.gy) * 10;
 
-      this.add.image(x, y + 6, "shadow").setOrigin(0.5, 0.5).setDepth(d + 1).setName(`shadow_${p.key}`);
+      this.add.image(x, y + TILE_H * 0.3, "shadow")
+        .setOrigin(0.5, 0.5)
+        .setScale(TERRAIN.shadow.scale ?? 1)
+        .setDepth(d + 1)
+        .setName(`shadow_${p.key}`);
 
       const sprite = this.add
-        .image(x, y + TILE_H * 0.32, p.key)
+        .image(x, y + TILE_H * 0.5, p.key)
         .setOrigin(0.5, 1)
+        .setScale(BUILDINGS[p.key].scale ?? 1)
         .setDepth(d + 5);
       this.buildingSprites.set(p.key, sprite);
 
@@ -195,12 +206,12 @@ export class CityScene extends Phaser.Scene {
       label?.setVisible(exists || underConstruction);
       label?.setText(`${p.label} · ${level}`);
 
-      // Building tier: a base scale (so buildings sit on their tiles without
-      // crowding neighbours) plus a gentle bump at higher level bands.
+      // Building tier: the manifest base scale (sized for the high-res painted
+      // PNG) plus a gentle bump at higher level bands.
+      const base = BUILDINGS[p.key].scale ?? 1;
       if (sprite && exists) {
-        const BASE = 0.82;
         const band = level >= 8 ? 1.16 : level >= 4 ? 1.07 : 1.0;
-        if (!underConstruction) sprite.setScale(BASE * band);
+        if (!underConstruction) sprite.setScale(base * band);
       }
 
       let scaffold = this.scaffolds.get(p.key);
@@ -210,6 +221,7 @@ export class CityScene extends Phaser.Scene {
         scaffold = this.add
           .image(sprite.x, sprite.y, p.key)
           .setOrigin(0.5, 1)
+          .setScale(base)
           .setAlpha(0.4)
           .setTint(0xbfa46a)
           .setDepth(sprite.depth + 0.1);

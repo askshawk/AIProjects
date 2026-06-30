@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 60" width="80" height="60">
-  <!-- A small cluster of iso boulders. Anchor bottom-centre. -->
-  <ellipse cx="40" cy="54" rx="30" ry="7" fill="#241c12" opacity="0.16"/>
-  <path d="M14 44 l10 -16 l14 0 l8 14 z" fill="#9a958a"/>
-  <path d="M14 44 l30 0 l-6 8 l-18 0 z" fill="#7c776d"/>
-  <path d="M44 46 l8 -12 l12 2 l4 12 z" fill="#a9a499"/>
-  <path d="M44 46 l24 2 l-4 7 l-14 0 z" fill="#8a857a"/>
-  <path d="M24 28 l14 0 l-4 5 l-7 0 z" fill="#b4afa3" opacity="0.7"/>
-</svg>

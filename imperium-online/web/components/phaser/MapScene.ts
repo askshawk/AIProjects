@@ -86,7 +86,7 @@ export class MapScene extends Phaser.Scene {
       const isAllied = !isMine && data.allies.includes(key);
       const depth = (c.x + c.y) * 10 + 100;
 
-      this.add.image(x, y, "island").setOrigin(0.5, 0.5).setDepth(depth);
+      this.add.image(x, y, "island").setOrigin(0.5, 0.5).setScale(0.24).setDepth(depth);
 
       if (isMine) {
         this.add.circle(x, y - 6, 56, 0xb7892f, 0).setStrokeStyle(4, 0xb7892f, 1).setDepth(depth + 1);
@@ -94,9 +94,9 @@ export class MapScene extends Phaser.Scene {
         this.add.circle(x, y - 6, 56, 0x3f7fa6, 0).setStrokeStyle(4, 0x4d9fd0, 1).setDepth(depth + 1);
       }
 
-      this.add.image(x - 34, y - 6, "cypress").setOrigin(0.5, 1).setScale(0.5).setDepth(depth + 1);
-      this.add.image(x + 30, y + 4, "rocks").setOrigin(0.5, 1).setScale(0.5).setDepth(depth + 1);
-      this.add.image(x, y - 2, "forum").setOrigin(0.5, 0.78).setScale(0.62).setDepth(depth + 2);
+      this.add.image(x - 36, y, "cypress").setOrigin(0.5, 1).setScale(0.13).setDepth(depth + 1);
+      this.add.image(x + 34, y + 6, "rocks").setOrigin(0.5, 1).setScale(0.13).setDepth(depth + 1);
+      this.add.image(x, y, "forum").setOrigin(0.5, 0.82).setScale(0.12).setDepth(depth + 2);
 
       this.add.text(x, y + 30, c.name, {
         fontFamily: '"Cinzel", serif',

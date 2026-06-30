@@ -170,7 +170,7 @@ export default function PlayPage() {
                   return (
                     <div className="building-row" key={b.building}>
                       <div className="thumb">
-                        <img src={`/assets/iso/${b.building}.svg`} alt="" />
+                        <img src={`/assets/iso/${b.building}.png`} alt="" />
                       </div>
                       <div>
                         <span className="name">{b.label}</span>
