@@ -975,8 +975,162 @@ input:focus {
   100% { transform: translateX(220%); }
 }
 
+/* ===== battle replay (B2) ===== */
+
+.battle-replay { margin-top: 4px; }
+
+/* The two forces face each other across a clash column. */
+.br-stage {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 14px;
+}
+.br-force h4 {
+  font-family: "Marcellus SC", serif;
+  margin: 0 0 2px;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+.br-force .br-sub { margin: 0 0 8px; font-size: 0.76rem; }
+.br-defender { text-align: right; }
+
+/* Armies close on each other as the replay opens. */
+.br-force { transition: transform 0.55s cubic-bezier(0.3, 0.7, 0.4, 1); }
+.br-attacker.marching { transform: translateX(-16px); }
+.br-defender.marching { transform: translateX(16px); }
+
+.br-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.br-rows li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+}
+.br-defender .br-rows li { flex-direction: row-reverse; }
+.br-ico { display: inline-flex; width: 20px; height: 20px; flex: 0 0 auto; }
+.br-ico svg { width: 20px; height: 20px; }
+.br-name { color: var(--ink-soft); }
+.br-count {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2ch;
+  text-align: right;
+}
+.br-defender .br-count { text-align: left; }
+.br-lost {
+  font-size: 0.74rem;
+  color: var(--terracotta-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Crossed swords between the lines; they strike on the clash beat. */
+.br-clash {
+  position: relative;
+  align-self: center;
+  width: 46px;
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.phase-clash .br-clash { transform: scale(1.5); color: var(--terracotta); }
+.br-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6d8 0%, rgba(213,168,67,0.75) 45%, transparent 70%);
+  animation: br-burst 0.45s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes br-burst {
+  from { transform: scale(0.4); opacity: 1; }
+  to   { transform: scale(11); opacity: 0; }
+}
+/* The whole card takes the hit. */
+.phase-clash .br-stage { animation: br-shake 0.4s ease-out; }
+@keyframes br-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  45% { transform: translateX(4px); }
+  70% { transform: translateX(-2px); }
+}
+
+/* Loyalty drains as the assault tells. */
+.br-loyalty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 0.82rem;
+}
+.br-loyalty-label { color: var(--ink-soft); }
+.br-loyalty-track {
+  flex: 1;
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(43, 38, 32, 0.14);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.br-loyalty-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--terracotta), var(--gold-bright));
+  transition: width 1.2s cubic-bezier(0.3, 0.8, 0.4, 1);
+}
+.br-loyalty-num { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+.br-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.br-when { font-size: 0.76rem; margin-left: auto; }
+.br-play { font-size: 0.78rem; padding: 6px 12px; }
+
+/* The verdict, pressed into the page like a wax seal. */
+.br-stamp {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.95rem;
+  padding: 4px 16px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  transform: rotate(-4deg);
+  opacity: 0.88;
+}
+.br-stamp.win { color: var(--laurel-dark); }
+.br-stamp.loss { color: var(--terracotta-dark); }
+.br-stamp.landing { animation: br-stamp-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+@keyframes br-stamp-in {
+  from { transform: rotate(-14deg) scale(2.4); opacity: 0; }
+  to   { transform: rotate(-4deg) scale(1); opacity: 0.88; }
+}
+
+@media (max-width: 640px) {
+  .br-stage { grid-template-columns: 1fr; }
+  .br-defender { text-align: left; }
+  .br-defender .br-rows li { flex-direction: row; }
+  .br-defender .br-count { text-align: right; }
+  .br-clash { width: auto; }
+}
+
 /* Respect reduced-motion: kill the ambient loops, keep instant states */
 @media (prefers-reduced-motion: reduce) {
+  .br-force, .br-clash, .br-loyalty-track > span { transition: none; }
+  .br-stamp.landing, .phase-clash .br-stage, .br-flash { animation: none; }
   .toast { animation-duration: 0.01ms; }
   .toast-timer, .resource .bar > span::after, .building-row.leveled { animation: none; }
   .grid-2 > .card:hover, .unit-card:hover { transform: none; }

@@ -20,9 +20,12 @@ export function useCountUp(target: number): number {
 
   useEffect(() => {
     // Snap on first paint / large resets (e.g. switching cities) so we don't
-    // spin a long tween across an unrelated jump.
+    // spin a long tween across an unrelated jump. Also snap when the document
+    // is hidden: browsers pause requestAnimationFrame for background tabs, so
+    // tweening there would leave the number stranded at its old value.
     const from = fromRef.current;
-    if (Math.abs(target - from) > from * 4 + 1000) {
+    const hidden = typeof document !== "undefined" && document.hidden;
+    if (hidden || Math.abs(target - from) > from * 4 + 1000) {
       fromRef.current = target;
       setValue(target);
       return;
