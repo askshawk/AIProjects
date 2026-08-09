@@ -77,11 +77,30 @@ export class CityScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#4f8aa8"); // surrounding sea
+    this.cameras.main.setBackgroundColor("#12455f"); // deep water beyond the shallows
 
     // Centre the diamond. x spans ±(GRID-1)*TILE_W/2; y spans 0..(2(GRID-1))*TILE_H/2.
     this.originX = this.scale.width / 2;
     this.originY = this.scale.height / 2 - (GRID - 1) * (TILE_H / 2) + 40;
+
+    // --- surrounding sea: painted water diamonds ringing the island --------
+    // Same 2:1 footprint as the ground tiles, so the shoreline tessellates
+    // exactly against the grass edge. Tinted shallow to read as coastal water.
+    // Overlapped a few px: the painted diamond has a darker rim, and butting
+    // them edge-to-edge turns those rims into a visible quilt.
+    // Depth: a dedicated band far below the ground (grass starts at 0), keeping
+    // back-to-front order among the water tiles themselves.
+    for (let gx = -3; gx < GRID + 3; gx++) {
+      for (let gy = -3; gy < GRID + 3; gy++) {
+        if (gx >= 0 && gx < GRID && gy >= 0 && gy < GRID) continue; // grass owns it
+        const { x, y } = this.place(gx, gy);
+        this.add.image(x, y, "water")
+          .setOrigin(0.5, 0.5)
+          .setDisplaySize(TILE_W + 5, TILE_H + 4)
+          .setTint(0x8fb3cf)
+          .setDepth(depthOf(gx, gy) * 0.01 - 100);
+      }
+    }
 
     // --- ground: grass everywhere, path over the cross cells ---------------
     // Painted tiles are big 2:1 diamonds — display each at the tile footprint
@@ -96,6 +115,9 @@ export class CityScene extends Phaser.Scene {
           .setDepth(depthOf(gx, gy));
       }
     }
+
+    // --- surf: a pale line tracing the island's diamond shoreline -----------
+    this.addSurfLine();
 
     // --- ambient sea sparkle: a few slow twinkles on the surrounding water --
     this.addSeaSparkle();
@@ -188,6 +210,35 @@ export class CityScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off("data-updated", undefined, this);
     });
+  }
+
+  /** Trace the outer edge of the grass diamond in foam-white, expanded a few
+      pixels into the water, so the island reads as having a real waterline. */
+  private addSurfLine() {
+    const n = GRID - 1;
+    // The four corners of the grid diamond, pushed outward from its centre.
+    const corners = [
+      this.place(0, 0), this.place(n, 0), this.place(n, n), this.place(0, n),
+    ];
+    const midX = (corners[0].x + corners[2].x) / 2;
+    const midY = (corners[0].y + corners[2].y) / 2;
+    const grow = 16;
+    const pts = corners.map((p) => {
+      const dx = p.x - midX, dy = p.y - midY;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      return { x: p.x + (dx / len) * grow, y: p.y + (dy / len) * grow };
+    });
+
+    // Above every water tile (band starts at -100), below the ground (from 0).
+    const g = this.add.graphics().setDepth(-50);
+    g.fillStyle(0xf2f7f5, 0.16);
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(3, 0xf2f7f5, 0.38);
+    g.strokePath();
   }
 
   /** Slow, sparse glints on the surrounding sea — ambient life, drawn behind
