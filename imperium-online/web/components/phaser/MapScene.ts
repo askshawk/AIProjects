@@ -15,6 +15,7 @@
 import * as Phaser from "phaser";
 import type { Movement, WorldCity } from "@/lib/api";
 import { TERRAIN, BUILDINGS, UNITS, isSvg, type AssetSlot } from "./assetManifest";
+import { SkyLayer } from "./sky";
 
 // `mine`/`allies` are sets of "x,y" coords: own cities wear the laurel-gold
 // ring, allied cities a blue ring.
@@ -84,6 +85,7 @@ export class MapScene extends Phaser.Scene {
   // Marching armies, keyed by movement id so refreshes reconcile in place.
   private armies = new Map<number, ArmyToken>();
   private progress?: Phaser.GameObjects.Graphics;
+  private sky?: SkyLayer;
   // Server clock − local clock, smoothed. Armies are timed from server
   // timestamps, so a skewed local clock would misplace them.
   private skewMs = 0;
@@ -130,6 +132,9 @@ export class MapScene extends Phaser.Scene {
 
     // Shared graphics for the travelled portion of every route.
     this.progress = this.add.graphics().setDepth(51);
+    // The sky sits above the world but below nothing else — armies and islands
+    // all darken together.
+    this.sky = new SkyLayer(this);
 
     this.redraw(this.registry.get("data") as MapData | undefined);
     this.syncArmies(this.registry.get("movements") as MovementData | undefined);
@@ -272,6 +277,7 @@ export class MapScene extends Phaser.Scene {
   update(time: number) {
     this.updateSea(time);
     this.updateArmies();
+    this.sky?.update();
   }
 
   // --- army layer --------------------------------------------------------

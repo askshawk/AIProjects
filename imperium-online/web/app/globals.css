@@ -975,6 +975,41 @@ input:focus {
   100% { transform: translateX(220%); }
 }
 
+/* ===== world clock badge (B4) ===== */
+
+.world-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  margin-right: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+  font-family: "Marcellus SC", serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transition: background 0.6s ease, color 0.6s ease, border-color 0.6s ease;
+}
+/* Night flips it to a deep, lamplit look — the badge itself keeps the clock. */
+.world-clock.is-night {
+  background: linear-gradient(180deg, #1b2a4a 0%, #101c33 100%);
+  border-color: #35507e;
+  color: #cfe0f5;
+}
+.world-clock .wc-glyph { font-size: 0.95rem; line-height: 1; }
+.world-clock .wc-count { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.world-clock .wc-bonus {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(213, 168, 67, 0.22);
+  color: var(--gold-bright);
+  border: 1px solid rgba(213, 168, 67, 0.5);
+  font-size: 0.68rem;
+}
+
 /* ===== battle replay (B2) ===== */
 
 .battle-replay { margin-top: 4px; }

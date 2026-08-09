@@ -9,12 +9,22 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
+from .. import daynight
 from ..auth import get_current_user
 from ..db import get_session
-from ..models import Alliance, AllianceMembership, City, User
+from ..models import Alliance, AllianceMembership, City, User, utcnow
 from ..schemas import WorldCityOut
 
 router = APIRouter(prefix="/world", tags=["world"])
+
+
+@router.get("/time")
+def world_time() -> dict:
+    """The shared world clock: current phase plus the constants the client
+    needs to re-derive it locally. Deliberately unauthenticated and cheap —
+    the client fetches it once and then computes the phase itself against the
+    server clock it already tracks, rather than polling."""
+    return daynight.state(utcnow())
 
 
 @router.get("/cities", response_model=list[WorldCityOut])

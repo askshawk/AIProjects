@@ -106,6 +106,7 @@ export type BattleReport = {
   loyalty_before: number;
   loyalty_after: number;
   captured: boolean;
+  night_bonus: boolean; // defenders fought under the night bonus
   created_at: string;
 };
 

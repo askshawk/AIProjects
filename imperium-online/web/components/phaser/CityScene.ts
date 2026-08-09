@@ -11,6 +11,7 @@ import * as Phaser from "phaser";
 import type { City, BuildJob } from "@/lib/api";
 import { TILE_W, TILE_H, toScreen, depthOf } from "./iso";
 import { BUILDINGS, TERRAIN, isSvg, type AssetSlot } from "./assetManifest";
+import { SkyLayer } from "./sky";
 
 const GRID = 6; // GRID×GRID diamond of tiles
 
@@ -55,6 +56,8 @@ export class CityScene extends Phaser.Scene {
   private buildingLabels = new Map<BuildingKey, Phaser.GameObjects.Text>();
   private scaffolds = new Map<BuildingKey, Phaser.GameObjects.Image>();
   private titleText?: Phaser.GameObjects.Text;
+  private sky?: SkyLayer;
+  private lamps: Phaser.GameObjects.PointLight[] = [];
   private originX = 0;
   private originY = 0;
 
@@ -205,11 +208,43 @@ export class CityScene extends Phaser.Scene {
       }
     }
 
+    // Warm lamplight in the streets, revealed once the sky darkens.
+    this.addLamps();
+    this.sky = new SkyLayer(this);
+
     this.redraw(this.registry.get("data") as City | undefined);
     this.game.events.on("data-updated", (data: City) => this.redraw(data), this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off("data-updated", undefined, this);
     });
+  }
+
+  /** Soft pools of lamplight over the built-up cells. Hidden by day; they fade
+      up as night falls, so the city reads as inhabited after dark. */
+  private addLamps() {
+    const tex = this.makeSoftCircle();
+    for (const p of PLACEMENTS) {
+      const { x, y } = this.place(p.gx, p.gy);
+      const lamp = this.add.image(x, y + TILE_H * 0.1, tex)
+        .setDisplaySize(150, 96)
+        .setTint(0xffc46b)
+        .setAlpha(0)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(depthOf(p.gx, p.gy) * 10 + 8);
+      // Reuse the PointLight array slot for plain images — we only need alpha.
+      this.lamps.push(lamp as unknown as Phaser.GameObjects.PointLight);
+    }
+  }
+
+  update() {
+    this.sky?.update();
+    if (!this.sky) return;
+    // Lamps track the sky rather than a hard on/off, so dusk glows gradually.
+    const target = this.sky.isDark() ? 0.55 : 0;
+    for (const lamp of this.lamps) {
+      const img = lamp as unknown as Phaser.GameObjects.Image;
+      img.setAlpha(Phaser.Math.Linear(img.alpha, target, 0.05));
+    }
   }
 
   /** Trace the outer edge of the grass diamond in foam-white, expanded a few

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCities } from "@/lib/cityStore";
+import WorldClockBadge from "@/components/WorldClockBadge";
 
 export default function TopBar() {
   const { logout } = useAuth();
@@ -13,6 +14,7 @@ export default function TopBar() {
     <header className="topbar">
       <Link href="/" className="brand">IMPERIVM</Link>
       <nav>
+        <WorldClockBadge />
         {cities.length > 0 && (
           <select
             className="city-switcher"

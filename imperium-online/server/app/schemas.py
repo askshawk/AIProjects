@@ -213,6 +213,7 @@ class BattleReportOut(BaseModel):
     loyalty_before: int
     loyalty_after: int
     captured: bool
+    night_bonus: bool = False  # defenders fought under the night bonus
     created_at: datetime
 
     _ser_created = field_serializer("created_at")(_as_utc_iso)

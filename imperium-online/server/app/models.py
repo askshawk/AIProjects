@@ -204,6 +204,9 @@ class BattleReport(SQLModel, table=True):
     loyalty_before: int = 100
     loyalty_after: int = 100
     captured: bool = False
+    # Whether the defender fought under the night bonus — the report explains
+    # the result, which is otherwise surprising when a smaller garrison holds.
+    night_bonus: bool = False
 
     created_at: datetime = Field(default_factory=utcnow, index=True)
 

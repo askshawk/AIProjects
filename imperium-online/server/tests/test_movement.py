@@ -145,3 +145,23 @@ def test_battle_resolves_while_everyone_is_offline(ctx):
         assert defender_scouts.count == 0
         returns = s.exec(select(Movement).where(Movement.kind == "return")).all()
         assert len(returns) == 1 and returns[0].payload["legionary"] > 0
+
+
+def test_night_bonus_repulses_an_attack_that_would_win_by_day(ctx, night_world):
+    """The same assault flips outcome under the shared world clock's night
+    window — and the report says so, since a smaller garrison holding is
+    otherwise a surprising result."""
+    att, dfn, ac, dc = _setup(ctx)
+    _garrison(ctx, ac["id"], legionary=10)
+    _garrison(ctx, dc["id"], legionary=6)
+
+    ctx.post("/movements", headers=att, json={
+        "origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 10},
+    })
+    _rush_movements(ctx, kind="attack")
+    ctx.get("/cities/me", headers=dfn)  # defender's read resolves the battle
+
+    rep = ctx.get("/reports/me", headers=att).json()[0]
+    # 10 attack vs 6 defence would carry by day; doubled at night it does not.
+    assert rep["outcome"] == "defender_won"
+    assert rep["night_bonus"] is True

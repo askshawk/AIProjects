@@ -226,6 +226,7 @@ def my_reports(
             loyalty_before=r.loyalty_before,
             loyalty_after=r.loyalty_after,
             captured=r.captured,
+            night_bonus=r.night_bonus,
             created_at=r.created_at,
         )
         for r in rows

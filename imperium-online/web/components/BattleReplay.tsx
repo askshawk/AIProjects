@@ -147,7 +147,11 @@ export default function BattleReplay({ report, iWon }: { report: BattleReport; i
 
         <Force
           title={`Defender — ${report.defender_city_name}`}
-          subtitle={`${total(report.defender_before)} defending`}
+          subtitle={
+            report.night_bonus
+              ? `${total(report.defender_before)} defending · 🌙 night ×2`
+              : `${total(report.defender_before)} defending`
+          }
           rows={defenderRows}
           showBefore={showBefore}
           runId={runId}

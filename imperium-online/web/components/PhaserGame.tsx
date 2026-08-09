@@ -12,6 +12,8 @@ import { useEffect, useRef } from "react";
 // bundler, so `import Phaser from "phaser"` warns. `import * as` is the
 // supported form and gives us Phaser.Game, Phaser.Scene, etc.
 import * as Phaser from "phaser";
+import { useWorldClock } from "@/lib/useWorldClock";
+import type { WorldClock } from "@/lib/dayNight";
 import { CityScene } from "./phaser/CityScene";
 import { MapScene } from "./phaser/MapScene";
 
@@ -39,6 +41,10 @@ export default function PhaserGame({
   dataRef.current = data;
   const movementsRef = useRef<unknown>(movements);
   movementsRef.current = movements;
+  // The shared world clock drives the sky in both scenes.
+  const world = useWorldClock();
+  const clockRef = useRef<WorldClock | null>(null);
+  clockRef.current = world?.clock ?? null;
   // Ref so the scene's event handler always calls the latest callback.
   const onCitySelectRef = useRef(onCitySelect);
   onCitySelectRef.current = onCitySelect;
@@ -64,6 +70,7 @@ export default function PhaserGame({
     // Seed the registry so the scene has data the instant it boots.
     game.registry.set("data", dataRef.current);
     game.registry.set("movements", movementsRef.current);
+    game.registry.set("clock", clockRef.current);
     // Bridge scene → React: the map scene emits "city-selected" on a click.
     game.events.on("city-selected", (c: { x: number; y: number; name: string; owner: string }) => {
       onCitySelectRef.current?.(c);
@@ -93,6 +100,15 @@ export default function PhaserGame({
     game.registry.set("movements", movements);
     game.events.emit("movements-updated", movements);
   }, [movements]);
+
+  // The world clock arrives asynchronously; hand it to the scenes when it does
+  // (and on each re-sync). The sky ticks locally from there.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game || !world) return;
+    game.registry.set("clock", world.clock);
+    game.events.emit("clock-updated", world.clock);
+  }, [world?.clock]);
 
   return (
     <div

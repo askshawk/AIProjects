@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from . import game_config, realtime
+from . import daynight, game_config, realtime
 from .combat import resolve_battle
 from .models import BattleReport, City, Movement, Unit
 from .simulation import _grant_units, catch_up
@@ -117,7 +117,11 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         # Bring the defender current so the battle uses their real army.
         catch_up(session, target, now)
         defender_before = _standing_army(session, target)
+        # Home fortification, doubled if the assault lands at night — the
+        # shared world clock decides, using the battle's own resolution time.
+        night = daynight.is_night(now)
         mult = game_config.fortification_multiplier(target.forum_level)
+        mult *= daynight.defense_multiplier(now)
 
         result = resolve_battle(movement.payload, defender_before, mult)
 
@@ -166,6 +170,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             loyalty_before=loyalty_before,
             loyalty_after=loyalty_after,
             captured=captured,
+            night_bonus=night,
         )
         session.add(report)
         session.flush()  # report needs an id for the push events
