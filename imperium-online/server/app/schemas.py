@@ -189,6 +189,10 @@ class MovementOut(BaseModel):
     incoming_attack: bool   # an enemy attack inbound to my city
     from_name: str
     to_name: str
+    # Origin coordinates let the client draw the march route. Optional because
+    # the origin city row may be gone (mirrors the from_name fallback).
+    from_x: int | None = None
+    from_y: int | None = None
     to_x: int
     to_y: int
 

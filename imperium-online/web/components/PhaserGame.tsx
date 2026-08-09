@@ -23,16 +23,22 @@ const HEIGHT = 576;
 export default function PhaserGame({
   kind,
   data,
+  movements,
   onCitySelect,
 }: {
   kind: "city" | "map";
   data: unknown;
+  /** Marching armies. Deliberately a separate channel from `data`: movements
+      refresh far more often, and any new `data` identity rebuilds every island. */
+  movements?: unknown;
   onCitySelect?: (city: { x: number; y: number; name: string; owner: string }) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const dataRef = useRef<unknown>(data);
   dataRef.current = data;
+  const movementsRef = useRef<unknown>(movements);
+  movementsRef.current = movements;
   // Ref so the scene's event handler always calls the latest callback.
   const onCitySelectRef = useRef(onCitySelect);
   onCitySelectRef.current = onCitySelect;
@@ -57,6 +63,7 @@ export default function PhaserGame({
     });
     // Seed the registry so the scene has data the instant it boots.
     game.registry.set("data", dataRef.current);
+    game.registry.set("movements", movementsRef.current);
     // Bridge scene → React: the map scene emits "city-selected" on a click.
     game.events.on("city-selected", (c: { x: number; y: number; name: string; owner: string }) => {
       onCitySelectRef.current?.(c);
@@ -77,6 +84,15 @@ export default function PhaserGame({
     game.registry.set("data", data);
     game.events.emit("data-updated", data);
   }, [data]);
+
+  // Marching armies travel their own channel — the scene reconciles them
+  // in place rather than rebuilding the world.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    game.registry.set("movements", movements);
+    game.events.emit("movements-updated", movements);
+  }, [movements]);
 
   return (
     <div

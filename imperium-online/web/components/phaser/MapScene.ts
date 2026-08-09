@@ -13,16 +13,56 @@
 // than children.removeAll(), which would take the sea and armies with it.
 
 import * as Phaser from "phaser";
-import type { WorldCity } from "@/lib/api";
-import { TERRAIN, BUILDINGS, isSvg, type AssetSlot } from "./assetManifest";
+import type { Movement, WorldCity } from "@/lib/api";
+import { TERRAIN, BUILDINGS, UNITS, isSvg, type AssetSlot } from "./assetManifest";
 
 // `mine`/`allies` are sets of "x,y" coords: own cities wear the laurel-gold
 // ring, allied cities a blue ring.
 export type MapData = { cities: WorldCity[]; mine: string[]; allies: string[] };
 
-// Island spacing on screen (wider than a tile so open sea shows between them).
-const ISO_X = 150;
-const ISO_Y = 78;
+/** Movements plus the server clock they should be timed against. */
+export type MovementData = { movements: Movement[]; serverNowMs: number | null };
+
+// A live army token: the container plus what update() needs to place it.
+type ArmyToken = {
+  container: Phaser.GameObjects.Container;
+  route: Phaser.GameObjects.Graphics | null;
+  marker: Phaser.GameObjects.GameObject | null; // "found" target flag, if any
+  eta: Phaser.GameObjects.Text;
+  chevron: Phaser.GameObjects.Triangle;
+  fx: number; fy: number; tx: number; ty: number;
+  hasOrigin: boolean;
+  departsMs: number;
+  arrivesMs: number;
+  colour: number;
+  kind: Movement["kind"];
+  lastSecs: number;
+  arriving: boolean;
+};
+
+/** mm:ss, or h:mm:ss for long marches — matches the MovementsPanel countdown. */
+function formatEta(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
+const ARMY_COLOURS: Record<string, number> = {
+  incoming: 0xb5532f, // enemy inbound — terracotta, matches the hover warning
+  attack: 0xb7892f,   // my attack — laurel gold, matches my city ring
+  reinforce: 0x4d9fd0,
+  return: 0x6f8f5f,
+  found: 0xd9c68a,
+};
+
+// Island spacing on screen. An island renders ~192×144, so the step has to
+// clear that or neighbours collide — with open sea (and room for marching
+// armies to be legible) between them.
+const ISO_X = 240;
+const ISO_Y = 124;
 
 // The sea pattern must be power-of-two: Phaser's WebGL TileSprite repeat path
 // distorts non-POT textures. 256×128 holds exactly one lattice cell (two
@@ -41,6 +81,12 @@ export class MapScene extends Phaser.Scene {
   private sea?: Phaser.GameObjects.TileSprite;
   private seaInterference?: Phaser.GameObjects.TileSprite;
   private reduceMotion = false;
+  // Marching armies, keyed by movement id so refreshes reconcile in place.
+  private armies = new Map<number, ArmyToken>();
+  private progress?: Phaser.GameObjects.Graphics;
+  // Server clock − local clock, smoothed. Armies are timed from server
+  // timestamps, so a skewed local clock would misplace them.
+  private skewMs = 0;
 
   constructor() {
     super("map");
@@ -53,6 +99,7 @@ export class MapScene extends Phaser.Scene {
     };
     for (const key of ["island", "cypress", "rocks", "water"]) load(key, TERRAIN[key]);
     load("forum", BUILDINGS.forum);
+    for (const [key, slot] of Object.entries(UNITS)) load(key, slot);
   }
 
   /** Register a world-layer object so redraw() can tear it down. */
@@ -81,11 +128,26 @@ export class MapScene extends Phaser.Scene {
       cam.zoom = Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.5, 2);
     });
 
+    // Shared graphics for the travelled portion of every route.
+    this.progress = this.add.graphics().setDepth(51);
+
     this.redraw(this.registry.get("data") as MapData | undefined);
+    this.syncArmies(this.registry.get("movements") as MovementData | undefined);
     this.game.events.on("data-updated", (data: MapData) => this.redraw(data), this);
+    this.game.events.on("movements-updated", (m: MovementData) => this.syncArmies(m), this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off("data-updated", undefined, this);
+      this.game.events.off("movements-updated", undefined, this);
     });
+  }
+
+  /** Screen position of a world-grid coordinate. Shared by islands and armies
+      so a token lands exactly on the city it is marching to. */
+  private toScreen(gx: number, gy: number): { x: number; y: number } {
+    return {
+      x: this.scale.width / 2 + (gx - gy) * ISO_X / 2,
+      y: this.scale.height / 2 + (gx + gy) * ISO_Y / 2,
+    };
   }
 
   // --- sea ---------------------------------------------------------------
@@ -209,6 +271,199 @@ export class MapScene extends Phaser.Scene {
 
   update(time: number) {
     this.updateSea(time);
+    this.updateArmies();
+  }
+
+  // --- army layer --------------------------------------------------------
+
+  private armyColour(m: Movement): number {
+    if (m.incoming_attack) return ARMY_COLOURS.incoming;
+    return ARMY_COLOURS[m.kind] ?? 0x8a8580;
+  }
+
+  /** Reconcile the live token set against a fresh movement list: add what's
+      new, update timings in place (recreating would restart tweens and flicker),
+      and fade out what has arrived. */
+  private syncArmies(data?: MovementData) {
+    if (!data) return;
+
+    // Track the server clock so interpolation doesn't drift with a bad local one.
+    if (data.serverNowMs != null) {
+      const sample = data.serverNowMs - Date.now();
+      // EMA smooths the header's 1s granularity and RTT jitter; the clamp stops
+      // one wild sample from teleporting every army.
+      this.skewMs = Phaser.Math.Clamp(this.skewMs * 0.7 + sample * 0.3, -300000, 300000);
+    }
+
+    const seen = new Set<number>();
+    for (const m of data.movements) {
+      seen.add(m.id);
+      const existing = this.armies.get(m.id);
+      if (existing) {
+        existing.departsMs = Date.parse(m.departs_at);
+        existing.arrivesMs = Date.parse(m.arrives_at);
+        continue;
+      }
+      this.armies.set(m.id, this.buildArmy(m));
+    }
+
+    for (const [id, token] of this.armies) {
+      if (!seen.has(id) && !token.arriving) this.retireArmy(id, token);
+    }
+  }
+
+  /** Arrival: let the token settle rather than blinking out of existence. */
+  private retireArmy(id: number, token: ArmyToken) {
+    token.arriving = true;
+    token.route?.destroy();
+    token.route = null;
+    token.marker?.destroy();
+    token.marker = null;
+    this.tweens.add({
+      targets: token.container,
+      alpha: 0,
+      scale: 1.35,
+      duration: 350,
+      ease: "quad.out",
+      onComplete: () => {
+        this.tweens.killTweensOf(token.container);
+        token.container.destroy();
+        this.armies.delete(id);
+      },
+    });
+  }
+
+  private buildArmy(m: Movement): ArmyToken {
+    const colour = this.armyColour(m);
+    const hasOrigin = m.from_x != null && m.from_y != null;
+    // Without an origin (the city row is gone) park the token just short of the
+    // target rather than drawing a march out of (0,0).
+    const fx = hasOrigin ? (m.from_x as number) : m.to_x - 0.6;
+    const fy = hasOrigin ? (m.from_y as number) : m.to_y - 0.6;
+
+    const p = this.toScreen(fx, fy);
+    const q = this.toScreen(m.to_x, m.to_y);
+
+    // Dashed route beneath every island (depth 50), so paths pass behind land.
+    let route: Phaser.GameObjects.Graphics | null = null;
+    if (hasOrigin) {
+      route = this.add.graphics().setDepth(50);
+      route.lineStyle(2, colour, 0.32);
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / len, uy = dy / len;
+      for (let d = 0; d < len; d += 18) {
+        const e = Math.min(len, d + 10);
+        route.lineBetween(p.x + ux * d, p.y + uy * d, p.x + ux * e, p.y + uy * e);
+      }
+    }
+
+    // Settlers marching to an empty cell get a flag on the destination tile.
+    let marker: Phaser.GameObjects.GameObject | null = null;
+    if (m.kind === "found") {
+      const flag = this.add.text(q.x, q.y - 6, "⚑", {
+        fontFamily: "serif", fontSize: "22px", color: "#f2e4bc",
+      }).setOrigin(0.5, 1).setDepth((m.to_x + m.to_y) * 10 + 103);
+      flag.setShadow(0, 2, "rgba(0,0,0,0.5)", 3);
+      marker = flag;
+    }
+
+    const container = this.add.container(p.x, p.y);
+    container.add(this.add.ellipse(0, 10, 26, 10, 0x000000, 0.22));
+    container.add(this.add.circle(0, 0, 13, colour).setStrokeStyle(2, 0x2b2620, 0.75));
+
+    // Biggest stack in the payload picks the portrait; settlers have no sprite.
+    const dominant = Object.entries(m.payload).sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (dominant && dominant !== "settler" && this.textures.exists(dominant)) {
+      container.add(this.add.image(0, 0, dominant).setOrigin(0.5, 0.5).setScale(0.086));
+    } else {
+      container.add(this.add.text(0, 0, "⚑", {
+        fontFamily: "serif", fontSize: "15px", color: "#3a2c14",
+      }).setOrigin(0.5, 0.5));
+    }
+
+    const chevron = this.add.triangle(20, 0, 0, -5, 0, 5, 9, 0, colour)
+      .setStrokeStyle(1, 0x2b2620, 0.6);
+    container.add(chevron);
+
+    const total = Object.values(m.payload).reduce((a, b) => a + b, 0);
+    container.add(this.add.text(11, 5, String(total), {
+      fontFamily: '"Marcellus SC", serif', fontSize: "9px", color: "#fff8e6",
+    }).setOrigin(0, 0).setShadow(0, 1, "rgba(0,0,0,0.8)", 2));
+
+    const eta = this.add.text(0, 22, "", {
+      fontFamily: '"Marcellus SC", serif',
+      fontSize: "10px",
+      color: "#2b2620",
+      backgroundColor: "rgba(247,238,213,0.92)",
+      padding: { x: 4, y: 1 },
+    }).setOrigin(0.5, 0);
+    container.add(eta);
+
+    // An inbound enemy attack pulses so it reads as an alarm.
+    if (m.incoming_attack && !this.reduceMotion) {
+      const alarm = this.add.circle(0, 0, 18, colour, 0).setStrokeStyle(2, colour, 0.9);
+      container.add(alarm);
+      this.tweens.add({
+        targets: alarm, scale: { from: 0.85, to: 1.5 }, alpha: { from: 0.9, to: 0 },
+        duration: 1200, repeat: -1, ease: "sine.out",
+      });
+    }
+
+    return {
+      container, route, marker, eta, chevron,
+      fx, fy, tx: m.to_x, ty: m.to_y, hasOrigin,
+      departsMs: Date.parse(m.departs_at),
+      arrivesMs: Date.parse(m.arrives_at),
+      colour, kind: m.kind, lastSecs: -1, arriving: false,
+    };
+  }
+
+  private updateArmies() {
+    if (!this.progress) return;
+    this.progress.clear();
+    if (this.armies.size === 0) return;
+
+    const now = Date.now() + this.skewMs;
+
+    for (const [id, a] of this.armies) {
+      if (a.arriving) continue;
+
+      const span = Math.max(1, a.arrivesMs - a.departsMs);
+      const t = Phaser.Math.Clamp((now - a.departsMs) / span, 0, 1);
+
+      const p = this.toScreen(a.fx, a.fy);
+      const q = this.toScreen(a.tx, a.ty);
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const len = Math.max(1, Math.hypot(dx, dy));
+
+      // Bow the path sideways so an outbound march and its return leg don't sit
+      // on top of each other.
+      const bow = (a.kind === "return" ? -10 : 10) * Math.sin(Math.PI * t);
+      const x = p.x + dx * t + (-dy / len) * bow;
+      const y = p.y + dy * t + (dx / len) * bow;
+
+      // Depth from the *fractional* grid sum, so a token correctly passes in
+      // front of nearer islands and behind farther ones. 2.5 sits above the
+      // island and its props but below the city label and the click hit-zone.
+      const gsum = (a.fx + a.fy) + ((a.tx + a.ty) - (a.fx + a.fy)) * t;
+      a.container.setPosition(x, y).setDepth(gsum * 10 + 102.5);
+      a.chevron.setRotation(Math.atan2(dy, dx));
+
+      if (a.hasOrigin) {
+        this.progress.lineStyle(3, a.colour, 0.85);
+        this.progress.lineBetween(p.x, p.y, x, y);
+      }
+
+      // setText re-rasterises a canvas — only do it when the second changes.
+      const secs = Math.max(0, Math.ceil((a.arrivesMs - now) / 1000));
+      if (secs !== a.lastSecs) {
+        a.lastSecs = secs;
+        a.eta.setText(formatEta(secs));
+      }
+
+      if (t >= 1) this.retireArmy(id, a);
+    }
   }
 
   // --- world layer -------------------------------------------------------
@@ -221,18 +476,11 @@ export class MapScene extends Phaser.Scene {
     this.worldObjects.length = 0;
     if (!data) return;
 
-    const cx = this.scale.width / 2;
-    const cy = this.scale.height / 2;
-    const toScreen = (gx: number, gy: number) => ({
-      x: cx + (gx - gy) * ISO_X / 2,
-      y: cy + (gx + gy) * ISO_Y / 2,
-    });
+    const toScreen = (gx: number, gy: number) => this.toScreen(gx, gy);
 
     // Clamp panning to the populated world plus a margin of open sea, so the
     // map can't be dragged off into an endless void.
-    const xs = data.cities.map((c) => c.x);
-    const ys = data.cities.map((c) => c.y);
-    if (xs.length) {
+    if (data.cities.length) {
       const corners = data.cities.map((c) => toScreen(c.x, c.y));
       const pad = 800;
       const minSx = Math.min(...corners.map((p) => p.x)) - pad;

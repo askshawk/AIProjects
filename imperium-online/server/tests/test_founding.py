@@ -70,6 +70,8 @@ def test_settler_founds_a_colony(client):
     })
     assert r.status_code == 201
     assert r.json()["kind"] == "found"
+    # A march to an empty cell still reports where it set out from.
+    assert (r.json()["from_x"], r.json()["from_y"]) == (roma["x"], roma["y"])
 
     _rush(client)
     cities = client.get("/cities", headers=h).json()

@@ -87,6 +87,8 @@ export type Movement = {
   incoming_attack: boolean;
   from_name: string;
   to_name: string;
+  from_x: number | null; // null if the origin city row is gone
+  from_y: number | null;
   to_x: number;
   to_y: number;
 };
@@ -184,6 +186,35 @@ export function sendArmy(token: string, originCityId: number, targetX: number, t
 
 export function getMovements(token: string) {
   return apiFetch<Movement[]>("/movements/me", {}, token);
+}
+
+/** Movements plus the server's own clock, read from the `Date` response header
+    (exposed via CORS). The map animates armies between two server timestamps,
+    so a skewed local clock would otherwise show marches arriving early or late.
+    Returns serverNowMs = null when the header is unavailable; callers fall back
+    to the local clock, which is only ever a cosmetic error. */
+export async function getMovementsWithClock(
+  token: string,
+): Promise<{ movements: Movement[]; serverNowMs: number | null }> {
+  const res = await fetch(`${API_URL}/movements/me`, {
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(detail);
+  }
+  const dateHeader = res.headers.get("Date");
+  const parsed = dateHeader ? Date.parse(dateHeader) : NaN;
+  return {
+    movements: (await res.json()) as Movement[],
+    serverNowMs: Number.isNaN(parsed) ? null : parsed,
+  };
 }
 
 export function getReports(token: string) {

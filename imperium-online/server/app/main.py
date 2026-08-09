@@ -54,6 +54,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # `Date` isn't CORS-safelisted; the client reads it to correct for a skewed
+    # local clock when interpolating army positions between two timestamps.
+    expose_headers=["Date"],
 )
 
 app.include_router(auth.router)

@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { useCities } from "@/lib/cityStore";
-import { getCity, getMyAlliance, getMyCity, getWorld, type City, type WorldCity } from "@/lib/api";
+import { getCity, getMyAlliance, getMyCity, getMovementsWithClock, getWorld, type City, type WorldCity } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
 import SendArmyForm from "@/components/SendArmyForm";
-import type { MapData } from "@/components/phaser/MapScene";
+import type { MapData, MovementData } from "@/components/phaser/MapScene";
 
 const PhaserGame = dynamic(() => import("@/components/PhaserGame"), { ssr: false });
 
@@ -21,6 +21,7 @@ export default function MapPage() {
   const { cities, activeId, reload: reloadCities } = useCities();
   const router = useRouter();
   const [data, setData] = useState<MapData | null>(null);
+  const [movements, setMovements] = useState<MovementData>({ movements: [], serverNowMs: null });
   const [origin, setOrigin] = useState<City | null>(null);  // active city = army origin
   const [selected, setSelected] = useState<Selected | null>(null);
   const [sentMsg, setSentMsg] = useState<string | null>(null);
@@ -64,6 +65,53 @@ export default function MapPage() {
     return unsubscribe;
   }, [load, reloadCities]);
 
+  // Marching armies ride their own channel: the scene interpolates positions
+  // locally, so this only needs to refetch when the *set* of marches changes —
+  // not every second. A signature guard keeps an unchanged poll from minting a
+  // new object identity (which would re-emit into Phaser for nothing).
+  const loadMovements = useCallback(async () => {
+    if (!token) return;
+    try {
+      const next = await getMovementsWithClock(token);
+      setMovements((prev) => {
+        const sig = (d: MovementData) => d.movements.map((m) => `${m.id}@${m.arrives_at}`).join("|");
+        return sig(prev) === sig(next) ? prev : next;
+      });
+    } catch {
+      /* keep the last known set — a failed poll shouldn't clear the map */
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    loadMovements();
+    const unsubscribe = realtime.subscribe((evt) => {
+      switch (evt.type) {
+        case "attack_resolved":
+        case "army_returned":
+        case "queued":
+        case "city_founded":
+        case "city_captured":
+          loadMovements();
+          break;
+      }
+    });
+    // Safety net for events that never arrive (dropped socket, other players).
+    const poll = setInterval(loadMovements, 25000);
+    return () => { unsubscribe(); clearInterval(poll); };
+  }, [token, loadMovements]);
+
+  // Refetch the moment the soonest march lands, so arrivals clear promptly.
+  useEffect(() => {
+    const soonest = movements.movements
+      .map((m) => Date.parse(m.arrives_at))
+      .sort((a, b) => a - b)[0];
+    if (!soonest) return;
+    const delay = Math.max(500, soonest - Date.now() + 750);
+    const timer = setTimeout(loadMovements, delay);
+    return () => clearTimeout(timer);
+  }, [movements, loadMovements]);
+
   // Clicking any city opens the send form — your own becomes a reinforcement,
   // an enemy an attack (the server classifies the order).
   const onCitySelect = useCallback((c: Selected) => {
@@ -96,7 +144,7 @@ export default function MapPage() {
 
         {data ? (
           <div className="card">
-            <PhaserGame kind="map" data={data} onCitySelect={onCitySelect} />
+            <PhaserGame kind="map" data={data} movements={movements} onCitySelect={onCitySelect} />
             <div className="found-bar">
               <span className="muted">Found a colony at</span>
               <input type="number" placeholder="x" value={foundX} onChange={(e) => setFoundX(e.target.value)} style={{ width: 64 }} />
@@ -115,8 +163,9 @@ export default function MapPage() {
             target={selected}
             onSent={() => {
               setSelected(null);
-              setSentMsg(`Your army marches on ${selected.name}. Track it from your city.`);
+              setSentMsg(`Your army marches on ${selected.name}. Watch it cross the sea.`);
               load();
+              loadMovements();
             }}
             onCancel={() => setSelected(null)}
           />

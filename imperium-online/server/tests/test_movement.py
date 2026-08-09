@@ -92,6 +92,11 @@ def test_full_attack_cycle(ctx):
     # Send → units leave the city immediately.
     r = ctx.post("/movements", headers=att, json={"origin_city_id": ac["id"], "target_x": dc["x"], "target_y": dc["y"], "units": {"legionary": 20}})
     assert r.status_code == 201
+    # Origin coords travel with the movement so the map can draw the route.
+    assert (r.json()["from_x"], r.json()["from_y"]) == (ac["x"], ac["y"])
+    listed = ctx.get("/movements/me", headers=att).json()[0]
+    assert (listed["from_x"], listed["from_y"]) == (ac["x"], ac["y"])
+    assert (listed["to_x"], listed["to_y"]) == (dc["x"], dc["y"])
     home = ctx.get("/cities/me", headers=att).json()
     assert next(u["have"] for u in home["units"] if u["unit_type"] == "legionary") == 0
 
