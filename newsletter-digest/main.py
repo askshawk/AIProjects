@@ -116,7 +116,7 @@ def summarize_with_claude(email_content, newsletter_name):
     client = Anthropic(api_key=CLAUDE_API_KEY)
     
     response = client.messages.create(
-        model="claude-opus-4-1",
+        model="claude-opus-4-8",
         max_tokens=400,
         messages=[
             {
@@ -171,7 +171,8 @@ def main():
 
     if not messages:
         print("❌ No newsletters found in the last 24 hours.")
-        return
+        print("\n🔍 Checking last 7 days for any newsletters...")
+        debug_results = service.users().messages().list(userId='me', q=f"from:({' OR '.join(NEWSLETTER_SENDERS.values())})", maxResults=100).execute()
         debug_messages = debug_results.get('messages', [])
 
         if debug_messages:
