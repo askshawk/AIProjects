@@ -13,7 +13,7 @@ import BarracksPanel from "@/components/BarracksPanel";
 import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
-import { RESOURCE_ICONS } from "@/components/ResourceIcons";
+import { RESOURCE_ICONS, PopulationIcon } from "@/components/ResourceIcons";
 
 // Phaser must not run during SSR — load the bridge client-only.
 const PhaserGame = dynamic(() => import("@/components/PhaserGame"), { ssr: false });
@@ -149,7 +149,7 @@ export default function PlayPage() {
                 <h3>Buildings</h3>
 
                 <div className="population">
-                  <span>Population</span>
+                  <span><PopulationIcon className="pop-icon" />Population</span>
                   <div className={`track${city.population_used >= city.population_cap ? " full" : ""}`}>
                     <span style={{ width: `${Math.min(100, (city.population_used / city.population_cap) * 100)}%` }} />
                   </div>

@@ -783,3 +783,79 @@ input:focus {
 }
 .chat-input { display: flex; gap: 8px; align-items: center; }
 .chat-input input { margin: 0; }
+
+/* ===== painted icons from the art pack ===== */
+.rc-icon { display: block; width: 32px; height: 32px; object-fit: contain; }
+/* resource-bar capsule: let the painted icon sit on the dark pill, no inner disc */
+.resource .icon { background: none; border: none; box-shadow: none; }
+.resource .icon .rc-icon { width: 38px; height: 38px; }
+.cost-line .ci .rc-icon { width: 16px; height: 16px; }
+.cost-line .ci { display: inline-flex; align-items: center; gap: 3px; }
+.population .pop-icon { width: 20px; height: 20px; object-fit: contain; vertical-align: middle; margin-right: 5px; }
+.unit-stats .stat-ico { width: 14px; height: 14px; object-fit: contain; vertical-align: -2px; }
+
+/* ===== painted 9-slice UI (art pack) ===== */
+
+/* Greek-key panel frame on every card. 256² source, ~52px ornate corners;
+   displayed as an ~18px border so the parchment interior still breathes. */
+.card {
+  border: 18px solid transparent;
+  border-image: url("/assets/ui/panel_frame.png") 52 fill / 18px / 0 round;
+  border-radius: 0;
+  padding: 16px 20px;
+  box-shadow: 0 3px 12px var(--shadow);
+}
+
+/* Gilded laurel header banner. Laurel ends fixed (left/right slices), centre
+   travertine stretches (fill) and carries the city name. */
+.oh-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 360px;
+  min-height: 56px;
+  padding: 4px 40px;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 26px 110px;
+  border-image: url("/assets/ui/header_banner.png") 40 190 fill / 26px 110px / 0 stretch;
+}
+.oh-banner h1 { margin: 0; color: #5e3a1a; }
+.ornate-header .oh-sub { margin-top: 10px; }
+
+/* Painted button frame. 384×96 source, ~28px frame, tan centre. Dark text. */
+.btn {
+  background: none;
+  border: 13px solid transparent;
+  border-image: url("/assets/ui/button.png") 28 fill / 13px / 0 stretch;
+  border-radius: 0;
+  color: #4a3018;
+  text-shadow: none;
+  box-shadow: none;
+  padding: 4px 14px;
+}
+.btn:hover:not(:disabled) {
+  filter: none;
+  border-image-source: url("/assets/ui/button_hover.png");
+}
+.btn:disabled { filter: grayscale(0.55) opacity(0.7); }
+/* the ghost (cancel/leave) button keeps the simpler CSS look for contrast */
+.btn-ghost {
+  border-image: none;
+  border: 1px solid var(--gold);
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+  color: var(--ink);
+  padding: 9px 16px;
+}
+
+/* keep the unit attack/defense stat line on one tidy row */
+.unit-stats {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+.unit-stats .stat-ico { width: 13px; height: 13px; }

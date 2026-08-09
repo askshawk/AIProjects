@@ -9,6 +9,7 @@
 import { useMemo, useState } from "react";
 import type { City, UnitType } from "@/lib/api";
 import { UNIT_ICONS } from "@/components/UnitIcons";
+import { AttackIcon, DefenseIcon } from "@/components/ResourceIcons";
 import RecruitQueue from "@/components/RecruitQueue";
 
 export default function BarracksPanel({
@@ -72,7 +73,9 @@ export default function BarracksPanel({
               <span className="unit-icon">{Icon && <Icon />}</span>
               <span className="unit-name">{u.label}</span>
               <span className="unit-have">{u.have}</span>
-              <span className="unit-stats">⚔ {u.attack} · 🛡 {u.defense}</span>
+              <span className="unit-stats">
+                <AttackIcon className="stat-ico" /> {u.attack} · <DefenseIcon className="stat-ico" /> {u.defense}
+              </span>
             </button>
           );
         })}
