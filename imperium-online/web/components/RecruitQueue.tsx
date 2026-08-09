@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import type { RecruitJob } from "@/lib/api";
 import { UNIT_ICONS } from "@/components/UnitIcons";
+import EmptyState from "@/components/EmptyState";
 
 const LABELS: Record<string, string> = {
   legionary: "Legionaries",
@@ -45,7 +46,11 @@ export default function RecruitQueue({
   }, [now, jobs, onComplete]);
 
   if (jobs.length === 0) {
-    return <p className="muted">No units in training.</p>;
+    return (
+      <EmptyState glyph="🛡️" compact>
+        The drill yard is quiet. Recruit above and they'll muster on a timer.
+      </EmptyState>
+    );
   }
 
   return (

@@ -14,6 +14,7 @@ import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
 import StatNumber from "@/components/StatNumber";
+import WelcomeScroll from "@/components/WelcomeScroll";
 import { RESOURCE_ICONS, PopulationIcon } from "@/components/ResourceIcons";
 
 // Phaser must not run during SSR — load the bridge client-only.
@@ -140,6 +141,7 @@ export default function PlayPage() {
           <p className="muted">Surveying your city…</p>
         ) : (
           <>
+            <WelcomeScroll cityName={city.name} />
             <OrnateHeader
               title={city.name}
               subtitle={`Founded at grid (${city.x}, ${city.y}) · warehouse cap ${Math.round(city.capacity)} per resource`}

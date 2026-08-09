@@ -7,6 +7,7 @@ import { getReports, type BattleReport } from "@/lib/api";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
 import BattleReplay from "@/components/BattleReplay";
+import EmptyState from "@/components/EmptyState";
 
 export default function ReportsPage() {
   const { token, ready } = useAuth();
@@ -32,7 +33,10 @@ export default function ReportsPage() {
         {!reports ? (
           <p className="muted">Consulting the dispatches…</p>
         ) : reports.length === 0 ? (
-          <p className="muted">No battles yet. March on a rival from the world map.</p>
+          <EmptyState glyph="📜" action={{ href: "/map", label: "Find a rival" }}>
+            The archive is empty. Win or lose, every engagement is recorded here —
+            and you can replay it.
+          </EmptyState>
         ) : (
           reports.map((r) => {
             const iWon = (r.i_attacked && r.outcome === "attacker_won") || (!r.i_attacked && r.outcome === "defender_won");

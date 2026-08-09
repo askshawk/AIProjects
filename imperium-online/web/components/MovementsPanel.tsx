@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMovements, type Movement } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
+import EmptyState from "@/components/EmptyState";
 
 const UNIT_LABEL: Record<string, string> = { legionary: "Leg.", archer: "Arc.", scout: "Sct." };
 
@@ -70,7 +71,9 @@ export default function MovementsPanel({ token }: { token: string }) {
     return (
       <div className="card">
         <h3>Movements</h3>
-        <p className="muted" style={{ margin: 0 }}>No armies on the road.</p>
+        <EmptyState glyph="🐎" action={{ href: "/map", label: "Open the world map" }}>
+          No armies on the road. Every city out there belongs to a real player.
+        </EmptyState>
       </div>
     );
   }

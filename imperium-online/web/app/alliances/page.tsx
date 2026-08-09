@@ -10,6 +10,7 @@ import {
 import { realtime } from "@/lib/realtime";
 import TopBar from "@/components/TopBar";
 import OrnateHeader from "@/components/OrnateHeader";
+import EmptyState from "@/components/EmptyState";
 
 export default function AlliancesPage() {
   const { token, ready } = useAuth();
@@ -107,7 +108,9 @@ export default function AlliancesPage() {
               <h3>Alliance chat</h3>
               <div className="chat-log" ref={scrollRef}>
                 {messages.length === 0 ? (
-                  <p className="muted">No messages yet. Say something.</p>
+                  <EmptyState glyph="💬" compact>
+                    Nothing said yet. Messages reach every member the moment you send them.
+                  </EmptyState>
                 ) : messages.map((m) => (
                   <div className="chat-msg" key={m.id}>
                     <span className="chat-user">{m.user}</span>
@@ -139,7 +142,9 @@ export default function AlliancesPage() {
             <div className="card">
               <h3>Join an alliance</h3>
               {others.length === 0 ? (
-                <p className="muted">No alliances yet. Be the first to found one.</p>
+                <EmptyState glyph="🤝" compact>
+                  No coalitions in this world yet. Found one and others can rally to it.
+                </EmptyState>
               ) : (
                 <ul className="member-list">
                   {others.map((a) => (

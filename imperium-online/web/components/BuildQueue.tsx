@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import type { BuildJob } from "@/lib/api";
+import EmptyState from "@/components/EmptyState";
 
 function formatRemaining(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -49,7 +50,11 @@ export default function BuildQueue({
   }, [now, jobs, onComplete]);
 
   if (jobs.length === 0) {
-    return <p className="muted">Nothing under construction. Queue a building →</p>;
+    return (
+      <EmptyState glyph="🧱" compact>
+        No scaffolding up. Pick a building above — it will finish on its own timer.
+      </EmptyState>
+    );
   }
 
   return (
