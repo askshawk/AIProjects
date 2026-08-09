@@ -97,13 +97,30 @@ export class CityScene extends Phaser.Scene {
       }
     }
 
+    // --- ambient sea sparkle: a few slow twinkles on the surrounding water --
+    this.addSeaSparkle();
+
     // --- decor ------------------------------------------------------------
     for (const d of DECOR) {
       const { x, y } = this.place(d.gx, d.gy);
-      this.add.image(x, y + TILE_H * 0.25, d.key)
+      const prop = this.add.image(x, y + TILE_H * 0.25, d.key)
         .setOrigin(0.5, 1)
         .setScale(TERRAIN[d.key].scale ?? 1)
         .setDepth(depthOf(d.gx, d.gy) * 10 + 5);
+      // Cypress trees sway gently in the breeze (pivot at the base) — a small
+      // living touch. Rocks/amphorae stay put. Phase offset by position so they
+      // don't all lean in unison.
+      if (d.key === "cypress") {
+        prop.setAngle(-1.5);
+        this.tweens.add({
+          targets: prop,
+          angle: 1.5,
+          duration: 2200 + ((d.gx * 7 + d.gy * 13) % 600),
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut",
+        });
+      }
     }
 
     // --- city title plaque (HUD, fixed) -----------------------------------
@@ -171,6 +188,25 @@ export class CityScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off("data-updated", undefined, this);
     });
+  }
+
+  /** Slow, sparse glints on the surrounding sea — ambient life, drawn behind
+      the island (negative depth) so it never covers the city. No new asset. */
+  private addSeaSparkle() {
+    const tex = this.makeSoftCircle();
+    this.add
+      .particles(0, 0, tex, {
+        x: { min: 0, max: this.scale.width },
+        y: { min: 0, max: this.scale.height },
+        lifespan: 1800,
+        // grow a touch while fading right out — reads as a glint on the water
+        scale: { start: 0.12, end: 0.4, ease: "sine.out" },
+        alpha: { start: 0.6, end: 0 },
+        frequency: 380,
+        quantity: 1,
+        blendMode: "ADD",
+      })
+      .setDepth(-10);
   }
 
   /** A soft white circle texture for the smoke emitter (no extra asset). */

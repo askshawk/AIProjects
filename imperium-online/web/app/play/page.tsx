@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
@@ -13,6 +13,7 @@ import BarracksPanel from "@/components/BarracksPanel";
 import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
+import StatNumber from "@/components/StatNumber";
 import { RESOURCE_ICONS, PopulationIcon } from "@/components/ResourceIcons";
 
 // Phaser must not run during SSR — load the bridge client-only.
@@ -39,10 +40,31 @@ export default function PlayPage() {
   const router = useRouter();
   const [city, setCity] = useState<City | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Buildings that just rose a level — flash them gold once (game feel).
+  const [leveled, setLeveled] = useState<Set<string>>(new Set());
+  const prevLevels = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (ready && !token) router.replace("/login");
   }, [ready, token, router]);
+
+  // Detect level-ups between refreshes and flash those rows. Keyed by city so
+  // switching cities re-baselines instead of flashing the whole board.
+  useEffect(() => {
+    if (!city) return;
+    const key = (b: string) => `${city.id}:${b}`;
+    const rose: string[] = [];
+    for (const b of BUILDINGS) {
+      const now = city[b.key] as number;
+      const before = prevLevels.current[key(b.building)];
+      if (before !== undefined && now > before) rose.push(b.building);
+      prevLevels.current[key(b.building)] = now;
+    }
+    if (rose.length === 0) return;
+    setLeveled(new Set(rose));
+    const timer = setTimeout(() => setLeveled(new Set()), 1200);
+    return () => clearTimeout(timer);
+  }, [city]);
 
   // Load the active city (or the primary one until the switcher resolves).
   const refresh = useCallback(async () => {
@@ -131,7 +153,7 @@ export default function PlayPage() {
                 return (
                   <li className="resource" key={r.key}>
                     <span className="icon"><Icon /></span>
-                    <span className="amount">{amount.toLocaleString()}</span>
+                    <StatNumber value={amount} className="amount" />
                     <span className="label">{r.label}</span>
                     <div className="bar"><span style={{ width: `${pct}%` }} /></div>
                   </li>
@@ -168,7 +190,7 @@ export default function PlayPage() {
                   const up = upgradeFor(b.building);
                   const blocked = !up || up.maxed || !up.affordable || !up.pop_ok;
                   return (
-                    <div className="building-row" key={b.building}>
+                    <div className={`building-row${leveled.has(b.building) ? " leveled" : ""}`} key={b.building}>
                       <div className="thumb">
                         <img src={`/assets/iso/${b.building}.png`} alt="" />
                       </div>
