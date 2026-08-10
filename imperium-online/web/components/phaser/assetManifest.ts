@@ -39,12 +39,13 @@ export const TERRAIN: Record<string, AssetSlot> = {
   island: { src: `${ISO}/island.png`, w: 800, h: 600, scale: 0.22 },
 };
 
-// Unit portraits (256² painted PNGs). Settlers have no painted sprite yet —
-// the hand-drawn SettlerIcon SVG (components/UnitIcons.tsx) covers that slot.
+// Unit portraits (256² painted PNGs), used for the army tokens on the world
+// map. The roster panel uses the hand-drawn SVGs in components/UnitIcons.tsx.
 export const UNITS: Record<string, AssetSlot> = {
   legionary: { src: `${UNITS_DIR}/legionary.png`, w: 256, h: 256 },
   archer: { src: `${UNITS_DIR}/archer.png`, w: 256, h: 256 },
   scout: { src: `${UNITS_DIR}/scout.png`, w: 256, h: 256 },
+  settler: { src: `${UNITS_DIR}/settler.png`, w: 256, h: 256 },
 };
 
 export const ALL_ASSETS: Record<string, AssetSlot> = { ...BUILDINGS, ...TERRAIN };

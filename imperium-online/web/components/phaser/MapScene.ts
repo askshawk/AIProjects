@@ -378,9 +378,12 @@ export class MapScene extends Phaser.Scene {
     container.add(this.add.ellipse(0, 10, 26, 10, 0x000000, 0.22));
     container.add(this.add.circle(0, 0, 13, colour).setStrokeStyle(2, 0x2b2620, 0.75));
 
-    // Biggest stack in the payload picks the portrait; settlers have no sprite.
-    const dominant = Object.entries(m.payload).sort((a, b) => b[1] - a[1])[0]?.[0];
-    if (dominant && dominant !== "settler" && this.textures.exists(dominant)) {
+    // Biggest stack picks the portrait — except on a founding march, where the
+    // single settler is the point of the expedition and its (usually larger)
+    // escort would otherwise mask it.
+    const biggest = Object.entries(m.payload).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const dominant = m.kind === "found" && m.payload.settler ? "settler" : biggest;
+    if (dominant && this.textures.exists(dominant)) {
       container.add(this.add.image(0, 0, dominant).setOrigin(0.5, 0.5).setScale(0.086));
     } else {
       container.add(this.add.text(0, 0, "⚑", {
