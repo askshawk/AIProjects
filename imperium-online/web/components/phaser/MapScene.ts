@@ -1,9 +1,11 @@
-// World map — isometric open sea dotted with island city-states.
+// World map — an isometric archipelago of shared islands (C1).
 //
-// Each city sits on its own island at an isometric position derived from its
-// world-grid coordinate; the viewer's own city wears a laurel-gold ring.
+// Every 4×4 block of the grid is one island holding up to 16 cities owned by
+// different players (see web/lib/islands.ts / server world.py). Land armies
+// march freely within an island; crossing between islands is a sea voyage.
 // Cities are clickable (an enemy click emits "city-selected", which the React
-// map page turns into a march form). Drag to pan, wheel to zoom.
+// map page turns into a march form); empty slots on an occupied island emit
+// "cell-selected" to pre-fill the found-colony form. Drag to pan, wheel zoom.
 //
 // Three layers with different lifetimes:
 //   sea    — built once in create(), survives every data update (depth < 0)
@@ -14,6 +16,7 @@
 
 import * as Phaser from "phaser";
 import type { Movement, WorldCity } from "@/lib/api";
+import { ISLAND_SIZE, islandOf } from "@/lib/islands";
 import { TERRAIN, BUILDINGS, UNITS, isSvg, type AssetSlot } from "./assetManifest";
 import { SkyLayer } from "./sky";
 
@@ -41,6 +44,10 @@ type ArmyToken = {
   arriving: boolean;
 };
 
+// A city label pair, tracked so the zoom/hover policy can toggle visibility
+// without rebuilding the world.
+type CityLabels = { name: Phaser.GameObjects.Text; owner: Phaser.GameObjects.Text; isMine: boolean };
+
 /** mm:ss, or h:mm:ss for long marches — matches the MovementsPanel countdown. */
 function formatEta(totalSeconds: number): string {
   const s = Math.max(0, totalSeconds);
@@ -59,23 +66,44 @@ const ARMY_COLOURS: Record<string, number> = {
   found: 0xd9c68a,
 };
 
-// Island spacing on screen. An island renders ~192×144, so the step has to
-// clear that or neighbours collide — with open sea (and room for marching
-// armies to be legible) between them.
-const ISO_X = 240;
-const ISO_Y = 124;
+// Deterministic island names — the far-zoom navigation anchor. Hashed from the
+// island coordinate so every player sees the same name.
+const ISLE_NAMES = [
+  "Aegina", "Melos", "Naxos", "Delos", "Paros", "Kythera", "Ithaca", "Corcyra",
+  "Lemnos", "Chios", "Samos", "Rhodos", "Thera", "Kos", "Skyros", "Andros",
+  "Tinos", "Icaria", "Salamis", "Seriphos", "Siphnos", "Mykonos", "Syros", "Lesbos",
+];
+function isleName(ix: number, iy: number): string {
+  const h = Math.abs(ix * 73856093 ^ iy * 19349663);
+  return ISLE_NAMES[h % ISLE_NAMES.length];
+}
+
+// Per-cell screen pitch. Cells are packed 4-to-an-island, so the pitch is much
+// tighter than the old one-city-per-island layout.
+const ISO_X = 120;
+const ISO_Y = 62;
+// Open sea between islands, in cell-widths, injected into the projection.
+const GAP = 2;
+
+// Zoom at which foreign city names appear (own cities are always labelled).
+const LABEL_ZOOM = 1.0;
 
 // The sea pattern must be power-of-two: Phaser's WebGL TileSprite repeat path
-// distorts non-POT textures. 256×128 holds exactly one lattice cell (two
-// diamond centres), so tiling it reproduces the diamond grid seamlessly.
+// distorts non-POT textures.
 const PATTERN_W = 256;
 const PATTERN_H = 128;
 const SEA_KEY = "sea-pattern";
 
-// One swell spans two island cells, so waves are large and the repeat is less
-// obvious than tiling at the lattice pitch.
-const SEA_SCALE_X = (ISO_X * 2) / PATTERN_W;
-const SEA_SCALE_Y = (ISO_Y * 2) / PATTERN_H;
+// One swell spans one island width — same absolute size as before the pitch
+// change, so the ocean look carries over.
+const SEA_SCALE_X = (ISO_X * 4) / PATTERN_W;
+const SEA_SCALE_Y = (ISO_Y * 4) / PATTERN_H;
+
+/** Effective coordinate: grid coordinate with sea gaps opened up at island
+    boundaries. All screen positions and depths derive from this. */
+function eff(g: number): number {
+  return g + Math.floor(g / ISLAND_SIZE) * GAP;
+}
 
 export class MapScene extends Phaser.Scene {
   private worldObjects: Phaser.GameObjects.GameObject[] = [];
@@ -86,6 +114,7 @@ export class MapScene extends Phaser.Scene {
   private armies = new Map<number, ArmyToken>();
   private progress?: Phaser.GameObjects.Graphics;
   private sky?: SkyLayer;
+  private cityLabels: CityLabels[] = [];
   // Server clock − local clock, smoothed. Armies are timed from server
   // timestamps, so a skewed local clock would misplace them.
   private skewMs = 0;
@@ -99,7 +128,7 @@ export class MapScene extends Phaser.Scene {
       if (isSvg(slot)) this.load.svg(key, slot.src, { width: slot.w, height: slot.h });
       else this.load.image(key, slot.src);
     };
-    for (const key of ["island", "cypress", "rocks", "water"]) load(key, TERRAIN[key]);
+    for (const key of ["island", "cypress", "rocks", "water", "grass"]) load(key, TERRAIN[key]);
     load("forum", BUILDINGS.forum);
     for (const [key, slot] of Object.entries(UNITS)) load(key, slot);
   }
@@ -114,8 +143,7 @@ export class MapScene extends Phaser.Scene {
     this.reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
     // Deep navy: only shows for a frame before the sea positions, and behind
-    // the water's own transparent diamond corners. Dark on purpose — a light
-    // background would make any tiling seam glow.
+    // the water's own transparent diamond corners.
     this.cameras.main.setBackgroundColor("#0e3a56");
     this.buildSea();
 
@@ -128,6 +156,7 @@ export class MapScene extends Phaser.Scene {
     this.input.on("wheel", (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
       const cam = this.cameras.main;
       cam.zoom = Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.5, 2);
+      this.applyLabelPolicy();
     });
 
     // Shared graphics for the travelled portion of every route.
@@ -146,24 +175,38 @@ export class MapScene extends Phaser.Scene {
     });
   }
 
-  /** Screen position of a world-grid coordinate. Shared by islands and armies
-      so a token lands exactly on the city it is marching to. */
+  /** Screen position of a world-grid coordinate. Shared by islands, cities and
+      armies, so a token lands exactly on the city it is marching to. Sea gaps
+      between islands come from the effective-coordinate transform. */
   private toScreen(gx: number, gy: number): { x: number; y: number } {
+    const ex = eff(gx), ey = eff(gy);
     return {
-      x: this.scale.width / 2 + (gx - gy) * ISO_X / 2,
-      y: this.scale.height / 2 + (gx + gy) * ISO_Y / 2,
+      x: this.scale.width / 2 + (ex - ey) * ISO_X / 2,
+      y: this.scale.height / 2 + (ex + ey) * ISO_Y / 2,
     };
+  }
+
+  /** Painter's-order depth for a grid cell. Effective coords keep the ordering
+      monotone across island gaps. */
+  private depthOf(gx: number, gy: number): number {
+    return (eff(gx) + eff(gy)) * 10;
+  }
+
+  /** Foreign city names show only when zoomed in (or on hover); owner lines
+      only on hover. Own cities are always labelled. */
+  private applyLabelPolicy() {
+    const zoomed = this.cameras.main.zoom >= LABEL_ZOOM;
+    for (const l of this.cityLabels) {
+      l.name.setVisible(l.isMine || zoomed);
+      l.owner.setVisible(false);
+    }
   }
 
   // --- sea ---------------------------------------------------------------
 
-  /** Stamp the painted water diamond into a POT pattern texture: one centred
-      diamond plus the four corner quarters, which together form the repeating
-      unit of the isometric lattice.
-
-      Built as a *canvas* texture, not a RenderTexture: a RenderTexture is
-      framebuffer-backed and doesn't reliably get GL repeat-wrapping, so a
-      TileSprite clamps it instead of tiling. */
+  /** Stamp the painted water diamond into a POT pattern texture. Built as a
+      *canvas* texture: a framebuffer-backed RenderTexture doesn't reliably get
+      GL repeat-wrapping, so a TileSprite clamps it instead of tiling. */
   private makeSeaPattern(): string | null {
     if (this.textures.exists(SEA_KEY)) return SEA_KEY;
     const src = this.textures.get("water").getSourceImage() as CanvasImageSource;
@@ -184,9 +227,6 @@ export class MapScene extends Phaser.Scene {
     // Big enough to cover the viewport at minimum zoom (896/0.5 × 576/0.5).
     const w = 1792, h = 1152;
 
-    // Swells run at twice the island lattice: bigger, calmer waves that repeat
-    // half as often across the viewport, so the tiling reads as ocean rather
-    // than as a quilt.
     this.sea = this.add.tileSprite(0, 0, w, h, key)
       .setOrigin(0.5, 0.5)
       .setTileScale(SEA_SCALE_X, SEA_SCALE_Y)
@@ -232,19 +272,19 @@ export class MapScene extends Phaser.Scene {
     return key;
   }
 
-  /** A reusable soft foam ring — three concentric stroked ellipses. */
+  /** A soft foam ring sized for a whole island — three concentric ellipses. */
   private makeFoamRing(): string {
-    const key = "foam-ring";
+    const key = "foam-ring-island";
     if (this.textures.exists(key)) return key;
-    const w = 256, h = 160;
+    const w = 680, h = 400;
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     const rings: [number, number, number][] = [
-      [100, 60, 0.30],
-      [108, 65, 0.18],
-      [116, 70, 0.10],
+      [290, 165, 0.30],
+      [310, 177, 0.18],
+      [330, 189, 0.10],
     ];
     for (const [rx, ry, alpha] of rings) {
-      g.lineStyle(3, 0xf2f7f5, alpha);
+      g.lineStyle(4, 0xf2f7f5, alpha);
       g.strokeEllipse(w / 2, h / 2, rx * 2, ry * 2);
     }
     g.generateTexture(key, w, h);
@@ -369,7 +409,7 @@ export class MapScene extends Phaser.Scene {
     if (m.kind === "found") {
       const flag = this.add.text(q.x, q.y - 6, "⚑", {
         fontFamily: "serif", fontSize: "22px", color: "#f2e4bc",
-      }).setOrigin(0.5, 1).setDepth((m.to_x + m.to_y) * 10 + 103);
+      }).setOrigin(0.5, 1).setDepth(this.depthOf(m.to_x, m.to_y) + 103);
       flag.setShadow(0, 2, "rgba(0,0,0,0.5)", 3);
       marker = flag;
     }
@@ -452,10 +492,12 @@ export class MapScene extends Phaser.Scene {
       const x = p.x + dx * t + (-dy / len) * bow;
       const y = p.y + dy * t + (dx / len) * bow;
 
-      // Depth from the *fractional* grid sum, so a token correctly passes in
-      // front of nearer islands and behind farther ones. 2.5 sits above the
-      // island and its props but below the city label and the click hit-zone.
-      const gsum = (a.fx + a.fy) + ((a.tx + a.ty) - (a.fx + a.fy)) * t;
+      // Depth from the *fractional* effective-grid sum, so a token correctly
+      // passes in front of nearer islands and behind farther ones. 2.5 sits
+      // above the island and its props but below labels and click hit-zones.
+      const fromSum = eff(a.fx) + eff(a.fy);
+      const toSum = eff(a.tx) + eff(a.ty);
+      const gsum = fromSum + (toSum - fromSum) * t;
       a.container.setPosition(x, y).setDepth(gsum * 10 + 102.5);
       a.chevron.setRotation(Math.atan2(dy, dx));
 
@@ -483,82 +525,159 @@ export class MapScene extends Phaser.Scene {
       o.destroy();
     }
     this.worldObjects.length = 0;
+    this.cityLabels = [];
     if (!data) return;
 
-    const toScreen = (gx: number, gy: number) => this.toScreen(gx, gy);
-
-    // Clamp panning to the populated world plus a margin of open sea, so the
-    // map can't be dragged off into an endless void.
-    if (data.cities.length) {
-      const corners = data.cities.map((c) => toScreen(c.x, c.y));
-      const pad = 800;
-      const minSx = Math.min(...corners.map((p) => p.x)) - pad;
-      const maxSx = Math.max(...corners.map((p) => p.x)) + pad;
-      const minSy = Math.min(...corners.map((p) => p.y)) - pad;
-      const maxSy = Math.max(...corners.map((p) => p.y)) + pad;
-      this.cameras.main.setBounds(minSx, minSy, maxSx - minSx, maxSy - minSy);
+    // Group cities by the island they share.
+    const byIsland = new Map<string, WorldCity[]>();
+    for (const c of data.cities) {
+      const [ix, iy] = islandOf(c.x, c.y);
+      const k = `${ix},${iy}`;
+      (byIsland.get(k) ?? byIsland.set(k, []).get(k)!).push(c);
     }
 
-    const foam = this.makeFoamRing();
-
-    for (const c of data.cities) {
-      const { x, y } = toScreen(c.x, c.y);
-      const key = `${c.x},${c.y}`;
-      const isMine = data.mine.includes(key);
-      const isAllied = !isMine && data.allies.includes(key);
-      const depth = (c.x + c.y) * 10 + 100;
-
-      // Shoreline: a pale sandbank halo, then the foam ring, then the island.
-      this.track(this.add.ellipse(x, y + 4, 256, 152, 0x7fd4e0, 0.22).setDepth(depth - 2));
-      const ring = this.track(
-        this.add.image(x, y + 4, foam).setOrigin(0.5, 0.5).setDepth(depth - 1),
-      );
-      if (!this.reduceMotion) {
-        this.tweens.add({
-          targets: ring,
-          scale: { from: 1, to: 1.055 },
-          alpha: { from: 0.9, to: 0.45 },
-          duration: 3200 + ((c.x * 7 + c.y * 13) % 900),
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-        });
+    // Camera bounds from island bounding boxes plus open sea.
+    if (byIsland.size) {
+      const pad = 800;
+      let minSx = Infinity, maxSx = -Infinity, minSy = Infinity, maxSy = -Infinity;
+      for (const k of byIsland.keys()) {
+        const [ix, iy] = k.split(",").map(Number);
+        const centre = this.islandCentre(ix, iy);
+        minSx = Math.min(minSx, centre.x - 340); maxSx = Math.max(maxSx, centre.x + 340);
+        minSy = Math.min(minSy, centre.y - 200); maxSy = Math.max(maxSy, centre.y + 200);
       }
+      this.cameras.main.setBounds(minSx - pad, minSy - pad, (maxSx - minSx) + pad * 2, (maxSy - minSy) + pad * 2);
+    }
 
-      this.track(this.add.image(x, y, "island").setOrigin(0.5, 0.5).setScale(0.24).setDepth(depth));
+    for (const [k, cities] of byIsland) {
+      const [ix, iy] = k.split(",").map(Number);
+      this.drawIsland(ix, iy, cities, data);
+    }
+    this.applyLabelPolicy();
+  }
 
-      if (isMine) {
-        this.track(this.add.circle(x, y - 6, 56, 0xb7892f, 0).setStrokeStyle(4, 0xb7892f, 1).setDepth(depth + 1));
-      } else if (isAllied) {
-        this.track(this.add.circle(x, y - 6, 56, 0x3f7fa6, 0).setStrokeStyle(4, 0x4d9fd0, 1).setDepth(depth + 1));
-      }
+  /** Screen centre of an island: midpoint of its 4×4 cell block. */
+  private islandCentre(ix: number, iy: number): { x: number; y: number } {
+    const a = this.toScreen(ix * ISLAND_SIZE, iy * ISLAND_SIZE);
+    const b = this.toScreen(ix * ISLAND_SIZE + ISLAND_SIZE - 1, iy * ISLAND_SIZE + ISLAND_SIZE - 1);
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
 
-      this.track(this.add.image(x - 36, y, "cypress").setOrigin(0.5, 1).setScale(0.13).setDepth(depth + 1));
-      this.track(this.add.image(x + 34, y + 6, "rocks").setOrigin(0.5, 1).setScale(0.13).setDepth(depth + 1));
-      this.track(this.add.image(x, y, "forum").setOrigin(0.5, 0.82).setScale(0.12).setDepth(depth + 2));
+  /** One shared landmass with up to 16 cities on it. */
+  private drawIsland(ix: number, iy: number, cities: WorldCity[], data: MapData) {
+    const centre = this.islandCentre(ix, iy);
+    const baseDepth = this.depthOf(ix * ISLAND_SIZE, iy * ISLAND_SIZE);
+    const occupied = new Set(cities.map((c) => `${c.x},${c.y}`));
 
-      this.track(this.add.text(x, y + 30, c.name, {
-        fontFamily: '"Cinzel", serif',
-        fontSize: "14px",
-        fontStyle: isMine ? "bold" : "normal",
-        color: "#2b2620",
-        backgroundColor: "rgba(247,238,213,0.92)",
-        padding: { x: 6, y: 2 },
-      }).setOrigin(0.5, 0).setDepth(depth + 3));
-      this.track(this.add.text(x, y + 52, c.owner, {
-        fontFamily: '"Marcellus SC", serif', fontSize: "10px", color: "#e9f3f8",
-      }).setOrigin(0.5, 0).setDepth(depth + 3));
-
-      // Click-to-march hit zone (enemy cities get a hover highlight).
-      const hit = this.track(
-        this.add.rectangle(x, y - 6, 110, 90, 0xffffff, 0.001)
-          .setInteractive({ useHandCursor: !isMine }).setDepth(depth + 4),
-      );
-      hit.on("pointerover", () => { if (!isMine) hit.setFillStyle(0xb5532f, 0.14); });
-      hit.on("pointerout", () => hit.setFillStyle(0xffffff, 0.001));
-      hit.on("pointerup", (pointer: Phaser.Input.Pointer) => {
-        if (pointer.getDistance() < 8) this.game.events.emit("city-selected", c);
+    // Shoreline: sandbank halo + foam ring, once per island.
+    this.track(this.add.ellipse(centre.x, centre.y + 6, 620, 360, 0x7fd4e0, 0.20).setDepth(baseDepth - 4));
+    const ring = this.track(
+      this.add.image(centre.x, centre.y + 6, this.makeFoamRing()).setOrigin(0.5, 0.5).setDepth(baseDepth - 3),
+    );
+    if (!this.reduceMotion) {
+      this.tweens.add({
+        targets: ring,
+        scale: { from: 1, to: 1.045 },
+        alpha: { from: 0.9, to: 0.5 },
+        duration: 3600 + ((ix * 7 + iy * 13 + 400) % 900),
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
       });
     }
+
+    // The landmass: the painted island stretched to the block footprint (a
+    // placeholder until a purpose-painted 4×4 island lands), plus a grass
+    // diamond per occupied cell so cities sit on solid ground.
+    this.track(
+      this.add.image(centre.x, centre.y, "island").setOrigin(0.5, 0.5).setScale(0.66, 0.48).setDepth(baseDepth - 2),
+    );
+
+    // One decor pair per island, not per city.
+    const west = this.toScreen(ix * ISLAND_SIZE, iy * ISLAND_SIZE + ISLAND_SIZE - 1);
+    const east = this.toScreen(ix * ISLAND_SIZE + ISLAND_SIZE - 1, iy * ISLAND_SIZE);
+    this.track(this.add.image(west.x - 8, west.y + 6, "cypress").setOrigin(0.5, 1).setScale(0.11).setDepth(baseDepth - 1));
+    this.track(this.add.image(east.x + 10, east.y + 8, "rocks").setOrigin(0.5, 1).setScale(0.11).setDepth(baseDepth - 1));
+
+    // Island name at the south tip — the far-zoom anchor.
+    const south = this.toScreen(ix * ISLAND_SIZE + ISLAND_SIZE - 1, iy * ISLAND_SIZE + ISLAND_SIZE - 1);
+    this.track(this.add.text(south.x, south.y + 44, isleName(ix, iy), {
+      fontFamily: '"Marcellus SC", serif', fontSize: "12px", color: "#cfe0f0",
+    }).setOrigin(0.5, 0).setAlpha(0.85).setShadow(0, 1, "rgba(0,0,0,0.6)", 2).setDepth(baseDepth - 1));
+
+    // Cells: grass under cities, faint sand mounds marking free slots.
+    for (let dx = 0; dx < ISLAND_SIZE; dx++) {
+      for (let dy = 0; dy < ISLAND_SIZE; dy++) {
+        const gx = ix * ISLAND_SIZE + dx, gy = iy * ISLAND_SIZE + dy;
+        const pos = this.toScreen(gx, gy);
+        const d = this.depthOf(gx, gy);
+        if (occupied.has(`${gx},${gy}`)) {
+          this.track(this.add.image(pos.x, pos.y, "grass")
+            .setOrigin(0.5, 0.5).setDisplaySize(ISO_X + 2, ISO_Y + 2).setDepth(d - 1));
+        } else {
+          // A buildable slot: subtle mound + click-to-found.
+          this.track(this.add.ellipse(pos.x, pos.y + 2, 52, 26, 0xd9c68a, 0.16).setDepth(d - 1));
+          const slot = this.track(
+            this.add.ellipse(pos.x, pos.y, ISO_X * 0.8, ISO_Y * 0.8, 0xffffff, 0.001)
+              .setInteractive({ useHandCursor: true }).setDepth(d + 4),
+          );
+          slot.on("pointerover", () => slot.setFillStyle(0xd9c68a, 0.18));
+          slot.on("pointerout", () => slot.setFillStyle(0xffffff, 0.001));
+          slot.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+            if (pointer.getDistance() < 8) this.game.events.emit("cell-selected", { x: gx, y: gy });
+          });
+        }
+      }
+    }
+
+    // Cities.
+    for (const c of cities) this.drawCity(c, data);
+  }
+
+  private drawCity(c: WorldCity, data: MapData) {
+    const { x, y } = this.toScreen(c.x, c.y);
+    const key = `${c.x},${c.y}`;
+    const isMine = data.mine.includes(key);
+    const isAllied = !isMine && data.allies.includes(key);
+    const depth = this.depthOf(c.x, c.y) + 100;
+
+    if (isMine) {
+      this.track(this.add.circle(x, y - 4, 34, 0xb7892f, 0).setStrokeStyle(3, 0xb7892f, 1).setDepth(depth + 1));
+    } else if (isAllied) {
+      this.track(this.add.circle(x, y - 4, 34, 0x3f7fa6, 0).setStrokeStyle(3, 0x4d9fd0, 1).setDepth(depth + 1));
+    }
+
+    this.track(this.add.image(x, y, "forum").setOrigin(0.5, 0.82).setScale(0.085).setDepth(depth + 2));
+
+    const name = this.track(this.add.text(x, y + 18, c.name, {
+      fontFamily: '"Cinzel", serif',
+      fontSize: "11px",
+      fontStyle: isMine ? "bold" : "normal",
+      color: "#2b2620",
+      backgroundColor: "rgba(247,238,213,0.92)",
+      padding: { x: 4, y: 1 },
+    }).setOrigin(0.5, 0).setDepth(depth + 3));
+    const owner = this.track(this.add.text(x, y + 33, c.owner, {
+      fontFamily: '"Marcellus SC", serif', fontSize: "9px", color: "#e9f3f8",
+    }).setOrigin(0.5, 0).setShadow(0, 1, "rgba(0,0,0,0.6)", 2).setDepth(depth + 3).setVisible(false));
+    this.cityLabels.push({ name, owner, isMine });
+
+    // Click-to-march hit zone (enemy cities get a hover highlight).
+    const hit = this.track(
+      this.add.rectangle(x, y - 4, 80, 56, 0xffffff, 0.001)
+        .setInteractive({ useHandCursor: !isMine }).setDepth(depth + 4),
+    );
+    hit.on("pointerover", () => {
+      if (!isMine) hit.setFillStyle(0xb5532f, 0.14);
+      name.setVisible(true);
+      owner.setVisible(true);
+    });
+    hit.on("pointerout", () => {
+      hit.setFillStyle(0xffffff, 0.001);
+      this.applyLabelPolicy();
+    });
+    hit.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.getDistance() < 8) this.game.events.emit("city-selected", c);
+    });
   }
 }

@@ -27,6 +27,7 @@ export default function PhaserGame({
   data,
   movements,
   onCitySelect,
+  onCellSelect,
 }: {
   kind: "city" | "map";
   data: unknown;
@@ -34,6 +35,8 @@ export default function PhaserGame({
       refresh far more often, and any new `data` identity rebuilds every island. */
   movements?: unknown;
   onCitySelect?: (city: { x: number; y: number; name: string; owner: string }) => void;
+  /** Map only: an empty island slot was clicked — pre-fill the found form. */
+  onCellSelect?: (cell: { x: number; y: number }) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -45,9 +48,11 @@ export default function PhaserGame({
   const world = useWorldClock();
   const clockRef = useRef<WorldClock | null>(null);
   clockRef.current = world?.clock ?? null;
-  // Ref so the scene's event handler always calls the latest callback.
+  // Refs so the scene's event handlers always call the latest callbacks.
   const onCitySelectRef = useRef(onCitySelect);
   onCitySelectRef.current = onCitySelect;
+  const onCellSelectRef = useRef(onCellSelect);
+  onCellSelectRef.current = onCellSelect;
 
   // Create the game once.
   useEffect(() => {
@@ -71,11 +76,19 @@ export default function PhaserGame({
     game.registry.set("data", dataRef.current);
     game.registry.set("movements", movementsRef.current);
     game.registry.set("clock", clockRef.current);
-    // Bridge scene → React: the map scene emits "city-selected" on a click.
+    // Bridge scene → React: the map scene emits "city-selected" on a click,
+    // and "cell-selected" when an empty island slot is chosen.
+    game.events.on("cell-selected", (cell: { x: number; y: number }) => {
+      onCellSelectRef.current?.(cell);
+    });
     game.events.on("city-selected", (c: { x: number; y: number; name: string; owner: string }) => {
       onCitySelectRef.current?.(c);
     });
     gameRef.current = game;
+    // Dev-only handle for automated verification (stripped from prod builds).
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __game?: Phaser.Game }).__game = game;
+    }
     return () => {
       game.destroy(true);
       gameRef.current = null;

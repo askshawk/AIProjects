@@ -119,9 +119,15 @@ export default function MapPage() {
     setSelected(c);
   }, []);
 
-  // "Found a colony" — pick an empty cell to march settlers to.
+  // "Found a colony" — pick an empty cell to march settlers to. Clicking a
+  // free slot on the map pre-fills the coordinates.
   const [foundX, setFoundX] = useState("");
   const [foundY, setFoundY] = useState("");
+  const onCellSelect = useCallback((cell: { x: number; y: number }) => {
+    setFoundX(String(cell.x));
+    setFoundY(String(cell.y));
+    setSentMsg(null);
+  }, []);
   function openFound() {
     const x = Number(foundX), y = Number(foundY);
     if (!Number.isInteger(x) || !Number.isInteger(y)) return;
@@ -144,7 +150,7 @@ export default function MapPage() {
 
         {data ? (
           <div className="card">
-            <PhaserGame kind="map" data={data} movements={movements} onCitySelect={onCitySelect} />
+            <PhaserGame kind="map" data={data} movements={movements} onCitySelect={onCitySelect} onCellSelect={onCellSelect} />
             <div className="found-bar">
               <span className="muted">Found a colony at</span>
               <input type="number" placeholder="x" value={foundX} onChange={(e) => setFoundX(e.target.value)} style={{ width: 64 }} />
