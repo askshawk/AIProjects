@@ -1,7 +1,8 @@
 // Thin typed wrapper around the FastAPI backend. Every call goes through
-// apiFetch, which attaches the JWT and unwraps errors into thrown Errors so
-// callers can try/catch. No state lives here — the token is passed in by the
-// auth context (lib/auth.tsx).
+// apiFetch, which sends the httpOnly session cookie and unwraps errors into
+// thrown Errors so callers can try/catch. No state and no credential lives
+// here: the browser never holds the JWT, so there is nothing for a script to
+// read (see lib/auth.tsx).
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -153,11 +154,16 @@ export type BattleReport = {
   created_at: string;
 };
 
-async function apiFetch<T>(path: string, opts: RequestInit = {}, token?: string): Promise<T> {
+async function apiFetch<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+  // credentials: "include" sends the httpOnly session cookie — the app never
+  // holds the JWT itself, so there is nothing for a script to steal.
+  const res = await fetch(`${API_URL}${path}`, {
+    ...opts,
+    credentials: "include",
+    headers: { ...headers, ...opts.headers },
+  });
   if (!res.ok) {
     // FastAPI puts the message in `detail`; fall back to the status text.
     let detail = res.statusText;
@@ -187,63 +193,75 @@ export function login(email: string, password: string) {
   });
 }
 
+export type Me = { id: number; email: string };
+
+/** Who the session cookie belongs to — the only way the client can tell that
+    it is signed in, now that it cannot read the token. */
+export function getMe() {
+  return apiFetch<Me>("/me", {});
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_URL}/logout`, { method: "POST", credentials: "include" });
+}
+
 // --- gameplay ---
 export type CitySummary = { id: number; name: string; x: number; y: number; forum_level: number; loyalty: number };
 
-export function getMyCities(token: string) {
-  return apiFetch<CitySummary[]>("/cities", {}, token);
+export function getMyCities() {
+  return apiFetch<CitySummary[]>("/cities", {});
 }
 
-export function getCity(token: string, cityId: number) {
-  return apiFetch<City>(`/cities/${cityId}`, {}, token);
+export function getCity(cityId: number) {
+  return apiFetch<City>(`/cities/${cityId}`, {});
 }
 
-export function getMyCity(token: string) {
-  return apiFetch<City>("/cities/me", {}, token);
+export function getMyCity() {
+  return apiFetch<City>("/cities/me", {});
 }
 
-export function queueBuild(token: string, cityId: number, building: string) {
+export function queueBuild(cityId: number, building: string) {
   return apiFetch<City>(`/cities/${cityId}/builds`, {
     method: "POST",
     body: JSON.stringify({ building }),
-  }, token);
+  });
 }
 
-export function recruit(token: string, cityId: number, unitType: string, count: number) {
+export function recruit(cityId: number, unitType: string, count: number) {
   return apiFetch<City>(`/cities/${cityId}/recruit`, {
     method: "POST",
     body: JSON.stringify({ unit_type: unitType, count }),
-  }, token);
+  });
 }
 
-export function researchTech(token: string, cityId: number, tech: string) {
+export function researchTech(cityId: number, tech: string) {
   return apiFetch<City>(`/cities/${cityId}/research`, {
     method: "POST",
     body: JSON.stringify({ tech }),
-  }, token);
+  });
 }
 
-export function appointHero(token: string, cityId: number, archetype: string, name?: string) {
+export function appointHero(cityId: number, archetype: string, name?: string) {
   return apiFetch<City>(`/cities/${cityId}/heroes`, {
     method: "POST",
     body: JSON.stringify({ archetype, name: name ?? null }),
-  }, token);
+  });
 }
 
-export function getWorld(token: string) {
-  return apiFetch<WorldCity[]>("/world/cities", {}, token);
+export function getWorld() {
+  return apiFetch<WorldCity[]>("/world/cities", {});
 }
 
 // --- movement & combat ---
-export function sendArmy(token: string, originCityId: number, targetX: number, targetY: number, units: UnitStack) {
+export function sendArmy(originCityId: number, targetX: number, targetY: number, units: UnitStack) {
   return apiFetch<Movement>("/movements", {
     method: "POST",
     body: JSON.stringify({ origin_city_id: originCityId, target_x: targetX, target_y: targetY, units }),
-  }, token);
+  });
 }
 
-export function getMovements(token: string) {
-  return apiFetch<Movement[]>("/movements/me", {}, token);
+export function getMovements() {
+  return apiFetch<Movement[]>("/movements/me", {});
 }
 
 /** Movements plus the server's own clock, read from the `Date` response header
@@ -252,10 +270,10 @@ export function getMovements(token: string) {
     Returns serverNowMs = null when the header is unavailable; callers fall back
     to the local clock, which is only ever a cosmetic error. */
 export async function getMovementsWithClock(
-  token: string,
 ): Promise<{ movements: Movement[]; serverNowMs: number | null }> {
   const res = await fetch(`${API_URL}/movements/me`, {
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -275,29 +293,29 @@ export async function getMovementsWithClock(
   };
 }
 
-export function getReports(token: string) {
-  return apiFetch<BattleReport[]>("/reports/me", {}, token);
+export function getReports() {
+  return apiFetch<BattleReport[]>("/reports/me", {});
 }
 
 // --- alliances ---
-export function getMyAlliance(token: string) {
-  return apiFetch<Alliance | null>("/alliances/me", {}, token);
+export function getMyAlliance() {
+  return apiFetch<Alliance | null>("/alliances/me", {});
 }
-export function listAlliances(token: string) {
-  return apiFetch<Alliance[]>("/alliances", {}, token);
+export function listAlliances() {
+  return apiFetch<Alliance[]>("/alliances", {});
 }
-export function createAlliance(token: string, name: string) {
-  return apiFetch<Alliance>("/alliances", { method: "POST", body: JSON.stringify({ name }) }, token);
+export function createAlliance(name: string) {
+  return apiFetch<Alliance>("/alliances", { method: "POST", body: JSON.stringify({ name }) });
 }
-export function joinAlliance(token: string, id: number) {
-  return apiFetch<Alliance>(`/alliances/${id}/join`, { method: "POST" }, token);
+export function joinAlliance(id: number) {
+  return apiFetch<Alliance>(`/alliances/${id}/join`, { method: "POST" });
 }
-export async function leaveAlliance(token: string) {
-  await apiFetch<unknown>("/alliances/leave", { method: "POST" }, token).catch(() => {});
+export async function leaveAlliance() {
+  await apiFetch<unknown>("/alliances/leave", { method: "POST" }).catch(() => {});
 }
-export function getMessages(token: string, id: number) {
-  return apiFetch<AllianceMessage[]>(`/alliances/${id}/messages`, {}, token);
+export function getMessages(id: number) {
+  return apiFetch<AllianceMessage[]>(`/alliances/${id}/messages`, {});
 }
-export function postMessage(token: string, id: number, body: string) {
-  return apiFetch<AllianceMessage>(`/alliances/${id}/messages`, { method: "POST", body: JSON.stringify({ body }) }, token);
+export function postMessage(id: number, body: string) {
+  return apiFetch<AllianceMessage>(`/alliances/${id}/messages`, { method: "POST", body: JSON.stringify({ body }) });
 }

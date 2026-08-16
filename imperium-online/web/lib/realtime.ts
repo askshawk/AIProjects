@@ -22,26 +22,25 @@ type Listener = (e: ServerEvent) => void;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function wsUrl(token: string): string {
-  // Convert http(s)://host → ws(s)://host and append the token.
-  const httpsToWss = API_URL.replace(/^http/, "ws");
-  return `${httpsToWss}/ws?token=${encodeURIComponent(token)}`;
+function wsUrl(): string {
+  // Convert http(s)://host → ws(s)://host. No token in the query string: the
+  // browser sends the session cookie on the handshake, which keeps the JWT out
+  // of proxy and access logs.
+  return `${API_URL.replace(/^http/, "ws")}/ws`;
 }
 
 export class RealtimeClient {
   private ws: WebSocket | null = null;
   private subs = new Set<Listener>();
-  private token: string | null = null;
   // Reconnect state — exponential backoff capped at 30s.
   private attempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private wantOpen = false;
 
-  /** Open (or reopen) with a token. Idempotent: calling with the same token
-      while connected does nothing. */
-  connect(token: string): void {
-    if (this.token === token && this.ws && this.ws.readyState <= WebSocket.OPEN) return;
-    this.token = token;
+  /** Open (or reopen). Idempotent: calling while already connected does
+      nothing. Auth rides along on the session cookie. */
+  connect(): void {
+    if (this.ws && this.ws.readyState <= WebSocket.OPEN) return;
     this.wantOpen = true;
     this.attempts = 0;
     this._open();
@@ -50,7 +49,6 @@ export class RealtimeClient {
   /** Permanently close. Cancels any pending reconnect. */
   close(): void {
     this.wantOpen = false;
-    this.token = null;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -68,9 +66,9 @@ export class RealtimeClient {
   }
 
   private _open(): void {
-    if (!this.token || !this.wantOpen) return;
+    if (!this.wantOpen) return;
     try {
-      this.ws = new WebSocket(wsUrl(this.token));
+      this.ws = new WebSocket(wsUrl());
     } catch {
       this._scheduleReconnect();
       return;

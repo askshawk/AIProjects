@@ -41,7 +41,7 @@ const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
 ];
 
 export default function PlayPage() {
-  const { token, ready, logout } = useAuth();
+  const { authed, ready, logout } = useAuth();
   const { activeId, reload: reloadCities } = useCities();
   const router = useRouter();
   const [city, setCity] = useState<City | null>(null);
@@ -51,8 +51,8 @@ export default function PlayPage() {
   const prevLevels = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    if (ready && !token) router.replace("/login");
-  }, [ready, token, router]);
+    if (ready && !authed) router.replace("/login");
+  }, [ready, authed, router]);
 
   // Detect level-ups between refreshes and flash those rows. Keyed by city so
   // switching cities re-baselines instead of flashing the whole board.
@@ -74,9 +74,9 @@ export default function PlayPage() {
 
   // Load the active city (or the primary one until the switcher resolves).
   const refresh = useCallback(async () => {
-    if (!token) return;
+    if (!authed) return;
     try {
-      setCity(activeId != null ? await getCity(token, activeId) : await getMyCity(token));
+      setCity(activeId != null ? await getCity(activeId) : await getMyCity());
     } catch (err) {
       if (err instanceof Error && /credential/i.test(err.message)) {
         logout();
@@ -85,13 +85,13 @@ export default function PlayPage() {
         setError(err instanceof Error ? err.message : "Failed to load city");
       }
     }
-  }, [token, activeId, logout, router]);
+  }, [authed, activeId, logout, router]);
 
   // Refetch whenever the active city changes (switcher) or a realtime event
   // lands. founded/captured also refresh the switcher list itself. The 10s
   // safety-net poll is gone; refresh-on-countdown-zero stays as a fallback.
   useEffect(() => {
-    if (!token) return;
+    if (!authed) return;
     refresh();
     const unsubscribe = realtime.subscribe((evt) => {
       switch (evt.type) {
@@ -110,43 +110,43 @@ export default function PlayPage() {
       }
     });
     return unsubscribe;
-  }, [token, refresh, reloadCities]);
+  }, [authed, refresh, reloadCities]);
 
   async function build(building: string) {
-    if (!token || !city) return;
+    if (!authed || !city) return;
     try {
       setError(null);
-      setCity(await queueBuild(token, city.id, building));
+      setCity(await queueBuild(city.id, building));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Build failed");
     }
   }
 
   async function recruit(unitType: string, count: number) {
-    if (!token || !city) return;
+    if (!authed || !city) return;
     try {
       setError(null);
-      setCity(await recruitApi(token, city.id, unitType, count));
+      setCity(await recruitApi(city.id, unitType, count));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recruit failed");
     }
   }
 
   async function doResearch(tech: string) {
-    if (!token || !city) return;
+    if (!authed || !city) return;
     try {
       setError(null);
-      setCity(await researchTech(token, city.id, tech));
+      setCity(await researchTech(city.id, tech));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Research failed");
     }
   }
 
   async function doAppoint(archetype: string) {
-    if (!token || !city) return;
+    if (!authed || !city) return;
     try {
       setError(null);
-      setCity(await appointHero(token, city.id, archetype));
+      setCity(await appointHero(city.id, archetype));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Appointment failed");
     }
@@ -155,7 +155,7 @@ export default function PlayPage() {
   // Look up the server-computed next-upgrade preview for a building.
   const upgradeFor = (building: string) => city?.upgrades.find((u) => u.building === building);
 
-  if (!ready || !token) return null;
+  if (!ready || !authed) return null;
 
   return (
     <>
@@ -263,7 +263,7 @@ export default function PlayPage() {
             </div>
 
             <div className="grid-2" style={{ marginTop: 22 }}>
-              <MovementsPanel token={token} />
+              <MovementsPanel />
             </div>
           </>
         )}

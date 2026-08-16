@@ -17,7 +17,7 @@ const PhaserGame = dynamic(() => import("@/components/PhaserGame"), { ssr: false
 type Selected = { x: number; y: number; name: string; owner: string };
 
 export default function MapPage() {
-  const { token, ready } = useAuth();
+  const { authed, ready } = useAuth();
   const { cities, activeId, reload: reloadCities } = useCities();
   const router = useRouter();
   const [data, setData] = useState<MapData | null>(null);
@@ -31,13 +31,13 @@ export default function MapPage() {
   const mineCoords = cities.map((c) => `${c.x},${c.y}`);
 
   useEffect(() => {
-    if (ready && !token) router.replace("/login");
-  }, [ready, token, router]);
+    if (ready && !authed) router.replace("/login");
+  }, [ready, authed, router]);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!authed) return;
     try {
-      const [world, alliance] = await Promise.all([getWorld(token), getMyAlliance(token)]);
+      const [world, alliance] = await Promise.all([getWorld(), getMyAlliance()]);
       const mineSet = new Set(cities.map((c) => `${c.x},${c.y}`));
       const mine = [...mineSet];
       // Allied = cities in my alliance that aren't my own.
@@ -48,11 +48,11 @@ export default function MapPage() {
         : [];
       setData({ cities: world as WorldCity[], mine, allies });
       // The active city is the origin armies march from.
-      setOrigin(activeId != null ? await getCity(token, activeId) : await getMyCity(token));
+      setOrigin(activeId != null ? await getCity(activeId) : await getMyCity());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load map");
     }
-  }, [token, activeId, cities]);
+  }, [authed, activeId, cities]);
 
   useEffect(() => {
     load();
@@ -70,9 +70,9 @@ export default function MapPage() {
   // not every second. A signature guard keeps an unchanged poll from minting a
   // new object identity (which would re-emit into Phaser for nothing).
   const loadMovements = useCallback(async () => {
-    if (!token) return;
+    if (!authed) return;
     try {
-      const next = await getMovementsWithClock(token);
+      const next = await getMovementsWithClock();
       setMovements((prev) => {
         const sig = (d: MovementData) => d.movements.map((m) => `${m.id}@${m.arrives_at}`).join("|");
         return sig(prev) === sig(next) ? prev : next;
@@ -80,10 +80,10 @@ export default function MapPage() {
     } catch {
       /* keep the last known set — a failed poll shouldn't clear the map */
     }
-  }, [token]);
+  }, [authed]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!authed) return;
     loadMovements();
     const unsubscribe = realtime.subscribe((evt) => {
       switch (evt.type) {
@@ -99,7 +99,7 @@ export default function MapPage() {
     // Safety net for events that never arrive (dropped socket, other players).
     const poll = setInterval(loadMovements, 25000);
     return () => { unsubscribe(); clearInterval(poll); };
-  }, [token, loadMovements]);
+  }, [authed, loadMovements]);
 
   // Refetch the moment the soonest march lands, so arrivals clear promptly.
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function MapPage() {
     setSelected({ x, y, name: "New colony", owner: "empty" });
   }
 
-  if (!ready || !token) return null;
+  if (!ready || !authed) return null;
 
   return (
     <>
@@ -164,7 +164,6 @@ export default function MapPage() {
 
         {selected && origin && (
           <SendArmyForm
-            token={token}
             city={origin}
             target={selected}
             onSent={() => {

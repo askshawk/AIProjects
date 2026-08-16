@@ -11,13 +11,11 @@ import { sameIsland } from "@/lib/islands";
 import { UNIT_ICONS } from "@/components/UnitIcons";
 
 export default function SendArmyForm({
-  token,
   city,
   target,
   onSent,
   onCancel,
 }: {
-  token: string;
   city: City;
   target: { x: number; y: number; name: string; owner: string };
   onSent: () => void;
@@ -56,7 +54,7 @@ export default function SendArmyForm({
     setBusy(true);
     setError(null);
     try {
-      await sendArmy(token, city.id, target.x, target.y, units);
+      await sendArmy(city.id, target.x, target.y, units);
       onSent();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send army");

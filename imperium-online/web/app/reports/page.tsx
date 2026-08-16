@@ -10,20 +10,20 @@ import BattleReplay from "@/components/BattleReplay";
 import EmptyState from "@/components/EmptyState";
 
 export default function ReportsPage() {
-  const { token, ready } = useAuth();
+  const { authed, ready } = useAuth();
   const router = useRouter();
   const [reports, setReports] = useState<BattleReport[] | null>(null);
 
   useEffect(() => {
-    if (ready && !token) router.replace("/login");
-  }, [ready, token, router]);
+    if (ready && !authed) router.replace("/login");
+  }, [ready, authed, router]);
 
   useEffect(() => {
-    if (!token) return;
-    getReports(token).then(setReports).catch(() => setReports([]));
-  }, [token]);
+    if (!authed) return;
+    getReports().then(setReports).catch(() => setReports([]));
+  }, [authed]);
 
-  if (!ready || !token) return null;
+  if (!ready || !authed) return null;
 
   return (
     <>

@@ -21,17 +21,17 @@ const KEY = "imperium_active_city";
 const CityContext = createContext<CityStore | null>(null);
 
 export function CityProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { authed } = useAuth();
   const [cities, setCities] = useState<CitySummary[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
-    if (!token) {
+    if (!authed) {
       setCities([]);
       setActiveId(null);
       return;
     }
-    const list = await getMyCities(token);
+    const list = await getMyCities();
     setCities(list);
     // Keep the stored active city if it still exists; else fall back to first.
     setActiveId((current) => {
@@ -41,7 +41,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       if (valid(stored)) return stored;
       return list[0]?.id ?? null;
     });
-  }, [token]);
+  }, [authed]);
 
   useEffect(() => { reload(); }, [reload]);
 

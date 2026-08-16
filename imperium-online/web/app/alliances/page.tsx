@@ -13,7 +13,7 @@ import OrnateHeader from "@/components/OrnateHeader";
 import EmptyState from "@/components/EmptyState";
 
 export default function AlliancesPage() {
-  const { token, ready } = useAuth();
+  const { authed, ready } = useAuth();
   const router = useRouter();
   const [mine, setMine] = useState<Alliance | null>(null);
   const [others, setOthers] = useState<Alliance[]>([]);
@@ -24,20 +24,20 @@ export default function AlliancesPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (ready && !token) router.replace("/login");
-  }, [ready, token, router]);
+    if (ready && !authed) router.replace("/login");
+  }, [ready, authed, router]);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!authed) return;
     try {
-      const m = await getMyAlliance(token);
+      const m = await getMyAlliance();
       setMine(m);
-      if (m) setMessages(await getMessages(token, m.id));
-      else setOthers(await listAlliances(token));
+      if (m) setMessages(await getMessages(m.id));
+      else setOthers(await listAlliances());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load alliances");
     }
-  }, [token]);
+  }, [authed]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -58,32 +58,32 @@ export default function AlliancesPage() {
   }, [messages]);
 
   async function send() {
-    if (!token || !mine || !draft.trim()) return;
+    if (!authed || !mine || !draft.trim()) return;
     const body = draft.trim();
     setDraft("");
-    try { await postMessage(token, mine.id, body); } catch { /* surfaced on reload */ }
+    try { await postMessage(mine.id, body); } catch { /* surfaced on reload */ }
   }
 
   async function doCreate() {
-    if (!token || !newName.trim()) return;
+    if (!authed || !newName.trim()) return;
     setError(null);
-    try { setMine(await createAlliance(token, newName.trim())); setNewName(""); load(); }
+    try { setMine(await createAlliance(newName.trim())); setNewName(""); load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Failed to create"); }
   }
 
   async function doJoin(id: number) {
-    if (!token) return;
-    try { await joinAlliance(token, id); load(); }
+    if (!authed) return;
+    try { await joinAlliance(id); load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Failed to join"); }
   }
 
   async function doLeave() {
-    if (!token) return;
-    await leaveAlliance(token);
+    if (!authed) return;
+    await leaveAlliance();
     setMine(null); setMessages([]); load();
   }
 
-  if (!ready || !token) return null;
+  if (!ready || !authed) return null;
 
   return (
     <>

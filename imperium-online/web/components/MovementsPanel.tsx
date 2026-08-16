@@ -27,17 +27,17 @@ function formatRemaining(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
 }
 
-export default function MovementsPanel({ token }: { token: string }) {
+export default function MovementsPanel() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [now, setNow] = useState(() => Date.now());
 
   const refresh = useCallback(async () => {
     try {
-      setMovements(await getMovements(token));
+      setMovements(await getMovements());
     } catch {
       /* transient — keep last known */
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     refresh();

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 
 export default function Landing() {
-  const { token, ready } = useAuth();
+  const { authed, ready } = useAuth();
 
   return (
     <div className="container">
@@ -16,7 +16,7 @@ export default function Landing() {
           buildings on real-world timers, and share one persistent world with every other player.
         </p>
         <div>
-          {ready && token ? (
+          {ready && authed ? (
             <Link className="btn" href="/play">Enter your city</Link>
           ) : (
             <>

@@ -1,63 +1,69 @@
 "use client";
 
-// Auth context: holds the JWT, persists it to localStorage, and exposes
-// login/register/logout. The slice keeps the token in localStorage for
-// simplicity; the production hardening (see plan) is an httpOnly cookie.
+// Auth context.
+//
+// The session lives in an httpOnly cookie the browser sends automatically, so
+// this holds no credential at all — only whether we are signed in. That is the
+// point: a script (ours, or one injected via XSS) cannot read the session the
+// way it could read a token in localStorage.
+//
+// Because the cookie is invisible to JS, "am I signed in?" is a question only
+// the server can answer: we ask once on mount via /me.
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import * as api from "./api";
 import { realtime } from "./realtime";
 
 type AuthState = {
-  token: string | null;
-  ready: boolean; // false until we've read localStorage (avoids SSR/hydration races)
+  authed: boolean;
+  ready: boolean; // false until the /me probe resolves (avoids redirect flicker)
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, cityName: string) => Promise<void>;
   logout: () => void;
 };
 
-const STORAGE_KEY = "imperium_token";
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
+  const [authed, setAuthed] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Rehydrate the token on first mount (client only).
+  // Ask the server whether the cookie we may or may not have is a live session.
   useEffect(() => {
-    setToken(localStorage.getItem(STORAGE_KEY));
-    setReady(true);
+    let alive = true;
+    api.getMe()
+      .then(() => { if (alive) setAuthed(true); })
+      .catch(() => { if (alive) setAuthed(false); })
+      .finally(() => { if (alive) setReady(true); });
+    return () => { alive = false; };
   }, []);
 
-  // Open the realtime WebSocket whenever a token is available; close on logout.
-  // Pages subscribe via `realtime.subscribe(...)` and just call refresh().
+  // Open the realtime WebSocket while signed in; close on logout. The socket
+  // authenticates with the same cookie, so it needs nothing passed in.
   useEffect(() => {
-    if (token) realtime.connect(token);
+    if (authed) realtime.connect();
     else realtime.close();
-  }, [token]);
-
-  const persist = useCallback((t: string) => {
-    localStorage.setItem(STORAGE_KEY, t);
-    setToken(t);
-  }, []);
+  }, [authed]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { access_token } = await api.login(email, password);
-    persist(access_token);
-  }, [persist]);
+    await api.login(email, password);   // response sets the cookie
+    setAuthed(true);
+  }, []);
 
   const register = useCallback(async (email: string, password: string, cityName: string) => {
-    const { access_token } = await api.register(email, password, cityName);
-    persist(access_token);
-  }, [persist]);
+    await api.register(email, password, cityName);
+    setAuthed(true);
+  }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setToken(null);
+    // Only the server can clear an httpOnly cookie; drop local state either way
+    // so a failed request still signs you out of the UI.
+    api.logout().catch(() => {});
+    setAuthed(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, ready, login, register, logout }}>
+    <AuthContext.Provider value={{ authed, ready, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

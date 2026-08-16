@@ -14,9 +14,11 @@ The hard parts:
     at startup (set_loop), then schedule sends onto it via
     asyncio.run_coroutine_threadsafe. So any thread can call push_to_user
     freely.
- 2. Auth. Browser WebSocket can't set Authorization headers, so the JWT comes
-    in as `?token=<jwt>` on the connect URL — verified with the same
-    python-jose code the REST routes use.
+ 2. Auth. Browser WebSocket can't set Authorization headers, but it DOES send
+    cookies on the handshake — so the session cookie authenticates the socket
+    with the same code path the REST routes use, and the JWT never travels in
+    a query string where proxies and access logs would record it. `?token=`
+    remains as a fallback for tests and non-browser clients.
 
 Scope note: the connection registry is an in-process dict[user_id, set[ws]].
 Fine on the free-tier single-uvicorn-worker deploy; horizontal scaling needs
@@ -30,10 +32,9 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from jose import JWTError, jwt
 from sqlmodel import Session
 
-from .auth import JWT_ALGORITHM, JWT_SECRET
+from . import auth
 from .db import get_session
 from .models import User
 
@@ -101,28 +102,26 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-def _user_from_token(token: str, session: Session) -> User | None:
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
-        return None
-    return session.get(User, user_id)
-
-
 @router.websocket("/ws")
 async def ws_endpoint(
     websocket: WebSocket,
     token: str = "",
     session: Session = Depends(get_session),
 ) -> None:
-    """One websocket per browser tab. Auth via ?token=<jwt>; on success we hold
-    the connection open, sending an occasional ping to keep proxies from
-    timing it out. Real events come in via push_to_user.
+    """One websocket per browser tab.
+
+    Auth comes from the session cookie, which the browser sends on the
+    handshake like any other request — so the JWT never has to travel in a
+    query string (where it would land in proxy and server logs). `?token=` is
+    still honoured for tests and non-browser clients.
+
+    On success we hold the connection open, sending an occasional ping to keep
+    proxies from timing it out; real events arrive via push_to_user.
 
     Session is injected via Depends so tests can override get_session and use
     their in-memory DB (same pattern the REST routes use)."""
-    user = _user_from_token(token, session)
+    raw = token or websocket.cookies.get(auth.COOKIE_NAME)
+    user = auth.user_from_token(raw, session) if raw else None
     if user is None:
         # 4401 = custom-application code for "auth failed" (1000-2999 are reserved).
         await websocket.close(code=4401)

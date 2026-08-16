@@ -12,7 +12,7 @@ import os
 from datetime import timedelta
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlmodel import Session
@@ -24,9 +24,55 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-only-change-me")
 JWT_ALGORITHM = "HS256"
 TOKEN_TTL = timedelta(days=7)  # long-lived; this is a slow async game, not a bank
 
+# The session cookie is the real credential. It's httpOnly, so a cross-site
+# script can't read it the way it could read localStorage — that swap is the
+# point of the change.
+COOKIE_NAME = "imperium_session"
+
+# In production the browser talks to an API on a different domain, so the
+# cookie has to be SameSite=None (and therefore Secure). Locally both live on
+# localhost, where Lax works and Secure would stop the cookie being set at all
+# over plain http.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0") == "1"
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "none" if COOKIE_SECURE else "lax")
+
 # tokenUrl is only used by Swagger's "Authorize" button to know where to POST
-# credentials; it doesn't change runtime behavior.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# credentials; it doesn't change runtime behavior. auto_error is off because a
+# request may authenticate by cookie instead — see get_current_user.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
+
+
+def set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        COOKIE_NAME,
+        token,
+        max_age=int(TOKEN_TTL.total_seconds()),
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(
+        COOKIE_NAME,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def user_from_token(token: str, session: Session) -> User | None:
+    """Decode a JWT and load its user, or None. Shared by the REST dependency
+    and the WebSocket handshake so there is one definition of a valid session."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+    return session.get(User, user_id)
 
 
 def _encode(plain: str) -> bytes:
@@ -50,10 +96,20 @@ def create_access_token(user_id: int) -> str:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
     session: Session = Depends(get_session),
 ) -> User:
-    """Decode the bearer token and load the user, or 401.
+    """Load the user from the session cookie, or 401.
+
+    The browser authenticates by cookie. A bearer token is still accepted so
+    Swagger's Authorize button, curl and the test suite keep working.
+
+    An explicit header wins over the cookie: the header is a deliberate act,
+    while a cookie is ambient and may be stale. (The test suite drove this out
+    — a client that had registered two users held the second one's cookie, and
+    cookie-first silently authenticated every later request as the wrong
+    account no matter which token was sent.)
 
     Drop this into any route via `user: User = Depends(get_current_user)` to
     make it require a valid login.
@@ -63,13 +119,10 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
+    raw = token or request.cookies.get(COOKIE_NAME)
+    if not raw:
         raise credentials_error
-
-    user = session.get(User, user_id)
+    user = user_from_token(raw, session)
     if user is None:
         raise credentials_error
     return user

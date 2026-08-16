@@ -37,6 +37,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class MeResponse(BaseModel):
+    """Identity behind the session cookie. Deliberately thin — the client only
+    needs to know that it is signed in, and as whom."""
+    id: int
+    email: str
+
+
 # --- gameplay ---
 class BuildJobOut(BaseModel):
     id: int
