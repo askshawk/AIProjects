@@ -88,6 +88,19 @@ class UnitTypeOut(BaseModel):
     capacity: int = 0        # transport berths, in population points
 
 
+class ResearchOut(BaseModel):
+    """A technology plus this city's live eligibility for it."""
+    tech: str
+    label: str
+    blurb: str
+    academy_level: int       # Academy level required
+    points: int              # research points it costs
+    cost: dict[str, float]   # resource cost
+    researched: bool
+    can_research: bool       # requirements met AND affordable right now
+    blocked_reason: str | None = None
+
+
 class CitySummaryOut(BaseModel):
     """Lightweight entry for the city-switcher list (no catch_up)."""
     id: int
@@ -114,6 +127,9 @@ class CityOut(BaseModel):
     farm_level: int
     barracks_level: int
     harbour_level: int
+    academy_level: int
+    research_points: int            # unspent points
+    research: list[ResearchOut]
     loyalty: int
     capacity: float  # current per-resource warehouse cap (derived)
     population_used: int
@@ -124,6 +140,10 @@ class CityOut(BaseModel):
     recruit_jobs: list[RecruitJobOut]
 
     _ser_tick = field_serializer("last_tick_at")(_as_utc_iso)
+
+
+class ResearchRequest(BaseModel):
+    tech: str  # one of game_config.RESEARCH_IDS
 
 
 class BuildRequest(BaseModel):

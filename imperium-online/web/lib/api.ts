@@ -46,6 +46,18 @@ export type RecruitJob = {
   status: string;
 };
 
+export type ResearchOption = {
+  tech: string;
+  label: string;
+  blurb: string;
+  academy_level: number;   // Academy level required
+  points: number;          // research points it costs
+  cost: { wood: number; stone: number; silver: number };
+  researched: boolean;
+  can_research: boolean;   // requirements met AND affordable right now
+  blocked_reason: string | null;
+};
+
 export type City = {
   id: number;
   name: string;
@@ -62,6 +74,9 @@ export type City = {
   farm_level: number;
   barracks_level: number;
   harbour_level: number;
+  academy_level: number;
+  research_points: number;        // unspent points
+  research: ResearchOption[];
   loyalty: number;
   capacity: number;
   population_used: number;
@@ -181,6 +196,13 @@ export function recruit(token: string, cityId: number, unitType: string, count: 
   return apiFetch<City>(`/cities/${cityId}/recruit`, {
     method: "POST",
     body: JSON.stringify({ unit_type: unitType, count }),
+  }, token);
+}
+
+export function researchTech(token: string, cityId: number, tech: string) {
+  return apiFetch<City>(`/cities/${cityId}/research`, {
+    method: "POST",
+    body: JSON.stringify({ tech }),
   }, token);
 }
 

@@ -78,6 +78,7 @@ class City(SQLModel, table=True):
     farm_level: int = game_config.STARTING_LEVELS["farm"]
     barracks_level: int = game_config.STARTING_LEVELS["barracks"]  # 0 = not built
     harbour_level: int = game_config.STARTING_LEVELS["harbour"]    # 0 = not built
+    academy_level: int = game_config.STARTING_LEVELS["academy"]    # 0 = not built
 
     # Conquest morale (0–100). Regenerates over time in catch_up; a settler-led
     # assault erodes it, and at 0 the city flips to the attacker.
@@ -138,6 +139,16 @@ class Unit(SQLModel, table=True):
     count: int = 0
 
     city: City = Relationship(back_populates="units")
+
+
+class Research(SQLModel, table=True):
+    """One row per technology a city has researched. A row's presence IS the
+    unlock — there is no level or progress, so research is idempotent and the
+    effect bundle is derived (see research.effects_for)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    city_id: int = Field(foreign_key="city.id", index=True)
+    tech: str  # one of game_config.RESEARCH_IDS
 
 
 class RecruitJob(SQLModel, table=True):

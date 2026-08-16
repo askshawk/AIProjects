@@ -29,7 +29,7 @@ PRODUCERS = {
 # the population every other building (and unit) consumes. The Barracks and the
 # Harbour start at level 0 (not built): you must construct them before you can
 # recruit soldiers / lay keels.
-BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm", "barracks", "harbour")
+BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm", "barracks", "harbour", "academy")
 STARTING_LEVELS = {
     "forum": 1,
     "timber_camp": 1,
@@ -38,6 +38,7 @@ STARTING_LEVELS = {
     "farm": 1,
     "barracks": 0,
     "harbour": 0,
+    "academy": 0,
 }
 
 # Max level so the client can grey out the button and the server can reject the
@@ -69,6 +70,7 @@ _POPULATION_PER_LEVEL = {
     "farm": 3,
     "barracks": 6,
     "harbour": 6,
+    "academy": 4,
 }
 
 
@@ -180,9 +182,13 @@ def split_domains(stack: dict[str, int]) -> tuple[dict[str, int], dict[str, int]
     return land, sea
 
 
-def transport_capacity(stack: dict[str, int]) -> int:
-    """Total berths the stack's ships provide, in population points."""
-    return sum(UNITS[t].get("capacity", 0) * c for t, c in stack.items() if c > 0)
+def transport_capacity(stack: dict[str, int], berth_bonus: int = 0) -> int:
+    """Total berths the stack's ships provide, in population points. Only ships
+    that carry cargo at all benefit from a berth bonus (Stowage)."""
+    return sum(
+        (UNITS[t].get("capacity", 0) + (berth_bonus if UNITS[t].get("capacity", 0) else 0)) * c
+        for t, c in stack.items() if c > 0
+    )
 
 
 def cargo_population(land_stack: dict[str, int]) -> int:
@@ -212,11 +218,11 @@ def unit_population(unit_type: str) -> int:
     return UNITS[unit_type]["population"]
 
 
-def recruit_seconds(unit_type: str, count: int, facility_level: int) -> int:
+def recruit_seconds(unit_type: str, count: int, facility_level: int, time_mult: float = 1.0) -> int:
     """Time to recruit `count` units. `facility_level` is the Barracks for land
     units or the Harbour for ships; each level past the first shaves ~5% off
     the per-unit time."""
-    per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, facility_level - 1))
+    per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, facility_level - 1)) * time_mult
     return max(1, int(per_unit * count))
 
 
@@ -230,10 +236,10 @@ def army_speed(units: dict[str, int]) -> float:
     return min(present) if present else 1.0
 
 
-def travel_seconds(distance: float, units: dict[str, int]) -> int:
+def travel_seconds(distance: float, units: dict[str, int], speed_mult: float = 1.0) -> int:
     """Marching time for `units` to cross `distance` tiles. Slower units
     (legionaries) lengthen the journey; scouts shorten it."""
-    return max(1, int(distance * SECONDS_PER_TILE / army_speed(units)))
+    return max(1, int(distance * SECONDS_PER_TILE / (army_speed(units) * speed_mult)))
 
 
 def fleet_speed(units: dict[str, int]) -> float:
@@ -243,15 +249,15 @@ def fleet_speed(units: dict[str, int]) -> float:
     return min(present) if present else army_speed(units)
 
 
-def travel_seconds_naval(distance: float, units: dict[str, int]) -> int:
+def travel_seconds_naval(distance: float, units: dict[str, int], speed_mult: float = 1.0) -> int:
     """Sailing time for a seaborne force to cross `distance` tiles."""
-    return max(1, int(distance * SECONDS_PER_TILE / fleet_speed(units)))
+    return max(1, int(distance * SECONDS_PER_TILE / (fleet_speed(units) * speed_mult)))
 
 
-def fortification_multiplier(forum_level: int) -> float:
+def fortification_multiplier(forum_level: int, research_mult: float = 1.0) -> float:
     """Home-defense bonus. The Forum doubles as the citadel: defenders fight a
     little harder for every level of it (no separate Wall building yet)."""
-    return 1.0 + 0.05 * (forum_level - 1)
+    return (1.0 + 0.05 * (forum_level - 1)) * research_mult
 
 
 # --- conquest / loyalty -----------------------------------------------------
@@ -277,14 +283,14 @@ def production_per_hour(building_level: int) -> float:
     return 30.0 * (1.2 ** (building_level - 1))
 
 
-def warehouse_capacity(forum_level: int) -> float:
+def warehouse_capacity(forum_level: int, storage_bonus: float = 0.0) -> float:
     """Per-resource storage cap.
 
     The slice has no dedicated warehouse building yet, so the forum level
     stands in for it. Resources never accumulate past this; that cap is applied
     in the catch-up tick so an offline player doesn't get unlimited resources.
     """
-    return 1000.0 + 500.0 * forum_level
+    return 1000.0 + 500.0 * forum_level + storage_bonus
 
 
 def build_seconds(building: str, target_level: int, forum_level: int) -> int:
@@ -300,7 +306,7 @@ def build_seconds(building: str, target_level: int, forum_level: int) -> int:
     return max(1, int(raw * forum_discount))
 
 
-def building_cost(building: str, target_level: int) -> dict[str, float]:
+def building_cost(building: str, target_level: int, cost_mult: float = 1.0) -> dict[str, float]:
     """Resource cost to raise `building` to `target_level`.
 
     Not enforced in the slice's build endpoint yet (resources are free to
@@ -308,9 +314,95 @@ def building_cost(building: str, target_level: int) -> dict[str, float]:
     change in the router, not a new model. Wood/stone scale with level; silver
     only matters for pricier upgrades.
     """
-    factor = 1.55 ** (target_level - 1)
+    factor = (1.55 ** (target_level - 1)) * cost_mult
     return {
         "wood": round(50 * factor, 1),
         "stone": round(40 * factor, 1),
         "silver": round(10 * factor, 1),
     }
+
+
+# --- research (C2) ----------------------------------------------------------
+# The Academy turns levels into research points, which are spent (alongside
+# resources) on technologies. Every technology is a pure multiplier or bonus
+# applied to one of the functions above, so the simulation stays data-driven:
+# nothing here reaches into the game loop, the loop reads the effects.
+
+RESEARCH_POINTS_PER_LEVEL = 4
+
+
+def research_points(academy_level: int) -> int:
+    """Total points an Academy of this level has produced."""
+    return max(0, academy_level) * RESEARCH_POINTS_PER_LEVEL
+
+
+# effect: the key `research.effects_for` accumulates. Each entry is
+# (attribute, delta) — multipliers compound, additions sum.
+RESEARCH: dict[str, dict] = {
+    "ceramics": {
+        "label": "Ceramics",
+        "blurb": "Pitch-sealed jars and deeper cellars. +1500 warehouse capacity.",
+        "academy_level": 1,
+        "points": 4,
+        "cost": {"wood": 400.0, "stone": 500.0, "silver": 200.0},
+        "effect": ("warehouse_bonus", 1500.0),
+    },
+    "architecture": {
+        "label": "Architecture",
+        "blurb": "Surveyors and standard plans. Buildings cost 15% less.",
+        "academy_level": 2,
+        "points": 6,
+        "cost": {"wood": 800.0, "stone": 900.0, "silver": 400.0},
+        "effect": ("build_cost_mult", 0.85),
+    },
+    "trainer": {
+        "label": "Trainer",
+        "blurb": "Drill masters on the parade ground. Recruitment is 10% faster.",
+        "academy_level": 3,
+        "points": 6,
+        "cost": {"wood": 600.0, "stone": 400.0, "silver": 900.0},
+        "effect": ("recruit_time_mult", 0.90),
+    },
+    "cartography": {
+        "label": "Cartography",
+        "blurb": "Charted roads and coastlines. Armies and fleets move 10% faster.",
+        "academy_level": 4,
+        "points": 8,
+        "cost": {"wood": 700.0, "stone": 300.0, "silver": 1100.0},
+        "effect": ("speed_mult", 1.10),
+    },
+    "stowage": {
+        "label": "Stowage",
+        "blurb": "Tighter holds and better lashing. Each transport carries 8 more berths.",
+        "academy_level": 4,
+        "points": 8,
+        "cost": {"wood": 1200.0, "stone": 200.0, "silver": 700.0},
+        "effect": ("berth_bonus", 8),
+    },
+    "fortifications": {
+        "label": "Fortifications",
+        "blurb": "Ditch, rampart and palisade. Defenders fight 15% harder at home.",
+        "academy_level": 5,
+        "points": 10,
+        "cost": {"wood": 900.0, "stone": 1600.0, "silver": 600.0},
+        "effect": ("fortification_mult", 1.15),
+    },
+    "conscription": {
+        "label": "Conscription",
+        "blurb": "A wider levy and harder discipline. Land units attack 10% harder.",
+        "academy_level": 6,
+        "points": 12,
+        "cost": {"wood": 800.0, "stone": 800.0, "silver": 1800.0},
+        "effect": ("land_attack_mult", 1.10),
+    },
+    "shipwright": {
+        "label": "Shipwright",
+        "blurb": "Seasoned timber and bronze rams. Warships attack 15% harder.",
+        "academy_level": 6,
+        "points": 12,
+        "cost": {"wood": 2000.0, "stone": 400.0, "silver": 1200.0},
+        "effect": ("naval_attack_mult", 1.15),
+    },
+}
+
+RESEARCH_IDS = tuple(RESEARCH.keys())

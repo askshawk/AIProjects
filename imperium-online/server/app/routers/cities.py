@@ -18,10 +18,10 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from .. import economy, game_config, military, realtime
+from .. import economy, game_config, research, military, realtime
 from ..auth import get_current_user
 from ..db import get_session
-from ..models import BuildJob, City, RecruitJob, Unit, User, utcnow
+from ..models import BuildJob, City, RecruitJob, Research, Unit, User, utcnow
 from ..schemas import (
     BuildJobOut,
     BuildRequest,
@@ -29,6 +29,8 @@ from ..schemas import (
     CitySummaryOut,
     RecruitJobOut,
     RecruitRequest,
+    ResearchOut,
+    ResearchRequest,
     UnitTypeOut,
     UpgradeOut,
 )
@@ -61,14 +63,17 @@ def _units(session: Session, city: City) -> list[Unit]:
 
 
 # --- serialization ---------------------------------------------------------
-def _upgrade_previews(city: City, builds: list[BuildJob], army_pop: int) -> list[UpgradeOut]:
+def _upgrade_previews(
+    city: City, builds: list[BuildJob], army_pop: int, cost_mult: float = 1.0
+) -> list[UpgradeOut]:
     """Next-upgrade economics per building. army_pop is folded into the
-    population projection so buildings and soldiers share the one cap."""
+    population projection so buildings and soldiers share the one cap;
+    cost_mult carries the Architecture discount."""
     counts = economy.pending_counts(builds)
     previews: list[UpgradeOut] = []
     for building in game_config.BUILDINGS:
         target = economy.next_target_level(city, counts, building)
-        cost = game_config.building_cost(building, target)
+        cost = game_config.building_cost(building, target, cost_mult)
         after_levels = economy.effective_levels(city, counts, extra=building)
         pop_after = economy.total_population_used(after_levels) + army_pop
         previews.append(
@@ -86,8 +91,11 @@ def _upgrade_previews(city: City, builds: list[BuildJob], army_pop: int) -> list
     return previews
 
 
-def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) -> list[UnitTypeOut]:
-    """Per unit-type catalog + this city's live recruit economics."""
+def _unit_catalog(
+    city: City, units: list[Unit], army_pop: int, pop_cap: int, time_mult: float = 1.0
+) -> list[UnitTypeOut]:
+    """Per unit-type catalog + this city's live recruit economics. time_mult
+    carries the Trainer discount."""
     have = {u.unit_type: u.count for u in units}
     out: list[UnitTypeOut] = []
     for unit_type in game_config.UNIT_TYPES:
@@ -108,7 +116,7 @@ def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) ->
                 label=spec["label"],
                 cost=one_cost,
                 population=spec["population"],
-                seconds=game_config.recruit_seconds(unit_type, 1, facility),
+                seconds=game_config.recruit_seconds(unit_type, 1, facility, time_mult),
                 attack=spec["attack"],
                 defense=spec["defense"],
                 have=have.get(unit_type, 0),
@@ -120,10 +128,35 @@ def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) ->
     return out
 
 
+def _research_catalog(city: City, techs: set[str]) -> list[ResearchOut]:
+    """Every technology plus this city's live eligibility for it."""
+    out: list[ResearchOut] = []
+    for tech_id, spec in game_config.RESEARCH.items():
+        allowed, reason = research.can_research(tech_id, city.academy_level, techs)
+        researched = tech_id in techs
+        out.append(
+            ResearchOut(
+                tech=tech_id,
+                label=spec["label"],
+                blurb=spec["blurb"],
+                academy_level=spec["academy_level"],
+                points=spec["points"],
+                cost=spec["cost"],
+                researched=researched,
+                can_research=allowed and economy.can_afford(city, spec["cost"]),
+                blocked_reason=None if researched else reason,
+            )
+        )
+    return out
+
+
 def _serialize(city: City, session: Session) -> CityOut:
     builds = _pending_builds(session, city)
     recruits = _pending_recruits(session, city)
     units = _units(session, city)
+    # Researched technologies shift most of the numbers below.
+    techs = research.techs_of(session, city.id)
+    fx = research.effects_for(techs)
 
     counts = economy.pending_counts(builds)
     eff_levels = economy.effective_levels(city, counts)
@@ -150,11 +183,14 @@ def _serialize(city: City, session: Session) -> CityOut:
         farm_level=city.farm_level,
         barracks_level=city.barracks_level,
         harbour_level=city.harbour_level,
+        academy_level=city.academy_level,
+        research_points=research.points_available(city.academy_level, techs),
+        research=_research_catalog(city, techs),
         loyalty=city.loyalty,
-        capacity=game_config.warehouse_capacity(city.forum_level),
+        capacity=game_config.warehouse_capacity(city.forum_level, fx.warehouse_bonus),
         population_used=pop_used,
         population_cap=pop_cap,
-        upgrades=_upgrade_previews(city, builds, army_pop),
+        upgrades=_upgrade_previews(city, builds, army_pop, fx.build_cost_mult),
         build_jobs=[
             BuildJobOut(
                 id=j.id, building=j.building, target_level=j.target_level,
@@ -162,7 +198,7 @@ def _serialize(city: City, session: Session) -> CityOut:
             )
             for j in builds
         ],
-        units=_unit_catalog(city, units, army_pop, pop_cap),
+        units=_unit_catalog(city, units, army_pop, pop_cap, fx.recruit_time_mult),
         recruit_jobs=[
             RecruitJobOut(
                 id=j.id, unit_type=j.unit_type, count=j.count,
@@ -262,7 +298,9 @@ def queue_build(
         )
 
     # gate 1: resources
-    cost = game_config.building_cost(body.building, target_level)
+    cost = game_config.building_cost(
+        body.building, target_level, research.effects_of(session, city.id).build_cost_mult
+    )
     if not economy.can_afford(city, cost):
         need = ", ".join(
             f"{int(a)} {r}" for r, a in cost.items() if city.resource(r) < a
@@ -364,7 +402,10 @@ def recruit(
     recruits = _pending_recruits(session, city)
     start_at = recruits[-1].completes_at if recruits else now
     facility = city.harbour_level if game_config.is_sea_unit(body.unit_type) else city.barracks_level
-    duration = game_config.recruit_seconds(body.unit_type, body.count, facility)
+    duration = game_config.recruit_seconds(
+        body.unit_type, body.count, facility,
+        research.effects_of(session, city.id).recruit_time_mult,
+    )
     session.add(RecruitJob(
         city_id=city.id, unit_type=body.unit_type, count=body.count,
         started_at=start_at, completes_at=start_at + timedelta(seconds=duration),
@@ -373,4 +414,44 @@ def recruit(
     session.commit()
     session.refresh(city)
     realtime.emit_queued(user.id)
+    return _serialize(city, session)
+
+
+@router.post("/{city_id}/research", response_model=CityOut, status_code=status.HTTP_201_CREATED)
+def research_technology(
+    city_id: int,
+    body: ResearchRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> CityOut:
+    """Spend research points + resources to unlock a technology permanently.
+
+    Research is instant (points are the scarce thing, not time) and idempotent
+    at the DB level: one Research row per city per technology.
+    """
+    city = _owned_city(session, user, city_id)
+    now = utcnow()
+    catch_up(session, city, now)
+
+    techs = research.techs_of(session, city.id)
+    allowed, reason = research.can_research(body.tech, city.academy_level, techs)
+    if not allowed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
+
+    spec = game_config.RESEARCH[body.tech]
+    if not economy.can_afford(city, spec["cost"]):
+        need = ", ".join(
+            f"{int(a)} {r}" for r, a in spec["cost"].items() if city.resource(r) < a
+        )
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Not enough resources to research {spec['label']} (need {need})",
+        )
+
+    for res, amount in spec["cost"].items():
+        city.set_resource(res, city.resource(res) - amount)
+    session.add(Research(city_id=city.id, tech=body.tech))
+    session.add(city)
+    session.commit()
+    session.refresh(city)
     return _serialize(city, session)

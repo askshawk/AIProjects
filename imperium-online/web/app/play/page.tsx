@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { useCities } from "@/lib/cityStore";
-import { getCity, getMyCity, queueBuild, recruit as recruitApi, type City } from "@/lib/api";
+import { getCity, getMyCity, queueBuild, recruit as recruitApi, researchTech, type City } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
 import HarbourPanel from "@/components/HarbourPanel";
+import AcademyPanel from "@/components/AcademyPanel";
 import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
@@ -29,6 +30,7 @@ const BUILDINGS: { key: keyof City; building: string; label: string }[] = [
   { key: "farm_level", building: "farm", label: "Farm" },
   { key: "barracks_level", building: "barracks", label: "Barracks" },
   { key: "harbour_level", building: "harbour", label: "Harbour" },
+  { key: "academy_level", building: "academy", label: "Academy" },
 ];
 
 const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
@@ -126,6 +128,16 @@ export default function PlayPage() {
       setCity(await recruitApi(token, city.id, unitType, count));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recruit failed");
+    }
+  }
+
+  async function doResearch(tech: string) {
+    if (!token || !city) return;
+    try {
+      setError(null);
+      setCity(await researchTech(token, city.id, tech));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Research failed");
     }
   }
 
@@ -235,6 +247,7 @@ export default function PlayPage() {
             </div>
 
             <div className="grid-2" style={{ marginTop: 22 }}>
+              <AcademyPanel city={city} onResearch={doResearch} />
               <MovementsPanel token={token} />
             </div>
           </>

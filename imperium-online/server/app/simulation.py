@@ -27,17 +27,19 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from . import game_config, realtime
+from . import research
 from .models import BuildJob, City, RecruitJob, Unit
 
 
-def _accrue(city: City, seconds: float) -> None:
+def _accrue(city: City, seconds: float, storage_bonus: float = 0.0) -> None:
     """Add `seconds` worth of production to each resource at current rates,
     clamped to the warehouse capacity. Mutates the city in place.
+    `storage_bonus` comes from research (Ceramics).
     """
     if seconds <= 0:
         return
     hours = seconds / 3600.0
-    capacity = game_config.warehouse_capacity(city.forum_level)
+    capacity = game_config.warehouse_capacity(city.forum_level, storage_bonus)
     for resource, building in game_config.PRODUCERS.items():
         rate = game_config.production_per_hour(city.level_of(building))
         produced = rate * hours
@@ -105,9 +107,13 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         key=lambda e: (e.completes_at, isinstance(e, RecruitJob)),
     )
 
+    # Research is static across the tick (it can't complete on a timer), so
+    # read the storage bonus once rather than per event.
+    storage_bonus = research.effects_of(session, city.id).warehouse_bonus
+
     for event in events:
         # Produce at the CURRENT rates up to the moment this event lands...
-        _accrue(city, (event.completes_at - cursor).total_seconds())
+        _accrue(city, (event.completes_at - cursor).total_seconds(), storage_bonus)
         cursor = event.completes_at
         # ...then apply it. A build may change rates for subsequent accrual.
         if isinstance(event, BuildJob):
@@ -121,7 +127,7 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         session.add(event)
 
     # Finally, produce over whatever time remains after the last event.
-    _accrue(city, (now - cursor).total_seconds())
+    _accrue(city, (now - cursor).total_seconds(), storage_bonus)
 
     city.last_tick_at = now
     session.add(city)

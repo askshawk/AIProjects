@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from . import daynight, game_config, realtime, world
+from . import daynight, game_config, realtime, research, world
 from .combat import resolve_battle
 from .models import BattleReport, City, Movement, Unit
 from .simulation import _grant_units, catch_up
@@ -133,7 +133,11 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
 
         night = daynight.is_night(now)
         night_mult = daynight.defense_multiplier(now)
-        fort_mult = game_config.fortification_multiplier(target.forum_level)
+        # Each side brings its own technologies: the defender's fortifications
+        # and the attacker's weapon research.
+        def_fx = research.effects_of(session, target.id)
+        att_fx = research.effects_of(session, origin.id)
+        fort_mult = game_config.fortification_multiplier(target.forum_level, def_fx.fortification_mult)
 
         # A sea voyage is derived, never stored: the movement crossed between
         # islands. Pre-navy land-only movements (and same-island marches with
@@ -163,7 +167,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         elif seaborne:
             # --- phase 1: the sea battle. No fortification on open water; the
             # night bonus applies (crews fight harder defending home waters).
-            sea_result = resolve_battle(sea_att, def_sea, night_mult)
+            sea_result = resolve_battle(sea_att, def_sea, night_mult, att_fx.naval_attack_mult)
             naval = {
                 "sea_sent": sea_att,
                 "sea_survivors": sea_result.attacker_survivors,
@@ -215,7 +219,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
 
         # --- phase 2: the ground battle (skipped for a pure-ship raid).
         if landed or def_land or not seaborne:
-            result = resolve_battle(landed, def_land, fort_mult * night_mult)
+            result = resolve_battle(landed, def_land, fort_mult * night_mult, att_fx.land_attack_mult)
         else:
             result = None
 
@@ -299,10 +303,11 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         if survivors and not captured:
             dist = distance(target, origin)
             _, return_ships = game_config.split_domains(survivors)
+            speed_mult = att_fx.speed_mult
             secs = (
-                game_config.travel_seconds_naval(dist, survivors)
+                game_config.travel_seconds_naval(dist, survivors, speed_mult)
                 if crossed and return_ships
-                else game_config.travel_seconds(dist, survivors)
+                else game_config.travel_seconds(dist, survivors, speed_mult)
             )
             session.add(Movement(
                 origin_city_id=target.id,

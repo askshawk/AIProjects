@@ -54,11 +54,12 @@ def resolve_battle(
     attacker: dict[str, int],
     defender: dict[str, int],
     defense_multiplier: float = 1.0,
+    attack_multiplier: float = 1.0,
 ) -> BattleResult:
     attacker = _clean(attacker)
     defender = _clean(defender)
 
-    att_power = _power(attacker, "attack")
+    att_power = _power(attacker, "attack") * attack_multiplier
     def_power = _power(defender, "defense") * defense_multiplier
 
     # Degenerate cases first.
