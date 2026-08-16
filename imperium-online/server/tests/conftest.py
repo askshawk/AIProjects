@@ -10,9 +10,16 @@ about the night mechanic either use the pure functions with explicit
 timestamps (mark them `real_clock`) or opt into `night_world`.
 """
 
+import os
+
 import pytest
 
-from app import daynight
+# Every test module builds its own in-memory SQLite via create_all and overrides
+# get_session, so the app's startup migration must not run — without this it
+# would reach for the real dev database on disk.
+os.environ.setdefault("IMPERIUM_SKIP_MIGRATIONS", "1")
+
+from app import daynight  # noqa: E402  (import after the env var is set)
 
 
 @pytest.fixture(autouse=True)

@@ -72,6 +72,36 @@ cd server
 .venv/bin/pytest -q
 ```
 
+### Database migrations
+
+Alembic owns the schema. Starting the app brings the database up to date on its
+own, so day to day you never run anything — but the commands matter when a
+model changes:
+
+```bash
+cd server
+.venv/bin/alembic upgrade head                        # apply pending migrations
+.venv/bin/alembic revision --autogenerate -m "…"      # after editing models.py
+.venv/bin/alembic check                               # models vs migrations: any drift?
+```
+
+Two things worth knowing:
+
+- **Autogenerate diffs against the database it's pointed at.** Run it against a
+  database that already has your new column and you'll get an empty migration.
+  Point it at a scratch one if in doubt: `DATABASE_URL=sqlite:////tmp/scratch.db`.
+- **A database from before Alembic** (one built by `create_all`) already has the
+  schema, so it must be *stamped* rather than upgraded — otherwise the initial
+  migration tries to create tables that exist:
+  ```bash
+  .venv/bin/alembic stamp head
+  ```
+
+This exists because `create_all` adds missing **tables** but never missing
+**columns** — an asymmetry that quietly cost three hand-written `ALTER TABLE`s
+(`city.harbour_level`, `battlereport.naval`, `city.academy_level`) before
+migrations were adopted. A missed one meant a 500 on the first city read.
+
 ## Project layout
 
 ```
