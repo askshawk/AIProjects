@@ -128,7 +128,7 @@ export class MapScene extends Phaser.Scene {
       if (isSvg(slot)) this.load.svg(key, slot.src, { width: slot.w, height: slot.h });
       else this.load.image(key, slot.src);
     };
-    for (const key of ["island", "cypress", "rocks", "water", "grass"]) load(key, TERRAIN[key]);
+    for (const key of ["island_large", "cypress", "rocks", "water"]) load(key, TERRAIN[key]);
     load("forum", BUILDINGS.forum);
     for (const [key, slot] of Object.entries(UNITS)) load(key, slot);
   }
@@ -570,14 +570,15 @@ export class MapScene extends Phaser.Scene {
     const occupied = new Set(cities.map((c) => `${c.x},${c.y}`));
 
     // Shoreline: sandbank halo + foam ring, once per island.
-    this.track(this.add.ellipse(centre.x, centre.y + 6, 620, 360, 0x7fd4e0, 0.20).setDepth(baseDepth - 4));
+    this.track(this.add.ellipse(centre.x, centre.y + 6, 700, 400, 0x7fd4e0, 0.20).setDepth(baseDepth - 4));
     const ring = this.track(
-      this.add.image(centre.x, centre.y + 6, this.makeFoamRing()).setOrigin(0.5, 0.5).setDepth(baseDepth - 3),
+      this.add.image(centre.x, centre.y + 6, this.makeFoamRing())
+        .setOrigin(0.5, 0.5).setScale(1.12).setDepth(baseDepth - 3),
     );
     if (!this.reduceMotion) {
       this.tweens.add({
         targets: ring,
-        scale: { from: 1, to: 1.045 },
+        scale: { from: 1.12, to: 1.17 },
         alpha: { from: 0.9, to: 0.5 },
         duration: 3600 + ((ix * 7 + iy * 13 + 400) % 900),
         yoyo: true,
@@ -586,11 +587,12 @@ export class MapScene extends Phaser.Scene {
       });
     }
 
-    // The landmass: the painted island stretched to the block footprint (a
-    // placeholder until a purpose-painted 4×4 island lands), plus a grass
-    // diamond per occupied cell so cities sit on solid ground.
+    // The landmass: a purpose-painted 4×4 island. Drawn at uniform scale (no
+    // stretching) and a little larger than the 16-cell diamond so there's
+    // coastline to spare around the outermost cities.
     this.track(
-      this.add.image(centre.x, centre.y, "island").setOrigin(0.5, 0.5).setScale(0.66, 0.48).setDepth(baseDepth - 2),
+      this.add.image(centre.x, centre.y, "island_large")
+        .setOrigin(0.5, 0.5).setScale(0.40).setDepth(baseDepth - 2),
     );
 
     // One decor pair per island, not per city.
@@ -611,10 +613,10 @@ export class MapScene extends Phaser.Scene {
         const gx = ix * ISLAND_SIZE + dx, gy = iy * ISLAND_SIZE + dy;
         const pos = this.toScreen(gx, gy);
         const d = this.depthOf(gx, gy);
-        if (occupied.has(`${gx},${gy}`)) {
-          this.track(this.add.image(pos.x, pos.y, "grass")
-            .setOrigin(0.5, 0.5).setDisplaySize(ISO_X + 2, ISO_Y + 2).setDepth(d - 1));
-        } else {
+        // The painted island supplies the ground, so occupied cells need no
+        // tile of their own — a grass diamond over it would only patch bright
+        // green onto a plateau that already reads as land.
+        if (!occupied.has(`${gx},${gy}`)) {
           // A buildable slot: subtle mound + click-to-found.
           this.track(this.add.ellipse(pos.x, pos.y + 2, 52, 26, 0xd9c68a, 0.16).setDepth(d - 1));
           const slot = this.track(

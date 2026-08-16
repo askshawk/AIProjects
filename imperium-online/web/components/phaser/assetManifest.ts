@@ -37,6 +37,8 @@ export const TERRAIN: Record<string, AssetSlot> = {
   rocks: { src: `${ISO}/rocks.png`, w: 384, h: 288, scale: 0.18 },
   amphora: { src: `${ISO}/amphora.png`, w: 192, h: 320, scale: 0.16 },
   island: { src: `${ISO}/island.png`, w: 800, h: 600, scale: 0.22 },
+  // A purpose-painted landmass sized to carry a whole 4×4 island of cities.
+  island_large: { src: `${ISO}/island_large.png`, w: 1600, h: 900, scale: 0.40 },
 };
 
 // Unit portraits (256² painted PNGs), used for the army tokens on the world
@@ -46,6 +48,9 @@ export const UNITS: Record<string, AssetSlot> = {
   archer: { src: `${UNITS_DIR}/archer.png`, w: 256, h: 256 },
   scout: { src: `${UNITS_DIR}/scout.png`, w: 256, h: 256 },
   settler: { src: `${UNITS_DIR}/settler.png`, w: 256, h: 256 },
+  trireme: { src: `${UNITS_DIR}/trireme.png`, w: 256, h: 256 },
+  bireme: { src: `${UNITS_DIR}/bireme.png`, w: 256, h: 256 },
+  transport: { src: `${UNITS_DIR}/transport.png`, w: 256, h: 256 },
 };
 
 export const ALL_ASSETS: Record<string, AssetSlot> = { ...BUILDINGS, ...TERRAIN };
