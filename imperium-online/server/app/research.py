@@ -30,6 +30,7 @@ class Effects:
     fortification_mult: float = 1.0
     land_attack_mult: float = 1.0
     naval_attack_mult: float = 1.0
+    production_mult: float = 1.0
 
 
 # Which fields compound multiplicatively vs. sum. Keeping this explicit means a
@@ -37,7 +38,22 @@ class Effects:
 _MULTIPLIERS = {
     "build_cost_mult", "recruit_time_mult", "speed_mult",
     "fortification_mult", "land_attack_mult", "naval_attack_mult",
+    "production_mult",
 }
+
+
+def merge(*bundles: "Effects") -> "Effects":
+    """Combine effect bundles from different sources (research, heroes).
+    Multipliers compound, additions sum — the same arithmetic each field uses
+    within a single source."""
+    values: dict[str, float] = {}
+    for bundle in bundles:
+        for field, value in vars(bundle).items():
+            if field in _MULTIPLIERS:
+                values[field] = values.get(field, 1.0) * value
+            else:
+                values[field] = values.get(field, 0.0) + value
+    return Effects(**values)
 
 
 def effects_for(techs: Iterable[str]) -> Effects:

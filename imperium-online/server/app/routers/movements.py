@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from .. import game_config, military, realtime, research, world
+from .. import bonuses, game_config, military, realtime, world
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import AllianceMembership, BattleReport, City, Movement, Unit, User, utcnow
@@ -76,7 +76,7 @@ def send_army(
     # Crossing between islands is a sea voyage: any land unit aboard needs
     # transport berths. Marches within an island are free, exactly as before —
     # ships may tag along around the coast without a check.
-    fx = research.effects_of(session, origin.id)
+    fx = bonuses.for_city(session, origin.id)
     land_units, sea_units = game_config.split_domains(units)
     cross_island = not world.same_island(origin.x, origin.y, tx, ty)
     if cross_island and land_units:

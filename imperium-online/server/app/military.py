@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from . import daynight, game_config, realtime, research, world
+from . import bonuses, daynight, game_config, heroes, realtime, world
 from .combat import resolve_battle
 from .models import BattleReport, City, Movement, Unit
 from .simulation import _grant_units, catch_up
@@ -135,8 +135,8 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         night_mult = daynight.defense_multiplier(now)
         # Each side brings its own technologies: the defender's fortifications
         # and the attacker's weapon research.
-        def_fx = research.effects_of(session, target.id)
-        att_fx = research.effects_of(session, origin.id)
+        def_fx = bonuses.for_city(session, target.id)
+        att_fx = bonuses.for_city(session, origin.id)
         fort_mult = game_config.fortification_multiplier(target.forum_level, def_fx.fortification_mult)
 
         # A sea voyage is derived, never stored: the movement crossed between
@@ -270,6 +270,10 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             for unit_type, count in garrison.items():
                 if count > 0:
                     _grant_units(session, target, unit_type, count)
+            # The defender's officers fall with the city rather than defecting
+            # to the conqueror along with the walls.
+            for hero in heroes.heroes_of(session, target.id):
+                session.delete(hero)
         else:
             _set_army(session, target, _merge(def_land_after, defender_sea_after))
 
@@ -292,6 +296,13 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         )
         session.add(report)
         session.flush()  # report needs an id for the push events
+
+        # Officers on both sides learn from the engagement — win or lose. A
+        # captured city's heroes fall with it, so they're skipped.
+        heroes.award_battle_xp(session, origin.id)
+        if not captured:
+            heroes.award_battle_xp(session, target.id)
+
         realtime.emit_attack_resolved(origin.user_id, report.id, outcome, "attacker")
         if defender_user_id != origin.user_id:
             realtime.emit_attack_resolved(defender_user_id, report.id, outcome, "defender")

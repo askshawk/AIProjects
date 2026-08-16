@@ -151,6 +151,18 @@ class Research(SQLModel, table=True):
     tech: str  # one of game_config.RESEARCH_IDS
 
 
+class Hero(SQLModel, table=True):
+    """A named officer holding a post in one city. Heroes don't march — they
+    lend their city a standing bonus that grows with the experience they earn
+    from battles fought there."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    city_id: int = Field(foreign_key="city.id", index=True)
+    name: str
+    archetype: str  # one of game_config.HERO_ARCHETYPES
+    xp: int = 0
+
+
 class RecruitJob(SQLModel, table=True):
     """A batch of units in training. Same timer pattern as BuildJob: resolved by
     completes_at, either on read (catch_up) or by the background worker. The

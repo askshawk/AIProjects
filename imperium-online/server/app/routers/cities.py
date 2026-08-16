@@ -18,10 +18,10 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from .. import economy, game_config, research, military, realtime
+from .. import bonuses, economy, game_config, heroes, military, realtime, research
 from ..auth import get_current_user
 from ..db import get_session
-from ..models import BuildJob, City, RecruitJob, Research, Unit, User, utcnow
+from ..models import BuildJob, City, Hero, RecruitJob, Research, Unit, User, utcnow
 from ..schemas import (
     BuildJobOut,
     BuildRequest,
@@ -29,6 +29,8 @@ from ..schemas import (
     CitySummaryOut,
     RecruitJobOut,
     RecruitRequest,
+    HeroOut,
+    HeroRequest,
     ResearchOut,
     ResearchRequest,
     UnitTypeOut,
@@ -134,6 +136,10 @@ def _research_catalog(city: City, techs: set[str]) -> list[ResearchOut]:
     for tech_id, spec in game_config.RESEARCH.items():
         allowed, reason = research.can_research(tech_id, city.academy_level, techs)
         researched = tech_id in techs
+        affordable = economy.can_afford(city, spec["cost"])
+        # A rule failure explains itself; otherwise the blocker is the purse.
+        if allowed and not affordable:
+            reason = f"Not enough resources for {spec['label']}"
         out.append(
             ResearchOut(
                 tech=tech_id,
@@ -143,10 +149,51 @@ def _research_catalog(city: City, techs: set[str]) -> list[ResearchOut]:
                 points=spec["points"],
                 cost=spec["cost"],
                 researched=researched,
-                can_research=allowed and economy.can_afford(city, spec["cost"]),
+                can_research=allowed and affordable,
                 blocked_reason=None if researched else reason,
             )
         )
+    return out
+
+
+def _hero_roster(city: City, posted: list) -> list[HeroOut]:
+    """Every archetype: filled posts show the officer, empty ones show what it
+    would take to fill them."""
+    by_type = {h.archetype: h for h in posted}
+    out: list[HeroOut] = []
+    for archetype, spec in game_config.HEROES.items():
+        hero = by_type.get(archetype)
+        allowed, reason = heroes.can_recruit(archetype, city.forum_level, posted)
+        if hero is not None:
+            level = game_config.hero_level(hero.xp)
+            maxed = level >= game_config.HERO_MAX_LEVEL
+            out.append(HeroOut(
+                archetype=archetype,
+                label=spec["label"],
+                blurb=spec["blurb"],
+                forum_level=spec["forum_level"],
+                cost=spec["cost"],
+                name=hero.name,
+                level=level,
+                xp=hero.xp,
+                next_level_xp=0 if maxed else level * game_config.HERO_XP_PER_LEVEL,
+                bonus_pct=round((game_config.hero_bonus(archetype, level) - 1.0) * 100),
+                recruited=True,
+            ))
+        else:
+            affordable = economy.can_afford(city, spec["cost"])
+            # A rule failure explains itself; otherwise the blocker is the purse.
+            if allowed and not affordable:
+                reason = f"Not enough resources to appoint a {spec['label']}"
+            out.append(HeroOut(
+                archetype=archetype,
+                label=spec["label"],
+                blurb=spec["blurb"],
+                forum_level=spec["forum_level"],
+                cost=spec["cost"],
+                can_recruit=allowed and affordable,
+                blocked_reason=reason,
+            ))
     return out
 
 
@@ -156,7 +203,7 @@ def _serialize(city: City, session: Session) -> CityOut:
     units = _units(session, city)
     # Researched technologies shift most of the numbers below.
     techs = research.techs_of(session, city.id)
-    fx = research.effects_for(techs)
+    fx = bonuses.for_city(session, city.id)
 
     counts = economy.pending_counts(builds)
     eff_levels = economy.effective_levels(city, counts)
@@ -186,6 +233,7 @@ def _serialize(city: City, session: Session) -> CityOut:
         academy_level=city.academy_level,
         research_points=research.points_available(city.academy_level, techs),
         research=_research_catalog(city, techs),
+        heroes=_hero_roster(city, heroes.heroes_of(session, city.id)),
         loyalty=city.loyalty,
         capacity=game_config.warehouse_capacity(city.forum_level, fx.warehouse_bonus),
         population_used=pop_used,
@@ -299,7 +347,7 @@ def queue_build(
 
     # gate 1: resources
     cost = game_config.building_cost(
-        body.building, target_level, research.effects_of(session, city.id).build_cost_mult
+        body.building, target_level, bonuses.for_city(session, city.id).build_cost_mult
     )
     if not economy.can_afford(city, cost):
         need = ", ".join(
@@ -404,7 +452,7 @@ def recruit(
     facility = city.harbour_level if game_config.is_sea_unit(body.unit_type) else city.barracks_level
     duration = game_config.recruit_seconds(
         body.unit_type, body.count, facility,
-        research.effects_of(session, city.id).recruit_time_mult,
+        bonuses.for_city(session, city.id).recruit_time_mult,
     )
     session.add(RecruitJob(
         city_id=city.id, unit_type=body.unit_type, count=body.count,
@@ -451,6 +499,52 @@ def research_technology(
     for res, amount in spec["cost"].items():
         city.set_resource(res, city.resource(res) - amount)
     session.add(Research(city_id=city.id, tech=body.tech))
+    session.add(city)
+    session.commit()
+    session.refresh(city)
+    return _serialize(city, session)
+
+
+DEFAULT_HERO_NAMES = {
+    "legatus": "Marcus Valerius",
+    "praefectus": "Gaius Fabius",
+    "navarch": "Lucius Ahenobarbus",
+    "quaestor": "Titus Pomponius",
+}
+
+
+@router.post("/{city_id}/heroes", response_model=CityOut, status_code=status.HTTP_201_CREATED)
+def recruit_hero(
+    city_id: int,
+    body: HeroRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> CityOut:
+    """Appoint an officer to this city. One per archetype, capped per city, and
+    paid for once — heroes then grow by fighting rather than by spending."""
+    city = _owned_city(session, user, city_id)
+    now = utcnow()
+    catch_up(session, city, now)
+
+    posted = heroes.heroes_of(session, city.id)
+    allowed, reason = heroes.can_recruit(body.archetype, city.forum_level, posted)
+    if not allowed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
+
+    spec = game_config.HEROES[body.archetype]
+    if not economy.can_afford(city, spec["cost"]):
+        need = ", ".join(
+            f"{int(a)} {r}" for r, a in spec["cost"].items() if city.resource(r) < a
+        )
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Not enough resources to appoint a {spec['label']} (need {need})",
+        )
+
+    for res, amount in spec["cost"].items():
+        city.set_resource(res, city.resource(res) - amount)
+    name = (body.name or "").strip() or DEFAULT_HERO_NAMES.get(body.archetype, spec["label"])
+    session.add(Hero(city_id=city.id, name=name[:40], archetype=body.archetype))
     session.add(city)
     session.commit()
     session.refresh(city)

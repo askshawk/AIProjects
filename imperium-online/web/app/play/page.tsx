@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth";
 import { useCities } from "@/lib/cityStore";
-import { getCity, getMyCity, queueBuild, recruit as recruitApi, researchTech, type City } from "@/lib/api";
+import { appointHero, getCity, getMyCity, queueBuild, recruit as recruitApi, researchTech, type City } from "@/lib/api";
 import { realtime } from "@/lib/realtime";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
 import HarbourPanel from "@/components/HarbourPanel";
 import AcademyPanel from "@/components/AcademyPanel";
+import HeroesPanel from "@/components/HeroesPanel";
 import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
@@ -141,6 +142,16 @@ export default function PlayPage() {
     }
   }
 
+  async function doAppoint(archetype: string) {
+    if (!token || !city) return;
+    try {
+      setError(null);
+      setCity(await appointHero(token, city.id, archetype));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Appointment failed");
+    }
+  }
+
   // Look up the server-computed next-upgrade preview for a building.
   const upgradeFor = (building: string) => city?.upgrades.find((u) => u.building === building);
 
@@ -248,6 +259,10 @@ export default function PlayPage() {
 
             <div className="grid-2" style={{ marginTop: 22 }}>
               <AcademyPanel city={city} onResearch={doResearch} />
+              <HeroesPanel city={city} onAppoint={doAppoint} />
+            </div>
+
+            <div className="grid-2" style={{ marginTop: 22 }}>
               <MovementsPanel token={token} />
             </div>
           </>

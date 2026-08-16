@@ -1116,6 +1116,58 @@ input:focus {
   font-size: 0.68rem;
 }
 
+/* ===== heroes (C3) ===== */
+
+.hero-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.hero-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.30);
+}
+.hero-row.posted { background: rgba(183, 137, 47, 0.10); border-color: rgba(183, 137, 47, 0.42); }
+.hero-seal {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--gild-bright), var(--gild-dark));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.hero-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.hero-name { font-family: "Marcellus SC", serif; letter-spacing: 0.03em; font-size: 0.92rem; }
+.hero-rank { font-family: inherit; font-size: 0.78rem; color: var(--muted); letter-spacing: 0; }
+.hero-blurb { font-size: 0.8rem; line-height: 1.35; }
+.hero-cost { font-size: 0.74rem; }
+.hero-bonus {
+  font-size: 0.78rem;
+  color: var(--laurel-dark);
+  font-family: "Marcellus SC", serif;
+  letter-spacing: 0.02em;
+}
+.hero-xp-track {
+  display: block;
+  height: 5px;
+  margin-top: 3px;
+  border-radius: 3px;
+  background: rgba(43, 38, 32, 0.14);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.hero-xp-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  transition: width 0.5s ease;
+}
+.hero-row .btn { flex: 0 0 auto; font-size: 0.76rem; padding: 4px 10px; }
+
 /* ===== the academy (C2) ===== */
 
 .rp-count { color: var(--terracotta-dark); font-variant-numeric: tabular-nums; }

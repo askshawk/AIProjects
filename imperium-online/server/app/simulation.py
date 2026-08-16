@@ -27,11 +27,11 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from . import game_config, realtime
-from . import research
+from . import bonuses
 from .models import BuildJob, City, RecruitJob, Unit
 
 
-def _accrue(city: City, seconds: float, storage_bonus: float = 0.0) -> None:
+def _accrue(city: City, seconds: float, storage_bonus: float = 0.0, production_mult: float = 1.0) -> None:
     """Add `seconds` worth of production to each resource at current rates,
     clamped to the warehouse capacity. Mutates the city in place.
     `storage_bonus` comes from research (Ceramics).
@@ -41,7 +41,7 @@ def _accrue(city: City, seconds: float, storage_bonus: float = 0.0) -> None:
     hours = seconds / 3600.0
     capacity = game_config.warehouse_capacity(city.forum_level, storage_bonus)
     for resource, building in game_config.PRODUCERS.items():
-        rate = game_config.production_per_hour(city.level_of(building))
+        rate = game_config.production_per_hour(city.level_of(building)) * production_mult
         produced = rate * hours
         new_amount = min(capacity, city.resource(resource) + produced)
         city.set_resource(resource, new_amount)
@@ -109,11 +109,12 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
 
     # Research is static across the tick (it can't complete on a timer), so
     # read the storage bonus once rather than per event.
-    storage_bonus = research.effects_of(session, city.id).warehouse_bonus
+    fx = bonuses.for_city(session, city.id)
+    storage_bonus = fx.warehouse_bonus
 
     for event in events:
         # Produce at the CURRENT rates up to the moment this event lands...
-        _accrue(city, (event.completes_at - cursor).total_seconds(), storage_bonus)
+        _accrue(city, (event.completes_at - cursor).total_seconds(), storage_bonus, fx.production_mult)
         cursor = event.completes_at
         # ...then apply it. A build may change rates for subsequent accrual.
         if isinstance(event, BuildJob):
@@ -127,7 +128,7 @@ def catch_up(session: Session, city: City, now: datetime) -> City:
         session.add(event)
 
     # Finally, produce over whatever time remains after the last event.
-    _accrue(city, (now - cursor).total_seconds(), storage_bonus)
+    _accrue(city, (now - cursor).total_seconds(), storage_bonus, fx.production_mult)
 
     city.last_tick_at = now
     session.add(city)

@@ -58,6 +58,22 @@ export type ResearchOption = {
   blocked_reason: string | null;
 };
 
+export type HeroPost = {
+  archetype: string;
+  label: string;
+  blurb: string;
+  forum_level: number;
+  cost: { wood: number; stone: number; silver: number };
+  name: string | null;      // null when the post is empty
+  level: number;
+  xp: number;
+  next_level_xp: number;    // 0 when maxed
+  bonus_pct: number;
+  recruited: boolean;
+  can_recruit: boolean;
+  blocked_reason: string | null;
+};
+
 export type City = {
   id: number;
   name: string;
@@ -77,6 +93,7 @@ export type City = {
   academy_level: number;
   research_points: number;        // unspent points
   research: ResearchOption[];
+  heroes: HeroPost[];
   loyalty: number;
   capacity: number;
   population_used: number;
@@ -203,6 +220,13 @@ export function researchTech(token: string, cityId: number, tech: string) {
   return apiFetch<City>(`/cities/${cityId}/research`, {
     method: "POST",
     body: JSON.stringify({ tech }),
+  }, token);
+}
+
+export function appointHero(token: string, cityId: number, archetype: string, name?: string) {
+  return apiFetch<City>(`/cities/${cityId}/heroes`, {
+    method: "POST",
+    body: JSON.stringify({ archetype, name: name ?? null }),
   }, token);
 }
 

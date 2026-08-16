@@ -406,3 +406,63 @@ RESEARCH: dict[str, dict] = {
 }
 
 RESEARCH_IDS = tuple(RESEARCH.keys())
+
+
+# --- heroes (C3) ------------------------------------------------------------
+# A hero is stationed in a city and lends it a standing bonus that grows with
+# level. Heroes never march: they hold a post, which keeps them out of the
+# movement payload entirely and makes their effect easy to reason about —
+# "whose city is this?" rather than "which stack were they in?".
+
+HERO_MAX_PER_CITY = 3
+HERO_MAX_LEVEL = 10
+HERO_XP_PER_LEVEL = 100
+HERO_XP_PER_BATTLE = 25  # awarded to every hero in a city that fought
+
+HEROES: dict[str, dict] = {
+    "legatus": {
+        "label": "Legatus",
+        "blurb": "A field commander. Armies marching from this city strike harder.",
+        "effect": "land_attack_mult",
+        "per_level": 0.04,      # +4% per level, so +40% at level 10
+        "cost": {"wood": 200.0, "stone": 200.0, "silver": 1200.0},
+        "forum_level": 3,
+    },
+    "praefectus": {
+        "label": "Praefectus",
+        "blurb": "A garrison officer. Defenders of this city hold the walls harder.",
+        "effect": "fortification_mult",
+        "per_level": 0.05,
+        "cost": {"wood": 300.0, "stone": 500.0, "silver": 900.0},
+        "forum_level": 3,
+    },
+    "navarch": {
+        "label": "Navarch",
+        "blurb": "A fleet admiral. Warships sailing from this city fight harder at sea.",
+        "effect": "naval_attack_mult",
+        "per_level": 0.05,
+        "cost": {"wood": 800.0, "stone": 100.0, "silver": 1000.0},
+        "forum_level": 4,
+    },
+    "quaestor": {
+        "label": "Quaestor",
+        "blurb": "A steward of the treasury. Every industry in this city produces more.",
+        "effect": "production_mult",
+        "per_level": 0.03,
+        "cost": {"wood": 400.0, "stone": 400.0, "silver": 800.0},
+        "forum_level": 2,
+    },
+}
+
+HERO_ARCHETYPES = tuple(HEROES.keys())
+
+
+def hero_level(xp: int) -> int:
+    """Level from accumulated experience, capped. Heroes start at level 1."""
+    return min(HERO_MAX_LEVEL, 1 + max(0, xp) // HERO_XP_PER_LEVEL)
+
+
+def hero_bonus(archetype: str, level: int) -> float:
+    """The multiplier a hero of this archetype and level contributes."""
+    spec = HEROES[archetype]
+    return 1.0 + spec["per_level"] * max(1, level)

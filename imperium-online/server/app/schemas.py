@@ -130,6 +130,7 @@ class CityOut(BaseModel):
     academy_level: int
     research_points: int            # unspent points
     research: list[ResearchOut]
+    heroes: list[HeroOut]
     loyalty: int
     capacity: float  # current per-resource warehouse cap (derived)
     population_used: int
@@ -140,6 +141,28 @@ class CityOut(BaseModel):
     recruit_jobs: list[RecruitJobOut]
 
     _ser_tick = field_serializer("last_tick_at")(_as_utc_iso)
+
+
+class HeroOut(BaseModel):
+    """A hero posted to this city, or an unfilled post you could recruit into."""
+    archetype: str
+    label: str
+    blurb: str
+    forum_level: int         # Forum level required to recruit
+    cost: dict[str, float]
+    name: str | None = None  # None when the post is empty
+    level: int = 0
+    xp: int = 0
+    next_level_xp: int = 0   # xp at which the next level lands (0 when maxed)
+    bonus_pct: int = 0       # the standing bonus, as a percentage
+    recruited: bool = False
+    can_recruit: bool = False
+    blocked_reason: str | None = None
+
+
+class HeroRequest(BaseModel):
+    archetype: str      # one of game_config.HERO_ARCHETYPES
+    name: str | None = None
 
 
 class ResearchRequest(BaseModel):
