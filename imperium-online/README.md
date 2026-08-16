@@ -102,6 +102,17 @@ This exists because `create_all` adds missing **tables** but never missing
 (`city.harbour_level`, `battlereport.naval`, `city.academy_level`) before
 migrations were adopted. A missed one meant a 500 on the first city read.
 
+## Deploying it
+
+The API runs on Fly.io and the web app on Vercel, both on free tiers.
+**[DEPLOY.md](DEPLOY.md)** is the step-by-step runbook — including the traps
+(cross-domain cookies, CORS, and why the machine must not scale to zero).
+
+Production is guarded rather than trusted: with `APP_ENV=production` the app
+refuses to start on any development default — the shipped JWT secret, localhost
+CORS, a SQLite URL, an insecure cookie — and lists every problem at once with
+the fix. See `server/app/config.py`.
+
 ## Project layout
 
 ```
