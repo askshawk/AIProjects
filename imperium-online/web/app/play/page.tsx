@@ -10,6 +10,7 @@ import { realtime } from "@/lib/realtime";
 import BuildQueue from "@/components/BuildQueue";
 import BuildCostPanel from "@/components/BuildCostPanel";
 import BarracksPanel from "@/components/BarracksPanel";
+import HarbourPanel from "@/components/HarbourPanel";
 import MovementsPanel from "@/components/MovementsPanel";
 import OrnateHeader from "@/components/OrnateHeader";
 import TopBar from "@/components/TopBar";
@@ -27,6 +28,7 @@ const BUILDINGS: { key: keyof City; building: string; label: string }[] = [
   { key: "silver_mine_level", building: "silver_mine", label: "Silver Mine" },
   { key: "farm_level", building: "farm", label: "Farm" },
   { key: "barracks_level", building: "barracks", label: "Barracks" },
+  { key: "harbour_level", building: "harbour", label: "Harbour" },
 ];
 
 const RESOURCES: { key: "wood" | "stone" | "silver"; label: string }[] = [
@@ -194,7 +196,19 @@ export default function PlayPage() {
                   return (
                     <div className={`building-row${leveled.has(b.building) ? " leveled" : ""}`} key={b.building}>
                       <div className="thumb">
-                        <img src={`/assets/iso/${b.building}.png`} alt="" />
+                        {/* The Harbour has no painted sprite yet — fall back to
+                            the Forum so the row still reads. */}
+                        <img
+                          src={`/assets/iso/${b.building}.png`}
+                          alt=""
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            if (!img.dataset.fallback) {
+                              img.dataset.fallback = "1";
+                              img.src = "/assets/iso/forum.png";
+                            }
+                          }}
+                        />
                       </div>
                       <div>
                         <span className="name">{b.label}</span>
@@ -217,6 +231,10 @@ export default function PlayPage() {
 
             <div className="grid-2" style={{ marginTop: 22 }}>
               <BarracksPanel city={city} onRecruit={recruit} onQueueComplete={refresh} />
+              <HarbourPanel city={city} onRecruit={recruit} />
+            </div>
+
+            <div className="grid-2" style={{ marginTop: 22 }}>
               <MovementsPanel token={token} />
             </div>
           </>

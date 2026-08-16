@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from .. import game_config, military, realtime
+from .. import game_config, military, realtime, world
 from ..auth import get_current_user
 from ..db import get_session
 from ..models import AllianceMembership, BattleReport, City, Movement, Unit, User, utcnow
@@ -73,6 +73,21 @@ def send_army(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown unit: {unit_type}")
     has_settler = units.get("settler", 0) > 0
 
+    # Crossing between islands is a sea voyage: any land unit aboard needs
+    # transport berths. Marches within an island are free, exactly as before —
+    # ships may tag along around the coast without a check.
+    land_units, sea_units = game_config.split_domains(units)
+    cross_island = not world.same_island(origin.x, origin.y, tx, ty)
+    if cross_island and land_units:
+        cargo = game_config.cargo_population(land_units)
+        berths = game_config.transport_capacity(units)
+        if cargo > berths:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Not enough transport capacity to cross the sea: {cargo} population "
+                f"of troops, {berths} berths — send more transports",
+            )
+
     # Classify the order from what's at the destination.
     if target is not None:
         if target.id == origin.id:
@@ -108,7 +123,12 @@ def send_army(
 
     import math
     dist = military.distance(origin, target) if target else math.hypot(origin.x - tx, origin.y - ty)
-    secs = game_config.travel_seconds(dist, units)
+    # A sea crossing sails at fleet speed — cargo below decks doesn't slow it.
+    secs = (
+        game_config.travel_seconds_naval(dist, units)
+        if cross_island and sea_units
+        else game_config.travel_seconds(dist, units)
+    )
     movement = Movement(
         origin_city_id=origin.id,
         target_city_id=target.id if target else None,
@@ -227,6 +247,7 @@ def my_reports(
             loyalty_after=r.loyalty_after,
             captured=r.captured,
             night_bonus=r.night_bonus,
+            naval=r.naval,
             created_at=r.created_at,
         )
         for r in rows

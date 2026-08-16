@@ -64,9 +64,10 @@ def test_settler_founds_a_colony(client):
     roma = client.get("/cities/me", headers=h).json()
     _garrison(client, roma["id"], settler=1, legionary=4)
 
-    # March a settler + escort to an empty cell.
+    # March a settler + escort to an empty cell on the SAME island — no ships
+    # needed. (Crossing to another island is covered in test_navy_routes.py.)
     r = client.post("/movements", headers=h, json={
-        "origin_city_id": roma["id"], "target_x": 5, "target_y": 6, "units": {"settler": 1, "legionary": 4},
+        "origin_city_id": roma["id"], "target_x": 2, "target_y": 2, "units": {"settler": 1, "legionary": 4},
     })
     assert r.status_code == 201
     assert r.json()["kind"] == "found"
@@ -76,7 +77,7 @@ def test_settler_founds_a_colony(client):
     _rush(client)
     cities = client.get("/cities", headers=h).json()
     assert len(cities) == 2
-    colony = next(c for c in cities if (c["x"], c["y"]) == (5, 6))
+    colony = next(c for c in cities if (c["x"], c["y"]) == (2, 2))
     # The settler was consumed; the 4 legionaries are its garrison.
     detail = client.get(f"/cities/{colony['id']}", headers=h).json()
     assert next((u["have"] for u in detail["units"] if u["unit_type"] == "legionary"), 0) == 4
@@ -106,8 +107,10 @@ def test_empty_cell_without_settler_is_rejected(client):
     h = _reg(client, "a@t.io", "Roma")
     roma = client.get("/cities/me", headers=h).json()
     _garrison(client, roma["id"], legionary=5)
+    # Same island, so the sea rules don't apply — this is purely about needing
+    # a settler to claim empty ground.
     r = client.post("/movements", headers=h, json={
-        "origin_city_id": roma["id"], "target_x": 8, "target_y": 8, "units": {"legionary": 5},
+        "origin_city_id": roma["id"], "target_x": 2, "target_y": 2, "units": {"legionary": 5},
     })
     assert r.status_code == 400
     assert "settler" in r.json()["detail"].lower()
@@ -119,14 +122,15 @@ def test_reinforce_own_city(client):
     # Give Roma an army and found a second city to reinforce.
     _garrison(client, roma["id"], settler=1, legionary=10)
     client.post("/movements", headers=h, json={
-        "origin_city_id": roma["id"], "target_x": 4, "target_y": 4, "units": {"settler": 1, "legionary": 2},
+        "origin_city_id": roma["id"], "target_x": 2, "target_y": 2, "units": {"settler": 1, "legionary": 2},
     })
     _rush(client)
-    colony = next(c for c in client.get("/cities", headers=h).json() if (c["x"], c["y"]) == (4, 4))
+    colony = next(c for c in client.get("/cities", headers=h).json() if (c["x"], c["y"]) == (2, 2))
 
-    # Reinforce the colony with Roma's remaining legionaries.
+    # Reinforce the colony with Roma's remaining legionaries — same island, so
+    # they march overland without transports.
     r = client.post("/movements", headers=h, json={
-        "origin_city_id": roma["id"], "target_x": 4, "target_y": 4, "units": {"legionary": 8},
+        "origin_city_id": roma["id"], "target_x": 2, "target_y": 2, "units": {"legionary": 8},
     })
     assert r.json()["kind"] == "reinforce"
     _rush(client)

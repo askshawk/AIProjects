@@ -22,6 +22,9 @@ const UNIT_LABEL: Record<string, string> = {
   archer: "Archers",
   scout: "Scouts",
   settler: "Settlers",
+  trireme: "Triremes",
+  bireme: "Biremes",
+  transport: "Transports",
 };
 
 type Phase = "rest" | "march" | "clash" | "toll" | "verdict";
@@ -37,6 +40,14 @@ function unitRows(before: UnitStack, after: UnitStack): { type: string; before: 
 
 function total(s: UnitStack): number {
   return Object.values(s).reduce((a, b) => a + b, 0);
+}
+
+/** "3 Triremes, 1 Transport" — or an em dash when the sea is empty. */
+function stackText(s: UnitStack): string {
+  const parts = Object.entries(s)
+    .filter(([, c]) => c > 0)
+    .map(([t, c]) => `${c} ${UNIT_LABEL[t] ?? t}`);
+  return parts.length ? parts.join(", ") : "—";
 }
 
 function Force({
@@ -129,6 +140,26 @@ export default function BattleReplay({ report, iWon }: { report: BattleReport; i
 
   return (
     <div className={`battle-replay phase-${phase}`}>
+      {report.naval && (
+        <div className={`br-naval${report.naval.outcome === "defender_won" ? " lost" : ""}`}>
+          <span className="br-naval-title">
+            ⚓ At sea — {report.naval.outcome === "attacker_won"
+              ? "the fleet forced a landing"
+              : "the fleet was lost; no one reached the shore"}
+          </span>
+          <div className="br-naval-lines">
+            <span>
+              Attacking fleet: {stackText(report.naval.sea_sent)} →{" "}
+              <strong>{stackText(report.naval.sea_survivors)}</strong>
+            </span>
+            <span>
+              Defending fleet: {stackText(report.naval.defender_sea_before)} →{" "}
+              <strong>{stackText(report.naval.defender_sea_survivors)}</strong>
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="br-stage">
         <Force
           title={`Attacker — ${report.attacker_city_name}`}

@@ -1,35 +1,33 @@
 "use client";
 
-// Barracks & Army panel. Shows the standing roster (with attack/defense), a
-// recruit form (unit type + quantity with a live cost + population check), and
-// the in-training queue. All economics come from the server's unit catalog;
-// affordability for the chosen quantity is the only thing computed client-side,
-// purely to enable/disable the button — the server re-validates on submit.
+// Harbour & Fleet panel (C1b).
+//
+// Ships are recruited exactly like soldiers — same queue, same economics — but
+// they're gated on the Harbour rather than the Barracks, and they're the only
+// way an army crosses between islands. Kept as its own panel so the fleet reads
+// as a separate arm rather than a few odd rows under "Barracks & Army".
 
 import { useMemo, useState } from "react";
 import type { City, UnitType } from "@/lib/api";
 import { UNIT_ICONS } from "@/components/UnitIcons";
 import { AttackIcon, DefenseIcon } from "@/components/ResourceIcons";
-import RecruitQueue from "@/components/RecruitQueue";
+import EmptyState from "@/components/EmptyState";
 
-export default function BarracksPanel({
+export default function HarbourPanel({
   city,
   onRecruit,
-  onQueueComplete,
 }: {
   city: City;
   onRecruit: (unitType: string, count: number) => Promise<void>;
-  onQueueComplete: () => void;
 }) {
-  const built = city.barracks_level >= 1;
-  // Ships have their own panel — this one raises soldiers.
-  const troops = useMemo(() => city.units.filter((u) => u.domain !== "sea"), [city.units]);
-  const [selected, setSelected] = useState<string>(troops[0]?.unit_type ?? "legionary");
-  const [count, setCount] = useState<number>(10);
+  const ships = useMemo(() => city.units.filter((u) => u.domain === "sea"), [city.units]);
+  const built = city.harbour_level >= 1;
+  const [selected, setSelected] = useState<string>(ships[0]?.unit_type ?? "trireme");
+  const [count, setCount] = useState<number>(2);
 
   const unit: UnitType | undefined = useMemo(
-    () => troops.find((u) => u.unit_type === selected),
-    [troops, selected],
+    () => ships.find((u) => u.unit_type === selected) ?? ships[0],
+    [ships, selected],
   );
 
   // Live cost + population check for the chosen quantity (display/enable only).
@@ -48,22 +46,33 @@ export default function BarracksPanel({
   if (!built) {
     return (
       <div className="card">
-        <h3>Barracks &amp; Army</h3>
-        <p className="muted" style={{ margin: 0 }}>
-          You have no Barracks yet. Build one from the Buildings panel to begin training a legion.
-        </p>
+        <h3>Harbour &amp; Fleet</h3>
+        <EmptyState glyph="⚓" action={{ href: "#buildings", label: "Build a Harbour" }}>
+          No slipways yet. Every city sits on an island — without ships your
+          legions can never leave it.
+        </EmptyState>
       </div>
     );
   }
 
+  // Total berths currently in port, so the player can size an invasion.
+  const berths = ships.reduce((sum, s) => sum + s.capacity * s.have, 0);
   const canSubmit = unit?.can_recruit && check.afford && check.popOk && count >= 1;
 
   return (
     <div className="card">
-      <h3>Barracks &amp; Army <span className="muted" style={{ fontSize: "0.8rem" }}>· level {city.barracks_level}</span></h3>
+      <h3>
+        Harbour &amp; Fleet{" "}
+        <span className="muted" style={{ fontSize: "0.8rem" }}>· level {city.harbour_level}</span>
+      </h3>
+      <p className="muted" style={{ marginTop: -6, fontSize: "0.82rem" }}>
+        {berths > 0
+          ? `${berths} berths in port — enough to carry ${berths} population of troops overseas.`
+          : "No transports in port. Warships alone cannot carry an army."}
+      </p>
 
       <div className="roster">
-        {troops.map((u) => {
+        {ships.map((u) => {
           const Icon = UNIT_ICONS[u.unit_type];
           return (
             <button
@@ -76,7 +85,14 @@ export default function BarracksPanel({
               <span className="unit-name">{u.label}</span>
               <span className="unit-have">{u.have}</span>
               <span className="unit-stats">
-                <AttackIcon className="stat-ico" /> {u.attack} · <DefenseIcon className="stat-ico" /> {u.defense}
+                {u.capacity > 0 ? (
+                  <>⚓ {u.capacity} berths</>
+                ) : (
+                  <>
+                    <AttackIcon className="stat-ico" /> {u.attack} ·{" "}
+                    <DefenseIcon className="stat-ico" /> {u.defense}
+                  </>
+                )}
               </span>
             </button>
           );
@@ -86,9 +102,9 @@ export default function BarracksPanel({
       {unit && (
         <div className="recruit-form">
           <div className="recruit-controls">
-            <label htmlFor="count" style={{ margin: 0 }}>Recruit {unit.label}</label>
+            <label htmlFor="ship-count" style={{ margin: 0 }}>Lay down {unit.label}</label>
             <input
-              id="count"
+              id="ship-count"
               type="number"
               min={1}
               max={500}
@@ -96,8 +112,8 @@ export default function BarracksPanel({
               onChange={(e) => setCount(Math.max(1, Math.min(500, Number(e.target.value) || 0)))}
               style={{ width: 90 }}
             />
-            <button className="btn" type="button" disabled={!canSubmit} onClick={() => onRecruit(selected, count)}>
-              Recruit
+            <button className="btn" type="button" disabled={!canSubmit} onClick={() => onRecruit(unit.unit_type, count)}>
+              Build
             </button>
           </div>
           <div className="cost-line" style={{ marginTop: 8 }}>
@@ -109,9 +125,6 @@ export default function BarracksPanel({
           </div>
         </div>
       )}
-
-      <h3 style={{ marginTop: 22 }}>Training</h3>
-      <RecruitQueue jobs={city.recruit_jobs} onComplete={onQueueComplete} />
     </div>
   );
 }

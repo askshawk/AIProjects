@@ -77,6 +77,7 @@ class City(SQLModel, table=True):
     silver_mine_level: int = game_config.STARTING_LEVELS["silver_mine"]
     farm_level: int = game_config.STARTING_LEVELS["farm"]
     barracks_level: int = game_config.STARTING_LEVELS["barracks"]  # 0 = not built
+    harbour_level: int = game_config.STARTING_LEVELS["harbour"]    # 0 = not built
 
     # Conquest morale (0–100). Regenerates over time in catch_up; a settler-led
     # assault erodes it, and at 0 the city flips to the attacker.
@@ -207,6 +208,10 @@ class BattleReport(SQLModel, table=True):
     # Whether the defender fought under the night bonus — the report explains
     # the result, which is otherwise surprising when a smaller garrison holds.
     night_bonus: bool = False
+    # The naval phase of a seaborne assault (None for pure land battles):
+    # {"sea_sent", "sea_survivors", "defender_sea_before",
+    #  "defender_sea_survivors", "outcome"}.
+    naval: dict | None = Field(default=None, sa_column=Column(JSON))
 
     created_at: datetime = Field(default_factory=utcnow, index=True)
 

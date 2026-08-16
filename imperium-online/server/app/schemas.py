@@ -83,7 +83,9 @@ class UnitTypeOut(BaseModel):
     attack: int
     defense: int
     have: int                # how many the city currently fields
-    can_recruit: bool        # barracks built + at least one affordable + pop room
+    can_recruit: bool        # facility built + at least one affordable + pop room
+    domain: str = "land"     # "land" (Barracks) or "sea" (Harbour)
+    capacity: int = 0        # transport berths, in population points
 
 
 class CitySummaryOut(BaseModel):
@@ -111,6 +113,7 @@ class CityOut(BaseModel):
     silver_mine_level: int
     farm_level: int
     barracks_level: int
+    harbour_level: int
     loyalty: int
     capacity: float  # current per-resource warehouse cap (derived)
     population_used: int
@@ -214,6 +217,7 @@ class BattleReportOut(BaseModel):
     loyalty_after: int
     captured: bool
     night_bonus: bool = False  # defenders fought under the night bonus
+    naval: dict | None = None  # the sea phase of a seaborne assault
     created_at: datetime
 
     _ser_created = field_serializer("created_at")(_as_utc_iso)

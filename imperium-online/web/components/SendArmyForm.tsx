@@ -4,9 +4,10 @@
 // many of each standing unit to march on it, validates against what's at home,
 // and dispatches the attack. The server re-validates and computes travel time.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { City, UnitStack } from "@/lib/api";
 import { sendArmy } from "@/lib/api";
+import { sameIsland } from "@/lib/islands";
 import { UNIT_ICONS } from "@/components/UnitIcons";
 
 export default function SendArmyForm({
@@ -28,6 +29,22 @@ export default function SendArmyForm({
   const [busy, setBusy] = useState(false);
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  // Crossing to another island is a sea voyage: every land unit needs a berth
+  // aboard a transport. Mirrors the server rule so the player sees the problem
+  // before hitting send rather than as a 400.
+  const crossing = !sameIsland(city.x, city.y, target.x, target.y);
+  const { cargo, berths } = useMemo(() => {
+    let cargo = 0, berths = 0;
+    for (const u of city.units) {
+      const n = counts[u.unit_type] ?? 0;
+      if (n <= 0) continue;
+      if (u.domain === "sea") berths += u.capacity * n;
+      else cargo += u.population * n;
+    }
+    return { cargo, berths };
+  }, [counts, city.units]);
+  const overloaded = crossing && cargo > berths;
 
   function setCount(unitType: string, value: number, max: number) {
     setCounts((c) => ({ ...c, [unitType]: Math.max(0, Math.min(max, value || 0)) }));
@@ -80,11 +97,23 @@ export default function SendArmyForm({
             })}
           </div>
 
+          {crossing && (
+            <div className={`crossing-meter${overloaded ? " over" : ""}`}>
+              <span className="cm-label">
+                ⚓ Crossing open sea — troops need transport berths
+              </span>
+              <div className="cm-track">
+                <span style={{ width: `${berths > 0 ? Math.min(100, (cargo / berths) * 100) : (cargo > 0 ? 100 : 0)}%` }} />
+              </div>
+              <span className="cm-count">{cargo} / {berths}</span>
+            </div>
+          )}
+
           {error && <div className="error">{error}</div>}
 
           <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center" }}>
-            <button className="btn" disabled={busy || total === 0} onClick={submit}>
-              {busy ? "Marching…" : `Send ${total || ""} ${total === 1 ? "soldier" : "soldiers"}`}
+            <button className="btn" disabled={busy || total === 0 || overloaded} onClick={submit}>
+              {busy ? "Marching…" : overloaded ? "Not enough berths" : `Send ${total || ""} ${total === 1 ? "soldier" : "soldiers"}`}
             </button>
             <button className="btn btn-ghost" onClick={onCancel} type="button">Cancel</button>
           </div>

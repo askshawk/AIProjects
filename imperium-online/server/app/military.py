@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
-from . import daynight, game_config, realtime
+from . import daynight, game_config, realtime, world
 from .combat import resolve_battle
 from .models import BattleReport, City, Movement, Unit
 from .simulation import _grant_units, catch_up
@@ -31,6 +31,17 @@ from .simulation import _grant_units, catch_up
 def distance(a: City, b: City) -> float:
     """Euclidean distance between two cities on the world grid."""
     return math.hypot(a.x - b.x, a.y - b.y)
+
+
+def _merge(*stacks: dict[str, int]) -> dict[str, int]:
+    """Combine unit stacks, dropping empties — used to put a land force and a
+    fleet back together after the two battle phases resolve separately."""
+    out: dict[str, int] = {}
+    for stack in stacks:
+        for unit_type, count in stack.items():
+            if count > 0:
+                out[unit_type] = out.get(unit_type, 0) + count
+    return out
 
 
 def _standing_army(session: Session, city: City) -> dict[str, int]:
@@ -117,33 +128,135 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
         # Bring the defender current so the battle uses their real army.
         catch_up(session, target, now)
         defender_before = _standing_army(session, target)
-        # Home fortification, doubled if the assault lands at night — the
-        # shared world clock decides, using the battle's own resolution time.
-        night = daynight.is_night(now)
-        mult = game_config.fortification_multiplier(target.forum_level)
-        mult *= daynight.defense_multiplier(now)
+        land_att, sea_att = game_config.split_domains(movement.payload)
+        def_land, def_sea = game_config.split_domains(defender_before)
 
-        result = resolve_battle(movement.payload, defender_before, mult)
+        night = daynight.is_night(now)
+        night_mult = daynight.defense_multiplier(now)
+        fort_mult = game_config.fortification_multiplier(target.forum_level)
+
+        # A sea voyage is derived, never stored: the movement crossed between
+        # islands. Pre-navy land-only movements (and same-island marches with
+        # an escort sailing round the coast) resolve as land battles — the
+        # defender's fleet sits in harbour and a coastal escort doesn't fight.
+        crossed = not world.same_island(origin.x, origin.y, target.x, target.y)
+        seaborne = crossed and bool(sea_att)
+
+        naval: dict | None = None
+        surviving_ships: dict[str, int] = {} if seaborne else dict(sea_att)
+        landed = dict(land_att)
+        defender_sea_after = dict(def_sea)
+
+        if seaborne and not def_sea:
+            # Nobody contests the crossing: the fleet lands unopposed and every
+            # soldier aboard reaches the shore. This case must bypass the sea
+            # battle — a transport-only fleet has zero attack power, and
+            # resolve_battle would score that as a loss against no opponent.
+            naval = {
+                "sea_sent": sea_att,
+                "sea_survivors": sea_att,
+                "defender_sea_before": {},
+                "defender_sea_survivors": {},
+                "outcome": "attacker_won",
+            }
+            surviving_ships = dict(sea_att)
+        elif seaborne:
+            # --- phase 1: the sea battle. No fortification on open water; the
+            # night bonus applies (crews fight harder defending home waters).
+            sea_result = resolve_battle(sea_att, def_sea, night_mult)
+            naval = {
+                "sea_sent": sea_att,
+                "sea_survivors": sea_result.attacker_survivors,
+                "defender_sea_before": def_sea,
+                "defender_sea_survivors": sea_result.defender_survivors,
+                "outcome": sea_result.outcome,
+            }
+            defender_sea_after = sea_result.defender_survivors
+
+            if sea_result.outcome == "defender_won":
+                # The invasion drowned: transports sunk, every soldier aboard
+                # lost. No landing, no loyalty erosion, no return leg.
+                _set_army(session, target, _merge(def_land, defender_sea_after))
+                report = BattleReport(
+                    movement_id=movement.id,
+                    attacker_user_id=origin.user_id,
+                    defender_user_id=target.user_id,
+                    attacker_city_name=origin.name,
+                    defender_city_name=target.name,
+                    outcome="defender_won",
+                    attacker_sent=dict(movement.payload),
+                    attacker_survivors={},
+                    defender_before=defender_before,
+                    defender_survivors=_merge(def_land, defender_sea_after),
+                    loyalty_before=target.loyalty,
+                    loyalty_after=target.loyalty,
+                    captured=False,
+                    night_bonus=night,
+                    naval=naval,
+                )
+                session.add(report)
+                session.flush()
+                realtime.emit_attack_resolved(origin.user_id, report.id, "defender_won", "attacker")
+                if target.user_id != origin.user_id:
+                    realtime.emit_attack_resolved(target.user_id, report.id, "defender_won", "defender")
+                movement.status = "done"
+                session.add(movement)
+                return
+
+            surviving_ships = sea_result.attacker_survivors
+            # Sunk transports take their cargo down with them: the landing
+            # force scales by transport survival. floor(), never round — a
+            # drowned settler must not be rounded back to life.
+            sent_tr = sea_att.get("transport", 0)
+            if sent_tr > 0 and landed:
+                ratio = surviving_ships.get("transport", 0) / sent_tr
+                landed = {t: math.floor(c * ratio) for t, c in landed.items()}
+                landed = {t: c for t, c in landed.items() if c > 0}
+
+        # --- phase 2: the ground battle (skipped for a pure-ship raid).
+        if landed or def_land or not seaborne:
+            result = resolve_battle(landed, def_land, fort_mult * night_mult)
+        else:
+            result = None
+
+        if seaborne and not land_att:
+            # Pure-ship raid that won the sea phase: there is no ground battle
+            # to lose — the raid succeeded.
+            outcome = "attacker_won"
+            att_land_survivors: dict[str, int] = {}
+            def_land_after = def_land
+        elif result is not None:
+            outcome = result.outcome
+            att_land_survivors = result.attacker_survivors
+            def_land_after = result.defender_survivors
+        else:  # seaborne, cargo all drowned, empty defence — nothing landed
+            outcome = "defender_won"
+            att_land_survivors = {}
+            def_land_after = def_land
 
         # --- loyalty & conquest ---------------------------------------------
         defender_user_id = target.user_id  # capture before any ownership flip
         loyalty_before = target.loyalty    # already regenerated by catch_up above
-        # A settler-led assault that wipes the garrison erodes the city's loyalty.
+        # A settler-led assault that wipes the garrison erodes the city's
+        # loyalty — and only settlers that actually LANDED count.
         settler_assault = (
-            result.outcome == "attacker_won"
-            and not result.defender_survivors
-            and movement.payload.get("settler", 0) > 0
+            outcome == "attacker_won"
+            and not def_land_after
+            and landed.get("settler", 0) > 0
         )
         if settler_assault:
             target.loyalty = max(0, target.loyalty - game_config.LOYALTY_HIT)
         loyalty_after = target.loyalty
         captured = settler_assault and target.loyalty <= 0
 
-        survivors = {t: c for t, c in result.attacker_survivors.items() if c > 0}
+        attacker_survivors = _merge(att_land_survivors, surviving_ships)
+        survivors = {t: c for t, c in attacker_survivors.items() if c > 0}
 
         if captured:
             # The city flips owner; the conquering survivors (minus one consumed
-            # settler) stay as its garrison — no return march.
+            # settler) stay as its garrison, and the victorious fleet stations
+            # itself in the captured harbour — no return march. The defender's
+            # remaining ships are scuttled with the fallen city.
             target.user_id = origin.user_id
             target.loyalty = game_config.LOYALTY_AFTER_CAPTURE
             garrison = dict(survivors)
@@ -154,7 +267,7 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
                 if count > 0:
                     _grant_units(session, target, unit_type, count)
         else:
-            _set_army(session, target, result.defender_survivors)
+            _set_army(session, target, _merge(def_land_after, defender_sea_after))
 
         report = BattleReport(
             movement_id=movement.id,
@@ -162,28 +275,35 @@ def resolve_movement(session: Session, movement: Movement, now: datetime) -> Non
             defender_user_id=defender_user_id,
             attacker_city_name=origin.name,
             defender_city_name=target.name,
-            outcome=result.outcome,
+            outcome=outcome,
             attacker_sent=dict(movement.payload),
-            attacker_survivors=result.attacker_survivors,
+            attacker_survivors=attacker_survivors,
             defender_before=defender_before,
-            defender_survivors=result.defender_survivors,
+            defender_survivors=_merge(def_land_after, defender_sea_after),
             loyalty_before=loyalty_before,
             loyalty_after=loyalty_after,
             captured=captured,
             night_bonus=night,
+            naval=naval,
         )
         session.add(report)
         session.flush()  # report needs an id for the push events
-        realtime.emit_attack_resolved(origin.user_id, report.id, result.outcome, "attacker")
+        realtime.emit_attack_resolved(origin.user_id, report.id, outcome, "attacker")
         if defender_user_id != origin.user_id:
-            realtime.emit_attack_resolved(defender_user_id, report.id, result.outcome, "defender")
+            realtime.emit_attack_resolved(defender_user_id, report.id, outcome, "defender")
         if captured:
             realtime.emit_city_captured(origin.user_id, defender_user_id, target.id)
 
-        # Survivors march home — unless they captured the city (they stay to hold it).
+        # Survivors march home — unless they captured the city (they stay to
+        # hold it). A returning fleet sails at ship speed.
         if survivors and not captured:
             dist = distance(target, origin)
-            secs = game_config.travel_seconds(dist, survivors)
+            _, return_ships = game_config.split_domains(survivors)
+            secs = (
+                game_config.travel_seconds_naval(dist, survivors)
+                if crossed and return_ships
+                else game_config.travel_seconds(dist, survivors)
+            )
             session.add(Movement(
                 origin_city_id=target.id,
                 target_city_id=origin.id,

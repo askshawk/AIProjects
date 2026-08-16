@@ -26,10 +26,10 @@ PRODUCERS = {
 }
 
 # Every building a city can have. The Farm produces no resources — it provides
-# the population every other building (and unit) consumes. The Barracks starts
-# at level 0 (not built): you must construct it before you can recruit, which
-# demonstrates a prerequisite gate on top of the build system.
-BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm", "barracks")
+# the population every other building (and unit) consumes. The Barracks and the
+# Harbour start at level 0 (not built): you must construct them before you can
+# recruit soldiers / lay keels.
+BUILDINGS = ("forum", "timber_camp", "quarry", "silver_mine", "farm", "barracks", "harbour")
 STARTING_LEVELS = {
     "forum": 1,
     "timber_camp": 1,
@@ -37,6 +37,7 @@ STARTING_LEVELS = {
     "silver_mine": 1,
     "farm": 1,
     "barracks": 0,
+    "harbour": 0,
 }
 
 # Max level so the client can grey out the button and the server can reject the
@@ -67,6 +68,7 @@ _POPULATION_PER_LEVEL = {
     "silver_mine": 5,
     "farm": 3,
     "barracks": 6,
+    "harbour": 6,
 }
 
 
@@ -119,6 +121,42 @@ UNITS: dict[str, dict] = {
         "defense": 2,
         "speed": 0.5,        # slow, lumbering wagon train
     },
+    # --- the fleet (C1b). domain "sea" units are built at the Harbour and are
+    # what carries an army between islands. Land units have no domain key and
+    # default to "land" via .get("domain", "land").
+    "trireme": {
+        "label": "Trireme",
+        "cost": {"wood": 180.0, "stone": 0.0, "silver": 120.0},
+        "population": 6,
+        "seconds": 300,
+        "attack": 24,        # the naval hammer — two legionaries' attack afloat
+        "defense": 12,
+        "speed": 1.2,
+        "domain": "sea",
+        "capacity": 0,
+    },
+    "bireme": {
+        "label": "Bireme",
+        "cost": {"wood": 160.0, "stone": 0.0, "silver": 90.0},
+        "population": 5,
+        "seconds": 260,
+        "attack": 8,
+        "defense": 28,       # the sea wall
+        "speed": 1.1,
+        "domain": "sea",
+        "capacity": 0,
+    },
+    "transport": {
+        "label": "Transport",
+        "cost": {"wood": 140.0, "stone": 0.0, "silver": 60.0},
+        "population": 4,
+        "seconds": 240,
+        "attack": 0,         # cannot fight: unescorted vs any fleet = total loss
+        "defense": 2,
+        "speed": 0.9,
+        "domain": "sea",
+        "capacity": 16,      # berths, in population points of cargo
+    },
 }
 
 UNIT_TYPES = tuple(UNITS.keys())
@@ -127,7 +165,38 @@ UNIT_TYPES = tuple(UNITS.keys())
 SETTLER_FORUM_REQUIREMENT = 2
 
 
-def can_recruit_unit(unit_type: str, forum_level: int) -> bool:
+def is_sea_unit(unit_type: str) -> bool:
+    return UNITS[unit_type].get("domain", "land") == "sea"
+
+
+def split_domains(stack: dict[str, int]) -> tuple[dict[str, int], dict[str, int]]:
+    """Split a mixed stack into (land, sea), dropping zero counts."""
+    land: dict[str, int] = {}
+    sea: dict[str, int] = {}
+    for t, c in stack.items():
+        if c <= 0:
+            continue
+        (sea if is_sea_unit(t) else land)[t] = c
+    return land, sea
+
+
+def transport_capacity(stack: dict[str, int]) -> int:
+    """Total berths the stack's ships provide, in population points."""
+    return sum(UNITS[t].get("capacity", 0) * c for t, c in stack.items() if c > 0)
+
+
+def cargo_population(land_stack: dict[str, int]) -> int:
+    """Berths a land force needs aboard: each unit occupies its population."""
+    return sum(UNITS[t]["population"] * c for t, c in land_stack.items() if c > 0)
+
+
+def can_recruit_unit(unit_type: str, forum_level: int, barracks_level: int, harbour_level: int) -> bool:
+    """Facility gates for one unit type. Sea units need a Harbour; land units a
+    Barracks; settlers additionally need an established Forum."""
+    if is_sea_unit(unit_type):
+        return harbour_level >= 1
+    if barracks_level < 1:
+        return False
     if unit_type == "settler":
         return forum_level >= SETTLER_FORUM_REQUIREMENT
     return True
@@ -143,10 +212,11 @@ def unit_population(unit_type: str) -> int:
     return UNITS[unit_type]["population"]
 
 
-def recruit_seconds(unit_type: str, count: int, barracks_level: int) -> int:
-    """Time to recruit `count` units. Each Barracks level past the first shaves
-    ~5% off the per-unit time (so a bigger barracks trains faster)."""
-    per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, barracks_level - 1))
+def recruit_seconds(unit_type: str, count: int, facility_level: int) -> int:
+    """Time to recruit `count` units. `facility_level` is the Barracks for land
+    units or the Harbour for ships; each level past the first shaves ~5% off
+    the per-unit time."""
+    per_unit = UNITS[unit_type]["seconds"] * (0.95 ** max(0, facility_level - 1))
     return max(1, int(per_unit * count))
 
 
@@ -164,6 +234,18 @@ def travel_seconds(distance: float, units: dict[str, int]) -> int:
     """Marching time for `units` to cross `distance` tiles. Slower units
     (legionaries) lengthen the journey; scouts shorten it."""
     return max(1, int(distance * SECONDS_PER_TILE / army_speed(units)))
+
+
+def fleet_speed(units: dict[str, int]) -> float:
+    """A fleet sails at its slowest *ship* — cargo below decks doesn't slow the
+    crossing. Falls back to army pace if (impossibly) no ship is present."""
+    present = [UNITS[t]["speed"] for t, c in units.items() if c > 0 and is_sea_unit(t)]
+    return min(present) if present else army_speed(units)
+
+
+def travel_seconds_naval(distance: float, units: dict[str, int]) -> int:
+    """Sailing time for a seaborne force to cross `distance` tiles."""
+    return max(1, int(distance * SECONDS_PER_TILE / fleet_speed(units)))
 
 
 def fortification_multiplier(forum_level: int) -> float:

@@ -1116,6 +1116,68 @@ input:focus {
   font-size: 0.68rem;
 }
 
+/* ===== the fleet (C1b) ===== */
+
+/* Transport capacity meter in the send-army form. */
+.crossing-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(63, 127, 166, 0.08);
+  font-size: 0.8rem;
+}
+.crossing-meter.over {
+  border-left-color: var(--terracotta);
+  background: rgba(181, 83, 47, 0.10);
+}
+.crossing-meter .cm-label { color: var(--ink-soft); white-space: nowrap; }
+.crossing-meter .cm-track {
+  flex: 1;
+  min-width: 60px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(43, 38, 32, 0.14);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.crossing-meter .cm-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--laurel), var(--gold-bright));
+  transition: width 0.2s ease;
+}
+.crossing-meter.over .cm-track > span {
+  background: linear-gradient(90deg, var(--terracotta), var(--terracotta-dark));
+}
+.crossing-meter .cm-count { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+/* The naval act at the head of a battle report. */
+.br-naval {
+  margin-bottom: 14px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  border-left: 4px solid var(--laurel);
+  background: rgba(63, 127, 166, 0.10);
+  font-size: 0.82rem;
+}
+.br-naval.lost { border-left-color: var(--terracotta); background: rgba(181, 83, 47, 0.10); }
+.br-naval-title {
+  display: block;
+  font-family: "Marcellus SC", serif;
+  letter-spacing: 0.03em;
+  margin-bottom: 5px;
+}
+.br-naval-lines { display: flex; flex-direction: column; gap: 2px; color: var(--ink-soft); }
+
+@media (max-width: 640px) {
+  .crossing-meter { flex-wrap: wrap; }
+}
+
 /* ===== battle replay (B2) ===== */
 
 .battle-replay { margin-top: 4px; }

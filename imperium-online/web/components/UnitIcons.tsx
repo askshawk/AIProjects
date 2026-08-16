@@ -60,9 +60,66 @@ export function SettlerIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+// --- the fleet. Same flat, outlined idiom: a ram and striped sail for the
+// trireme, a shielded gunwale for the defensive bireme, and a tubby
+// merchantman riding low under cargo for the transport.
+
+export function TriremeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="#3d3a32" strokeWidth="1.3" strokeLinejoin="round" {...props}>
+      {/* mast + red-striped square sail */}
+      <path d="M16 4 L16 18" stroke="#6b4a24" strokeWidth="1.4" />
+      <path d="M8 6 L24 6 L24 14 L8 14 Z" fill="#e8dcc0" />
+      <path d="M8 9 L24 9 M8 11.5 L24 11.5" stroke="#b5532f" strokeWidth="1.2" />
+      {/* lean hull with a bronze ram at the bow */}
+      <path d="M5 19 L27 19 L23 25 L9 25 Z" fill="#8a6a3a" />
+      <path d="M27 19 L31 21 L27 22 Z" fill="#c79a3a" stroke="#8a6a1f" />
+      {/* oars */}
+      <path d="M11 25 L10 28 M15 25 L14 28 M19 25 L18 28" stroke="#6b4a24" strokeWidth="1" />
+    </svg>
+  );
+}
+
+export function BiremeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="#3d3a32" strokeWidth="1.3" strokeLinejoin="round" {...props}>
+      {/* mast + blue sail */}
+      <path d="M16 4 L16 16" stroke="#6b4a24" strokeWidth="1.4" />
+      <path d="M9 6 L23 6 L23 13 L9 13 Z" fill="#bcd3e4" />
+      <path d="M9 9.5 L23 9.5" stroke="#3f7fa6" strokeWidth="1.2" />
+      {/* stocky hull */}
+      <path d="M4 18 L28 18 L24 26 L8 26 Z" fill="#7d6236" />
+      {/* a row of round shields along the gunwale — the sea wall */}
+      <circle cx="9" cy="21" r="2" fill="#b5532f" strokeWidth="0.9" />
+      <circle cx="16" cy="21" r="2" fill="#c79a3a" strokeWidth="0.9" />
+      <circle cx="23" cy="21" r="2" fill="#b5532f" strokeWidth="0.9" />
+    </svg>
+  );
+}
+
+export function TransportIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="#3d3a32" strokeWidth="1.3" strokeLinejoin="round" {...props}>
+      {/* furled sail on a short mast — she runs heavy, not fast */}
+      <path d="M16 5 L16 15" stroke="#6b4a24" strokeWidth="1.4" />
+      <path d="M11 7 C14 5.5 18 5.5 21 7 L21 9 C18 7.5 14 7.5 11 9 Z" fill="#e0d5b8" />
+      {/* deck cargo: crates and an amphora */}
+      <rect x="9" y="12" width="6" height="5" fill="#a8813f" />
+      <rect x="16" y="13" width="5" height="4" fill="#8a6a3a" />
+      <path d="M22 12 C24 12 24 16 22 17 Z" fill="#b5532f" />
+      {/* wide-beamed hull riding low */}
+      <path d="M3 18 L29 18 L25 26 L7 26 Z" fill="#8a6a3a" />
+      <path d="M3 20.5 L29 20.5" stroke="#5e4525" strokeWidth="1" />
+    </svg>
+  );
+}
+
 export const UNIT_ICONS: Record<string, (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element> = {
   legionary: LegionaryIcon,
   archer: ArcherIcon,
   scout: ScoutIcon,
   settler: SettlerIcon,
+  trireme: TriremeIcon,
+  bireme: BiremeIcon,
+  transport: TransportIcon,
 };

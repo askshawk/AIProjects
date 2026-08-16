@@ -34,6 +34,8 @@ export type UnitType = {
   defense: number;
   have: number;
   can_recruit: boolean;
+  domain: "land" | "sea";  // land units train at the Barracks, ships at the Harbour
+  capacity: number;        // transport berths, in population points
 };
 
 export type RecruitJob = {
@@ -59,6 +61,7 @@ export type City = {
   silver_mine_level: number;
   farm_level: number;
   barracks_level: number;
+  harbour_level: number;
   loyalty: number;
   capacity: number;
   population_used: number;
@@ -107,6 +110,14 @@ export type BattleReport = {
   loyalty_after: number;
   captured: boolean;
   night_bonus: boolean; // defenders fought under the night bonus
+  /** The sea phase of a seaborne assault; null for pure land battles. */
+  naval: {
+    sea_sent: UnitStack;
+    sea_survivors: UnitStack;
+    defender_sea_before: UnitStack;
+    defender_sea_survivors: UnitStack;
+    outcome: "attacker_won" | "defender_won";
+  } | null;
   created_at: string;
 };
 

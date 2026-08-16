@@ -89,14 +89,16 @@ def _upgrade_previews(city: City, builds: list[BuildJob], army_pop: int) -> list
 def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) -> list[UnitTypeOut]:
     """Per unit-type catalog + this city's live recruit economics."""
     have = {u.unit_type: u.count for u in units}
-    built = city.barracks_level >= 1
     out: list[UnitTypeOut] = []
     for unit_type in game_config.UNIT_TYPES:
         spec = game_config.UNITS[unit_type]
         one_cost = game_config.unit_cost(unit_type, 1)
+        # Ships train at the Harbour, soldiers at the Barracks.
+        facility = city.harbour_level if game_config.is_sea_unit(unit_type) else city.barracks_level
         can = (
-            built
-            and game_config.can_recruit_unit(unit_type, city.forum_level)
+            game_config.can_recruit_unit(
+                unit_type, city.forum_level, city.barracks_level, city.harbour_level
+            )
             and economy.can_afford(city, one_cost)
             and army_pop + spec["population"] <= pop_cap
         )
@@ -106,11 +108,13 @@ def _unit_catalog(city: City, units: list[Unit], army_pop: int, pop_cap: int) ->
                 label=spec["label"],
                 cost=one_cost,
                 population=spec["population"],
-                seconds=game_config.recruit_seconds(unit_type, 1, city.barracks_level),
+                seconds=game_config.recruit_seconds(unit_type, 1, facility),
                 attack=spec["attack"],
                 defense=spec["defense"],
                 have=have.get(unit_type, 0),
                 can_recruit=can,
+                domain=spec.get("domain", "land"),
+                capacity=spec.get("capacity", 0),
             )
         )
     return out
@@ -145,6 +149,7 @@ def _serialize(city: City, session: Session) -> CityOut:
         silver_mine_level=city.silver_mine_level,
         farm_level=city.farm_level,
         barracks_level=city.barracks_level,
+        harbour_level=city.harbour_level,
         loyalty=city.loyalty,
         capacity=game_config.warehouse_capacity(city.forum_level),
         population_used=pop_used,
@@ -312,15 +317,18 @@ def recruit(
     now = utcnow()
     catch_up(session, city, now)
 
-    # prerequisite: a Barracks must exist
-    if city.barracks_level < 1:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Build a Barracks before recruiting")
-    # Settlers need a developed Forum.
-    if not game_config.can_recruit_unit(body.unit_type, city.forum_level):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"Settlers require Forum level {game_config.SETTLER_FORUM_REQUIREMENT}",
-        )
+    # prerequisites, domain-aware: ships need a Harbour, soldiers a Barracks,
+    # settlers additionally a developed Forum.
+    if not game_config.can_recruit_unit(
+        body.unit_type, city.forum_level, city.barracks_level, city.harbour_level
+    ):
+        if game_config.is_sea_unit(body.unit_type):
+            detail = "Build a Harbour before recruiting ships"
+        elif city.barracks_level < 1:
+            detail = "Build a Barracks before recruiting"
+        else:
+            detail = f"Settlers require Forum level {game_config.SETTLER_FORUM_REQUIREMENT}"
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail)
 
     # gate 1: resources
     cost = game_config.unit_cost(body.unit_type, body.count)
@@ -355,7 +363,8 @@ def recruit(
     # last pending recruit job.
     recruits = _pending_recruits(session, city)
     start_at = recruits[-1].completes_at if recruits else now
-    duration = game_config.recruit_seconds(body.unit_type, body.count, city.barracks_level)
+    facility = city.harbour_level if game_config.is_sea_unit(body.unit_type) else city.barracks_level
+    duration = game_config.recruit_seconds(body.unit_type, body.count, facility)
     session.add(RecruitJob(
         city_id=city.id, unit_type=body.unit_type, count=body.count,
         started_at=start_at, completes_at=start_at + timedelta(seconds=duration),
