@@ -18,10 +18,11 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from . import realtime
+from . import ratelimit, realtime
 from .db import init_db
 from .routers import alliances, auth, cities, movements, world
 from .worker import start_worker, stop_worker
@@ -41,6 +42,26 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Imperium Online", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """Budget every request before it reaches a route.
+
+    Middleware rather than a per-route dependency so a new endpoint is covered
+    the moment it exists — the failure mode of the dependency approach is an
+    unprotected route nobody remembers to annotate. CORS preflights are exempt:
+    an OPTIONS that 429s would surface in the browser as an opaque CORS error
+    rather than as rate limiting.
+    """
+    if request.method != "OPTIONS":
+        try:
+            ratelimit.enforce(request)
+        except HTTPException as exc:
+            return JSONResponse(
+                {"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers
+            )
+    return await call_next(request)
 
 # Allow the Next.js dev server (and any extra origins) to call the API.
 origins = [

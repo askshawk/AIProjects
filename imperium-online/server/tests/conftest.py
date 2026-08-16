@@ -19,6 +19,11 @@ import pytest
 # would reach for the real dev database on disk.
 os.environ.setdefault("IMPERIUM_SKIP_MIGRATIONS", "1")
 
+# Rate limiting is off for the suite at large: tests register dozens of users
+# from one address and would trip the auth budget. test_ratelimit.py turns it
+# on deliberately for the cases that exercise it.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "0")
+
 from app import daynight  # noqa: E402  (import after the env var is set)
 
 
