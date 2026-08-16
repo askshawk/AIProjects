@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import ratelimit, realtime
+from . import config, ratelimit, realtime
 from .db import init_db
 from .routers import alliances, auth, cities, movements, world
 from .worker import start_worker, stop_worker
@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
     # Startup: create tables, capture the asyncio loop (the realtime push helper
     # uses it to schedule sends from the worker thread / sync handlers), then
     # kick off the background event resolver.
+    # Refuse to boot a production app on development defaults — see config.py.
+    config.assert_production_ready()
     init_db()
     realtime.set_loop(asyncio.get_running_loop())
     start_worker()
@@ -79,6 +81,14 @@ app.add_middleware(
     # local clock when interpolating army positions between two timestamps.
     expose_headers=["Date"],
 )
+
+@app.get("/health", tags=["ops"])
+def health() -> dict[str, str]:
+    """Liveness probe for the hosting platform. Deliberately does not touch the
+    database: this answers "is the process up?", and a health check that fails
+    on a slow query takes the app down for a problem it cannot fix."""
+    return {"status": "ok"}
+
 
 app.include_router(auth.router)
 app.include_router(cities.router)

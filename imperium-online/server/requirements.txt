@@ -8,3 +8,4 @@ python-multipart>=0.0.9
 APScheduler>=3.10
 pydantic[email]>=2.7
 alembic>=1.13  # schema migrations; see migrations/ and the README
+psycopg[binary]>=3.1  # Postgres driver for production (DATABASE_URL=postgresql+psycopg://...)
