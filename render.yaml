@@ -1,0 +1,41 @@
+# Render Blueprint — deploys the Imperium Online API straight from GitHub.
+#
+# This is the no-CLI path: Render reads this file when you point it at the
+# repository, so the whole deploy happens in a browser. See
+# imperium-online/DEPLOY.md.
+#
+# The database is deliberately NOT defined here. Render's free Postgres expires
+# after 30 days; Neon's free tier does not, so DATABASE_URL is set by hand from
+# a Neon connection string instead.
+
+services:
+  - type: web
+    name: imperium-api
+    runtime: docker
+    rootDir: imperium-online/server
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Render terminates TLS in front of the app and sets X-Forwarded-For, so
+      # the rate limiter can trust it here. (Off by default — trusting that
+      # header with no proxy in front lets any client forge an address.)
+      - key: TRUST_PROXY
+        value: "1"
+      # The API and web app are on different domains, so the session cookie
+      # must be SameSite=None, which requires Secure.
+      - key: COOKIE_SECURE
+        value: "1"
+      # Generated once by Render and kept across deploys. Changing it signs
+      # everyone out.
+      - key: JWT_SECRET
+        generateValue: true
+      # Set these two in the dashboard — they are account-specific:
+      #   DATABASE_URL   postgresql+psycopg://... (from Neon; note the +psycopg)
+      #   CORS_ORIGINS   https://your-app.vercel.app  (exact, no trailing slash)
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

@@ -104,9 +104,11 @@ migrations were adopted. A missed one meant a 500 on the first city read.
 
 ## Deploying it
 
-The API runs on Fly.io and the web app on Vercel, both on free tiers.
-**[DEPLOY.md](DEPLOY.md)** is the step-by-step runbook — including the traps
-(cross-domain cookies, CORS, and why the machine must not scale to zero).
+**[DEPLOY.md](DEPLOY.md)** is the step-by-step runbook, with two routes to the
+same running game: a **browser-only** one (Render Blueprint + Neon + Vercel, no
+CLI to install — the repo ships a [`render.yaml`](../render.yaml)), or Fly +
+Vercel from the terminal. It also covers the traps — cross-domain cookies, CORS,
+and why a server that *sleeps* still resolves battles correctly.
 
 Production is guarded rather than trusted: with `APP_ENV=production` the app
 refuses to start on any development default — the shipped JWT secret, localhost

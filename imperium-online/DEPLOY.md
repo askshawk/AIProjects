@@ -1,14 +1,67 @@
 # Deploying Imperium Online
 
-Two pieces: the **API** (FastAPI + Postgres) on Fly.io, and the **web app**
-(Next.js) on Vercel. Both have free tiers that comfortably fit this game.
+Three pieces: a **Postgres database**, the **API** (FastAPI), and the **web app**
+(Next.js). All three have free tiers that comfortably fit this game.
 
-Everything here needs *your* accounts, so these are commands for you to run —
-the repo is already configured for them.
+Everything here needs *your* accounts — that, and nothing about the code, is the
+only reason this isn't already live.
 
-Roughly 20 minutes end to end.
+There are two routes. Pick one:
+
+- **[Route A — browser only](#route-a--browser-only-no-cli)**, no installs. ~15 minutes.
+  Start here.
+- **[Route B — Fly + Vercel CLI](#route-b--fly--vercel-cli)**, more control, needs
+  two CLIs. ~20 minutes.
+
+Both end with the same running game. Route A is *not* a lesser version.
+
+> Free-tier terms change; the shapes below were accurate when written but check
+> each provider's current page before assuming "free".
 
 ---
+
+## Route A — browser only (no CLI)
+
+The code is already on GitHub, and both hosts can deploy straight from a repo, so
+this whole route is clicking through three websites.
+
+**1. Database — [neon.tech](https://neon.tech).** New project → copy the connection
+string. Change the scheme to `postgresql+psycopg://` (that's the driver this app
+uses; the rest of the URL is unchanged). Neon's free tier doesn't expire, which is
+why it's here rather than the host's own free Postgres.
+
+**2. API — [render.com](https://render.com).** New → **Blueprint** → connect the
+repo. Render reads [`render.yaml`](../render.yaml) at the repo root and configures
+the service itself: Docker build from `imperium-online/server`, `APP_ENV=production`,
+`TRUST_PROXY=1`, `COOKIE_SECURE=1`, and a generated `JWT_SECRET`. You fill in two
+values it can't know:
+
+- `DATABASE_URL` — the Neon string from step 1
+- `CORS_ORIGINS` — a placeholder for now; you'll have the real one after step 3
+
+Deploy, then open `https://YOUR-API.onrender.com/health` — it should say
+`{"status":"ok"}`. If it refuses to boot instead, read the error: that's the
+production guard in `server/app/config.py` listing exactly what's misconfigured.
+
+**3. Web app — [vercel.com](https://vercel.com).** Add New → Project → import the
+same repo. Set **Root Directory** to `imperium-online/web`, and add one
+environment variable:
+
+- `NEXT_PUBLIC_API_URL` = `https://YOUR-API.onrender.com`
+
+Deploy.
+
+**4. Close the loop.** Back in Render, set `CORS_ORIGINS` to the exact Vercel URL
+(`https://your-app.vercel.app` — scheme included, no trailing slash). Saving it
+restarts the service. Now skip to [Check it](#3--check-it).
+
+**The one tradeoff:** a free Render service sleeps after ~15 minutes idle, so the
+first visit after a quiet spell takes about a minute to wake. It doesn't lose
+anything — see [the note on sleeping](#does-sleeping-break-the-game) below.
+
+---
+
+## Route B — Fly + Vercel CLI
 
 ## Before you start
 
@@ -118,24 +171,52 @@ requests at all, and the app rejects `*` on purpose.
 **Preview deployments break auth.** Vercel gives each preview its own hostname,
 which won't be in `CORS_ORIGINS`. Either add them or test against production.
 
-**Scaling to zero loses the game.** `auto_stop_machines = false` is deliberate:
-a sleeping machine drops every WebSocket and stops the background worker that
-resolves battles while players are away — which is the whole premise of an
-async game.
-
 **One worker only.** The WebSocket registry and the rate-limit counters are
 both in process. A second worker splits the sockets and doubles the effective
 rate limit. Redis is the fix if you ever need to scale out.
 
 ---
 
+## Does sleeping break the game?
+
+No — and this is worth understanding, because it's the payoff of the whole
+architecture.
+
+The instinct is that a sleeping server loses the async game: battles land while
+nobody's online, so who resolves them? But `catch_up()` never depended on a
+running process. State is derived from `now - last_tick_at` and absolute
+`completes_at` timestamps, so **reads resolve the past**:
+`resolve_due_movements()` is called from `routers/cities.py` and
+`routers/movements.py`, not only from `worker.py`. A server that wakes on the
+next request fast-forwards everything that was due while it slept — builds,
+recruits, battles, loyalty, conquest — in time order, and the player sees the
+correct world.
+
+What sleeping actually costs is narrower than it sounds:
+
+- **A cold first load** (~30–60s on Render's free tier).
+- **Push latency, not correctness.** The worker exists to push a `attack_resolved`
+  event to someone already staring at the screen. Asleep, the same battle simply
+  resolves on the next read instead of arriving as a live toast.
+
+So `auto_stop_machines = false` in `fly.toml` is a *nicety* — it keeps
+WebSockets alive and events instant. It is not a correctness requirement, and an
+earlier version of this file overstated it as one.
+
+Which is why Route A's free, sleeping service is a real option and not a
+compromise.
+
+---
+
 ## Costs
 
-Free on Fly's shared-cpu-1x with one 512MB machine, Neon's free tier, and
-Vercel's hobby plan. The one thing that *would* cost money is running more than
-one always-on machine.
+Route A is free: Render's free web service, Neon's free Postgres, Vercel hobby.
+Route B is free on Fly's shared-cpu-1x with one 512MB machine plus the same Neon
+and Vercel tiers. The one thing that *would* cost money is keeping a machine
+always on — which, per the section above, buys instant push events rather than a
+working game.
 
-## Afterwards
+## Afterwards (Route B)
 
 ```bash
 fly logs                        # tail the API

@@ -96,8 +96,3 @@ app.include_router(world.router)
 app.include_router(movements.router)
 app.include_router(alliances.router)
 app.include_router(realtime.router)
-
-
-@app.get("/health", tags=["meta"])
-def health() -> dict[str, str]:
-    return {"status": "ok"}
