@@ -12,10 +12,13 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "seed:exercises": "tsx scripts/seed-exercises.ts"
+    "seed:exercises": "tsx scripts/seed-exercises.ts",
+    "generate:program": "tsx scripts/generate-program.ts",
+    "seed:demo": "tsx scripts/seed-golden-six.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.39",
+    "@anthropic-ai/sdk": "^0.117.1",
     "@electric-sql/pglite": "^0.5.5",
     "@electric-sql/pglite-pgvector": "^0.0.6",
     "@huggingface/transformers": "^4.2.0",

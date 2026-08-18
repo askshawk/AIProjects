@@ -20,8 +20,8 @@ const isLocal = url.includes("127.0.0.1") || url.includes("localhost");
 const sql =
   globalForDb.__ironAtlasSql ??
   postgres(url, {
-    // Local is PGlite behind a multiplexing socket server (see scripts/db-server.ts).
-    // It tolerates concurrent connections but there's nothing to gain from a big pool.
+    // Local is PGlite behind a multiplexing socket server (see scripts/db-server.ts),
+    // which tolerates concurrent connections but gains nothing from a big pool.
     max: isLocal ? 3 : 10,
     // PGlite's socket server speaks plaintext; hosted Postgres requires TLS.
     ssl: isLocal ? false : "require",
