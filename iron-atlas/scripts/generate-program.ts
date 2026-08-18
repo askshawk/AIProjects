@@ -145,6 +145,21 @@ async function main() {
     `  ${program.title} by ${program.authorName} — ${program.daysPerWeek}d/week, ${program.weeks} weeks`,
   );
 
+  // The model occasionally returns a well-formed program with an empty
+  // weeks_detail (schema allows it — nothing forces a non-empty array). That
+  // parses fine and would otherwise save silently as a program with no
+  // training data in it.
+  const totalPrescribed = program.weeks_detail.flatMap((w) =>
+    w.days.flatMap((d) => d.exercises),
+  ).length;
+  if (program.weeks_detail.length === 0 || totalPrescribed === 0) {
+    console.error(
+      `\ngeneration produced no training data (${program.weeks_detail.length} weeks, ${totalPrescribed} prescribed sets) — retry the command`,
+    );
+    await sql.end();
+    process.exit(1);
+  }
+
   const { resolutions, failures } = await resolveAll(program);
 
   for (const [requested, { resolved }] of resolutions) {
