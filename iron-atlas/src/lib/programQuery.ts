@@ -67,6 +67,7 @@ export async function loadProgram(slug: string) {
       primaryMuscle: exercises.primaryMuscle,
       equipment: exercises.equipment,
       isCompound: exercises.isCompound,
+      isExplosive: exercises.isExplosive,
     })
     .from(programWeeks)
     .innerJoin(programDays, eq(programDays.weekId, programWeeks.id))
@@ -99,4 +100,29 @@ export function groupByWeek(rows: ProgramRow[]) {
     weeks.set(row.weekId, week);
   }
   return weeks;
+}
+
+/**
+ * Rewrites a program's rows to use the gym's substitutions. Applied before
+ * rendering *and* before export, so the spreadsheet you download is the
+ * program you were shown — the two can't drift.
+ */
+export function applySwaps(
+  rows: ProgramRow[],
+  swaps: Map<number, { to: { id: number; name: string; equipment: string } | null }>,
+): ProgramRow[] {
+  return rows.map((row) => {
+    const swap = swaps.get(row.exerciseId);
+    if (!swap?.to) return row;
+    return {
+      ...row,
+      exerciseId: swap.to.id,
+      exerciseName: swap.to.name,
+      equipment: swap.to.equipment as ProgramRow["equipment"],
+      // Keep the original visible; a swapped program should say what it swapped.
+      exNotes: [row.exNotes, `Swapped from ${row.exerciseName}`]
+        .filter(Boolean)
+        .join(" · "),
+    };
+  });
 }

@@ -57,7 +57,11 @@ Thumbs.db
 
 # Database
 *.db
-data/
+# Runtime data dirs for the Python projects. Scoped per-project rather than a
+# bare `data/`, which also matched iron-atlas/src/data — silently untracking
+# the exercise catalogue that the whole app is seeded from.
+/sentinel/data/
+/news-analysis/data/
 
 # Logs
 *.log

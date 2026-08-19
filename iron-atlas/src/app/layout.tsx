@@ -23,6 +23,7 @@ const NAV = [
   { href: "/coach", label: "Coach" },
   { href: "/programs", label: "Programs" },
   { href: "/exercises", label: "Exercises" },
+  { href: "/gym", label: "Your gym" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

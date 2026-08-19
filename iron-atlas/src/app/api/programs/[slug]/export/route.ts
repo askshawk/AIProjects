@@ -1,4 +1,6 @@
-import { loadProgram } from "@/lib/programQuery";
+import { applySwaps, loadProgram } from "@/lib/programQuery";
+import { readGymProfile } from "@/lib/gymProfile";
+import { planSwaps } from "@/lib/substitute";
 import { buildProgramCsv, buildProgramWorkbook } from "@/lib/workbook";
 
 /**
@@ -22,8 +24,17 @@ export async function GET(
     return new Response("Program not found", { status: 404 });
   }
 
-  const { program, rows } = loaded;
-  const format = new URL(request.url).searchParams.get("f");
+  const { program } = loaded;
+  const url = new URL(request.url);
+  const format = url.searchParams.get("f");
+
+  // The download honours the gym profile unless explicitly asked not to, so
+  // the spreadsheet matches the program as displayed.
+  const gym = await readGymProfile();
+  const rows =
+    url.searchParams.get("original") === "1"
+      ? loaded.rows
+      : applySwaps(loaded.rows, await planSwaps(loaded.rows, gym));
 
   if (format === "csv") {
     return new Response(buildProgramCsv(program, rows), {

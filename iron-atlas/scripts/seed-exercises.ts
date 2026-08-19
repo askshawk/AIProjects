@@ -35,6 +35,7 @@ async function main() {
           equipment: raw`excluded.equipment`,
           isUnilateral: raw`excluded.is_unilateral`,
           isCompound: raw`excluded.is_compound`,
+          isExplosive: raw`excluded.is_explosive`,
           embedding: raw`excluded.embedding`,
         },
       });

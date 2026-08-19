@@ -4,7 +4,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { programs } from "@/db/schema";
 import { Pill, ProvenanceBadge } from "@/components/ProgramBadges";
-import { groupByWeek, loadProgram } from "@/lib/programQuery";
+import { applySwaps, groupByWeek, loadProgram } from "@/lib/programQuery";
+import { readGymProfile } from "@/lib/gymProfile";
+import { planSwaps } from "@/lib/substitute";
+import { SwapNotice } from "@/components/SwapNotice";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -46,7 +49,13 @@ export default async function ProgramPage({
   const loaded = await loadProgram(slug);
   if (!loaded) notFound();
 
-  const { program, rows } = loaded;
+  const { program } = loaded;
+
+  // Adapt to the gym before rendering, and show what changed rather than
+  // quietly presenting a different program under the author's name.
+  const gym = await readGymProfile();
+  const swaps = await planSwaps(loaded.rows, gym);
+  const rows = applySwaps(loaded.rows, swaps);
   const weeks = groupByWeek(rows);
 
   return (
@@ -118,6 +127,8 @@ export default async function ProgramPage({
           )}
         </div>
       )}
+
+      <SwapNotice swaps={[...swaps.values()]} />
 
       {program.description && (
         <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">

@@ -40,6 +40,8 @@ export const exercises = pgTable(
     equipment: equipment("equipment").notNull(),
     isUnilateral: boolean("is_unilateral").notNull().default(false),
     isCompound: boolean("is_compound").notNull().default(false),
+    /** Trained for speed, not load — jumps, throws, Olympic lifts. */
+    isExplosive: boolean("is_explosive").notNull().default(false),
     notes: text("notes"),
     embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
   },
