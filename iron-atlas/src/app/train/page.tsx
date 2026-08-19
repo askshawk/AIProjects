@@ -1,0 +1,203 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { setLogs, workoutSessions } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth";
+import { activeProgram } from "@/lib/fork";
+import {
+  lastPerformances,
+  personalBests,
+  prescriptionFor,
+  programDaysFor,
+} from "@/lib/logbook";
+import { LogWorkout } from "@/components/LogWorkout";
+
+export const metadata = { title: "Train · Iron Atlas" };
+
+async function logSession(formData: FormData) {
+  "use server";
+
+  const user = await getCurrentUser();
+  if (!user) redirect("/account");
+
+  const dayId = Number(formData.get("dayId"));
+  if (!Number.isInteger(dayId)) redirect("/train");
+
+  // Parse the flat form into sets. Field names carry their own identity
+  // (w-<prescriptionId>-<setIndex>) so the shape survives a form POST.
+  type Parsed = { exerciseId: number; setIndex: number; weight: number | null; reps: number | null; rpe: number | null };
+  const parsed: Parsed[] = [];
+
+  for (const [key, raw] of formData.entries()) {
+    const match = /^w-(\d+)-(\d+)$/.exec(key);
+    if (!match) continue;
+
+    const [, peId, idx] = match;
+    const exerciseId = Number(formData.get(`x-${peId}-${idx}`));
+    const num = (v: FormDataEntryValue | null) => {
+      const n = Number(String(v ?? "").trim());
+      return String(v ?? "").trim() === "" || Number.isNaN(n) ? null : n;
+    };
+
+    const weight = num(raw);
+    const reps = num(formData.get(`r-${peId}-${idx}`));
+
+    // An untouched row is not a set that happened.
+    if (weight === null && reps === null) continue;
+
+    parsed.push({
+      exerciseId,
+      setIndex: Number(idx),
+      weight,
+      reps,
+      rpe: num(formData.get(`e-${peId}-${idx}`)),
+    });
+  }
+
+  if (parsed.length === 0) redirect("/train?empty=1");
+
+  await db.transaction(async (tx) => {
+    const [session] = await tx
+      .insert(workoutSessions)
+      .values({
+        userId: user.id,
+        userProgramDayId: dayId,
+        notes: String(formData.get("notes") ?? "") || null,
+        completedAt: new Date(),
+      })
+      .returning({ id: workoutSessions.id });
+
+    await tx.insert(setLogs).values(
+      parsed.map((p) => ({
+        sessionId: session.id,
+        exerciseId: p.exerciseId,
+        setIndex: p.setIndex,
+        weightKg: p.weight === null ? null : String(p.weight),
+        reps: p.reps,
+        rpe: p.rpe === null ? null : String(p.rpe),
+      })),
+    );
+  });
+
+  revalidatePath("/train");
+  revalidatePath("/history");
+  redirect("/history?logged=1");
+}
+
+export default async function TrainPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return (
+      <div className="max-w-md space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Train</h1>
+        <p className="text-sm text-muted">
+          You need an account to run a program and log sets.
+        </p>
+        <Link
+          href="/account"
+          className="inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
+
+  const program = await activeProgram(user.id);
+  if (!program) {
+    return (
+      <div className="max-w-md space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Train</h1>
+        <p className="text-sm text-muted">
+          No active program. Pick one from the library and hit &ldquo;Start this
+          program&rdquo; — it gets copied to your account with your gym&apos;s swaps baked in.
+        </p>
+        <Link
+          href="/programs"
+          className="inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
+        >
+          Browse programs
+        </Link>
+      </div>
+    );
+  }
+
+  const days = await programDaysFor(program.id);
+  if (days.length === 0) {
+    return <p className="text-sm text-muted">This program has no training days.</p>;
+  }
+
+  // Which day to show: the requested one, else the one after whatever was
+  // logged last, else the start of the block.
+  const requested = Number(Array.isArray(params.day) ? params.day[0] : params.day);
+  const [lastLogged] = await db
+    .select({ dayId: workoutSessions.userProgramDayId })
+    .from(workoutSessions)
+    .where(eq(workoutSessions.userId, user.id))
+    .orderBy(desc(workoutSessions.performedAt))
+    .limit(1);
+
+  let index = days.findIndex((d) => d.dayId === requested);
+  if (index === -1) {
+    const lastIndex = days.findIndex((d) => d.dayId === lastLogged?.dayId);
+    index = lastIndex === -1 ? 0 : (lastIndex + 1) % days.length;
+  }
+  const day = days[index];
+
+  const prescription = await prescriptionFor(day.dayId);
+  const exerciseIds = [...new Set(prescription.map((p) => p.exerciseId))];
+  const [last, bests] = await Promise.all([
+    lastPerformances(user.id, exerciseIds),
+    personalBests(user.id, exerciseIds),
+  ]);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="text-sm text-muted">{program.title}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{day.dayName}</h1>
+        <p className="mt-1 text-sm text-muted">
+          {day.weekLabel ?? `Week ${day.weekNumber}`}
+          {day.dayNotes && ` · ${day.dayNotes}`}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {days.map((d, i) => (
+          <Link
+            key={d.dayId}
+            href={`/train?day=${d.dayId}`}
+            className={`rounded-md border px-2.5 py-1 text-xs ${
+              i === index ? "border-accent bg-accent-soft/30 text-foreground" : "text-muted"
+            }`}
+          >
+            {d.dayName}
+          </Link>
+        ))}
+      </div>
+
+      {params.empty && (
+        <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3 text-sm text-amber-300">
+          Nothing was logged — fill in at least one set before finishing.
+        </p>
+      )}
+
+      <LogWorkout
+        dayId={day.dayId}
+        dayName={day.dayName}
+        exercises={prescription}
+        lastPerformances={Object.fromEntries(last)}
+        personalBests={Object.fromEntries(bests)}
+        action={logSession}
+      />
+    </div>
+  );
+}

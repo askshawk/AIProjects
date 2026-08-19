@@ -8,6 +8,7 @@ import { applySwaps, groupByWeek, loadProgram } from "@/lib/programQuery";
 import { readGymProfile } from "@/lib/gymProfile";
 import { planSwaps } from "@/lib/substitute";
 import { SwapNotice } from "@/components/SwapNotice";
+import { StartProgram } from "@/components/StartProgram";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -74,6 +75,7 @@ export default async function ProgramPage({
         <p className="max-w-2xl text-muted">{program.summary}</p>
 
         <div className="flex flex-wrap gap-2">
+          <StartProgram slug={program.slug} />
           <a
             href={`/api/programs/${program.slug}/export`}
             className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-opacity hover:opacity-90"
