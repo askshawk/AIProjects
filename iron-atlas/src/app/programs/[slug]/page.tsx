@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  exercises,
-  programDays,
-  programExercises,
-  programWeeks,
-  programs,
-} from "@/db/schema";
+import { programs } from "@/db/schema";
 import { Pill, ProvenanceBadge } from "@/components/ProgramBadges";
+import { groupByWeek, loadProgram } from "@/lib/programQuery";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -48,74 +43,11 @@ export default async function ProgramPage({
 }) {
   const { slug } = await params;
 
-  // Explicit columns: `select *` would drag the 384-float embedding into the
-  // render payload, and nothing on this page uses it.
-  const [program] = await db
-    .select({
-      id: programs.id,
-      title: programs.title,
-      authorName: programs.authorName,
-      summary: programs.summary,
-      description: programs.description,
-      goal: programs.goal,
-      experienceLevel: programs.experienceLevel,
-      daysPerWeek: programs.daysPerWeek,
-      weeks: programs.weeks,
-      splitType: programs.splitType,
-      progression: programs.progression,
-      equipmentRequired: programs.equipmentRequired,
-      sourceUrls: programs.sourceUrls,
-      aiGenerated: programs.aiGenerated,
-      verified: programs.verified,
-    })
-    .from(programs)
-    .where(eq(programs.slug, slug));
-  if (!program) notFound();
+  const loaded = await loadProgram(slug);
+  if (!loaded) notFound();
 
-  // One query for the whole block; grouped in memory rather than N+1 per day.
-  const rows = await db
-    .select({
-      weekId: programWeeks.id,
-      weekNumber: programWeeks.weekNumber,
-      weekLabel: programWeeks.label,
-      weekNotes: programWeeks.notes,
-      repeatCount: programWeeks.repeatCount,
-      dayId: programDays.id,
-      dayIndex: programDays.dayIndex,
-      dayName: programDays.name,
-      dayNotes: programDays.notes,
-      order: programExercises.order,
-      sets: programExercises.sets,
-      reps: programExercises.reps,
-      intensityType: programExercises.intensityType,
-      intensityValue: programExercises.intensityValue,
-      restSeconds: programExercises.restSeconds,
-      tempo: programExercises.tempo,
-      exNotes: programExercises.notes,
-      supersetGroup: programExercises.supersetGroup,
-      exerciseName: exercises.name,
-      primaryMuscle: exercises.primaryMuscle,
-    })
-    .from(programWeeks)
-    .innerJoin(programDays, eq(programDays.weekId, programWeeks.id))
-    .innerJoin(programExercises, eq(programExercises.dayId, programDays.id))
-    .innerJoin(exercises, eq(exercises.id, programExercises.exerciseId))
-    .where(eq(programWeeks.programId, program.id))
-    .orderBy(
-      asc(programWeeks.weekNumber),
-      asc(programDays.dayIndex),
-      asc(programExercises.order),
-    );
-
-  type Row = (typeof rows)[number];
-  const weeks = new Map<number, { meta: Row; days: Map<number, { meta: Row; items: Row[] }> }>();
-  for (const row of rows) {
-    const week = weeks.get(row.weekId) ?? { meta: row, days: new Map() };
-    const day = week.days.get(row.dayId) ?? { meta: row, items: [] };
-    day.items.push(row);
-    week.days.set(row.dayId, day);
-    weeks.set(row.weekId, week);
-  }
+  const { program, rows } = loaded;
+  const weeks = groupByWeek(rows);
 
   return (
     <div className="space-y-8">
@@ -131,6 +63,22 @@ export default async function ProgramPage({
           <ProvenanceBadge aiGenerated={program.aiGenerated} verified={program.verified} />
         </div>
         <p className="max-w-2xl text-muted">{program.summary}</p>
+
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={`/api/programs/${program.slug}/export`}
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-opacity hover:opacity-90"
+          >
+            Download spreadsheet
+          </a>
+          <a
+            href={`/api/programs/${program.slug}/export?f=csv`}
+            className="rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:border-accent/60"
+          >
+            CSV
+          </a>
+        </div>
+
         <div className="flex flex-wrap gap-1">
           <Pill>{label(program.goal)}</Pill>
           <Pill>{program.experienceLevel}</Pill>
