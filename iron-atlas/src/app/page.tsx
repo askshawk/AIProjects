@@ -20,12 +20,15 @@ export default async function Home() {
           A library of programs from the coaches worth reading — pick one, swap the movements
           your gym can&apos;t do, and take it with you as a spreadsheet or a logbook.
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link
-            href="/programs"
+            href="/coach"
             className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
           >
-            Browse programs
+            Find me a program
+          </Link>
+          <Link href="/programs" className="rounded-md border px-4 py-2 text-sm font-medium">
+            Browse the library
           </Link>
           <Link href="/exercises" className="rounded-md border px-4 py-2 text-sm font-medium">
             Exercise catalogue
