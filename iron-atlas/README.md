@@ -26,7 +26,8 @@ npm run seed:demo              # one hand-transcribed program so the library isn
 npm run dev                    # http://localhost:3100
 ```
 
-To fill the library, add your `ANTHROPIC_API_KEY` to `.env.local` and generate:
+Both `ANTHROPIC_API_KEY` (generation and chat) and `VOYAGE_API_KEY` (embeddings) go in
+`.env.local`. Then fill the library:
 
 ```bash
 npm run generate:program -- "5/3/1 Boring But Big" --slug 531-bbb
@@ -64,10 +65,16 @@ knowledge of well-known programs, not transcribed from the sources. Each row car
 `ai_generated`, the author's name, source links, and a `verified` flag to flip once a human has
 checked it against the original. The UI shows the badge.
 
-**Embeddings run locally.** `all-MiniLM-L6-v2` via transformers.js (384 dimensions, CPU, no API
-key) powers exercise similarity — which is what makes "my gym has no hack squat" return
-V-squat, pendulum squat, belt squat rather than a guess. Anthropic has no embeddings endpoint,
-and this avoids taking on a second provider.
+**Embeddings come from Voyage.** `voyage-4-lite` at 512 dimensions powers exercise
+similarity — which is what makes "my gym has no hack squat" return V-squat, pendulum
+squat, belt squat rather than a guess. This originally ran locally on transformers.js,
+but the model plus onnxruntime is ~413 MB installed against a 250 MB serverless function
+limit, so deployment forced an API. Anthropic has no embeddings endpoint; Voyage is its
+recommended partner and the free tier covers this project many times over.
+
+Changing model means changing `EMBEDDING_DIM` in `src/lib/embeddings.ts`, generating a
+migration, and re-running `seed:exercises` — vectors from different models aren't
+comparable.
 
 ## Layout
 
@@ -90,6 +97,10 @@ scripts/          db server, seeds, program generation
 | `/gym` | Your equipment — drives substitutions everywhere |
 | `/train` | Today's session: prescription, last time's numbers, suggested loads, set logging |
 | `/history` | Logged sessions and estimated-1RM trends |
+
+## Deploying
+
+See [DEPLOY.md](DEPLOY.md) — Vercel + Neon + Voyage, all free tier.
 
 ## Installing it on a phone
 

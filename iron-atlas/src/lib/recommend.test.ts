@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { sql as client } from "@/db";
 import { profileText, recommendPrograms } from "@/lib/recommend";
+import { hasEmbeddings } from "@/lib/testEnv";
 
 /**
  * Runs against the local database — start it with `npm run db`. These assert
@@ -33,7 +34,7 @@ describe("profileText", () => {
   });
 });
 
-describe("recommendPrograms", () => {
+describe.skipIf(!hasEmbeddings)("recommendPrograms", () => {
   it("respects every constraint when the library can satisfy them", async () => {
     const recs = await recommendPrograms({
       goal: "hypertrophy",

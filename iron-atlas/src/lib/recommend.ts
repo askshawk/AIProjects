@@ -1,4 +1,4 @@
-import { and, cosineDistance, desc, sql, type SQL } from "drizzle-orm";
+import { and, asc, cosineDistance, desc, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   equipment as equipmentEnum,
@@ -6,7 +6,7 @@ import {
   goal as goalEnum,
   programs,
 } from "@/db/schema";
-import { embedOne } from "@/lib/embeddings";
+import { tryEmbedOne } from "@/lib/embeddings";
 
 /**
  * Hybrid retrieval: hard SQL filters decide what is *trainable*, embeddings
@@ -116,8 +116,19 @@ export async function recommendPrograms(
     });
   }
 
-  const vector = await embedOne(profileText(profile) || "general strength training");
-  const similarity = sql<number>`1 - (${cosineDistance(programs.embedding, vector)})`;
+  // Null when the embedding model can't load. The hard filters still decide
+  // what's trainable; only the "which of these fits best" ordering is lost.
+  const vector = await tryEmbedOne(
+    profileText(profile) || "general strength training",
+    "query",
+  );
+  const similarity = vector
+    ? sql<number>`1 - (${cosineDistance(programs.embedding, vector)})`
+    : sql<number>`0::float`;
+  // Without similarity, prefer human-verified programs and keep order stable.
+  const ranking = vector
+    ? [desc(similarity)]
+    : [desc(programs.verified), asc(programs.title)];
 
   const select = {
     slug: programs.slug,
@@ -150,7 +161,7 @@ export async function recommendPrograms(
       .select(select)
       .from(programs)
       .where(and(...active.map((c) => c.clause)))
-      .orderBy(desc(similarity))
+      .orderBy(...ranking)
       .limit(limit);
 
     if (rows.length > 0) {
@@ -164,7 +175,7 @@ export async function recommendPrograms(
   const rows = await db
     .select(select)
     .from(programs)
-    .orderBy(desc(similarity))
+    .orderBy(...ranking)
     .limit(limit);
 
   return rows.map((r) => ({ ...r, matched: [] }));

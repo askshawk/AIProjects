@@ -1,6 +1,10 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { assertProductionConfig } from "@/lib/config";
+
+// Fails the deploy loudly instead of serving a broken app.
+assertProductionConfig();
 
 const url = process.env.DATABASE_URL;
 if (!url) {

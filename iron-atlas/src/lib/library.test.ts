@@ -4,6 +4,7 @@ import { db, sql as client } from "@/db";
 import { exercises, programExercises, programs } from "@/db/schema";
 import { resolveExerciseName } from "@/lib/exerciseResolver";
 import { generatedProgramJsonSchema } from "@/lib/programSchema";
+import { hasEmbeddings } from "@/lib/testEnv";
 
 /**
  * These run against the local database — start it with `npm run db` first.
@@ -15,7 +16,7 @@ afterAll(async () => {
   await client.end();
 });
 
-describe("exercise resolver", () => {
+describe.skipIf(!hasEmbeddings)("exercise resolver", () => {
   it("matches an exact catalogue name", async () => {
     const match = await resolveExerciseName("Barbell Bench Press");
     expect(match?.via).toBe("exact");

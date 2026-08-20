@@ -58,7 +58,7 @@ export async function resolveExerciseName(
   const aliased = rows.find((r) => r.aliases.some((a) => slugify(a) === slug));
   if (aliased) return { id: aliased.id, name: aliased.name, via: "alias" };
 
-  const vector = await embedOne(raw);
+  const vector = await embedOne(raw, "query");
   const similarity = sql<number>`1 - (${cosineDistance(exercises.embedding, vector)})`;
   const [nearest] = await db
     .select({ id: exercises.id, name: exercises.name, similarity })

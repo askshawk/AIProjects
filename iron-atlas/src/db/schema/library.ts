@@ -19,8 +19,12 @@ import {
   progressionScheme,
 } from "./enums";
 
-/** all-MiniLM-L6-v2 runs locally via transformers.js — no embedding API key needed. */
-export const EMBEDDING_DIM = 384;
+/**
+ * Declared by the embedding provider — changing it requires re-embedding
+ * everything, so the two must never drift apart.
+ */
+export { EMBEDDING_DIM } from "@/lib/embeddings";
+import { EMBEDDING_DIM } from "@/lib/embeddings";
 
 /**
  * The canonical movement catalogue. Every prescribed set in the app points at a

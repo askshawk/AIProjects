@@ -10,6 +10,7 @@ import {
   type GymProfile,
 } from "@/lib/substitute";
 import { parseGymProfile, serializeGymProfile } from "@/lib/gymProfile";
+import { hasEmbeddings } from "@/lib/testEnv";
 
 /**
  * Runs against the local database — start it with `npm run db`.
@@ -68,7 +69,7 @@ describe("canPerform", () => {
   });
 });
 
-describe("findSubstitutes", () => {
+describe.skipIf(!hasEmbeddings)("findSubstitutes", () => {
   it("swaps a machine movement for a free-weight one that trains the same thing", async () => {
     const subs = await findSubstitutes(await load("Hack Squat"), HOME);
     expect(subs.length).toBeGreaterThan(0);
@@ -126,7 +127,7 @@ describe("findSubstitutes", () => {
   });
 });
 
-describe("planSwaps", () => {
+describe.skipIf(!hasEmbeddings)("planSwaps", () => {
   it("plans one swap per distinct exercise, not per prescribed set", async () => {
     const hackSquat = await load("Hack Squat");
     // The same movement appearing on many days must resolve consistently.
