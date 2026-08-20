@@ -13,6 +13,12 @@ import {
   programDaysFor,
 } from "@/lib/logbook";
 import { LogWorkout } from "@/components/LogWorkout";
+import {
+  isLowerBodyMuscle,
+  suggestNext,
+  type ProgressionScheme,
+  type Suggestion,
+} from "@/lib/progression";
 
 export const metadata = { title: "Train · Iron Atlas" };
 
@@ -159,6 +165,26 @@ export default async function TrainPage({
     personalBests(user.id, exerciseIds),
   ]);
 
+  // What to put on the bar, derived from the program's own scheme plus what
+  // was actually logged. Null where the history can't support a number.
+  const suggestions: Record<number, Suggestion> = {};
+  for (const p of prescription) {
+    const suggestion = suggestNext(
+      program.progression as ProgressionScheme,
+      {
+        sets: p.sets,
+        reps: p.reps,
+        intensityType: p.intensityType,
+        intensityValue: p.intensityValue,
+        isCompound: p.isCompound,
+        isLowerBody: isLowerBodyMuscle(p.primaryMuscle),
+      },
+      last.get(p.exerciseId)?.sets,
+      bests.get(p.exerciseId)?.e1rm ?? null,
+    );
+    if (suggestion) suggestions[p.id] = suggestion;
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -196,6 +222,7 @@ export default async function TrainPage({
         exercises={prescription}
         lastPerformances={Object.fromEntries(last)}
         personalBests={Object.fromEntries(bests)}
+        suggestions={suggestions}
         action={logSession}
       />
     </div>

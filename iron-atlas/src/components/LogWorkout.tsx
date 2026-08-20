@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { LastPerformance } from "@/lib/logbook";
+import type { Suggestion } from "@/lib/progression";
 
 export type PrescribedExercise = {
   id: number;
@@ -23,6 +24,8 @@ type Props = {
   exercises: PrescribedExercise[];
   lastPerformances: Record<number, LastPerformance | undefined>;
   personalBests: Record<number, { weightKg: number; reps: number; e1rm: number } | undefined>;
+  /** Keyed by prescription id — what to lift next, and why. */
+  suggestions: Record<number, Suggestion | undefined>;
   action: (formData: FormData) => void;
 };
 
@@ -49,6 +52,7 @@ export function LogWorkout({
   exercises,
   lastPerformances,
   personalBests,
+  suggestions,
   action,
 }: Props) {
   // Prefill from last time — most sessions repeat or nudge the previous load.
@@ -56,9 +60,13 @@ export function LogWorkout({
     const initial: Record<string, string> = {};
     for (const e of exercises) {
       const last = lastPerformances[e.exerciseId];
+      const suggested = suggestions[e.id]?.weightKg;
       for (let i = 0; i < e.sets; i++) {
         const prior = last?.sets[i];
-        if (prior?.weightKg != null) initial[`w-${e.id}-${i}`] = String(prior.weightKg);
+        // The suggestion is the point of the feature — prefill it, and fall
+        // back to a straight repeat only when there isn't one.
+        const weight = suggested ?? prior?.weightKg;
+        if (weight != null) initial[`w-${e.id}-${i}`] = String(weight);
         if (prior?.reps != null) initial[`r-${e.id}-${i}`] = String(prior.reps);
       }
     }
@@ -75,6 +83,7 @@ export function LogWorkout({
         {exercises.map((e) => {
           const last = lastPerformances[e.exerciseId];
           const best = personalBests[e.exerciseId];
+          const suggestion = suggestions[e.id];
 
           return (
             <div key={e.id} className="rounded-lg border bg-surface">
@@ -99,6 +108,14 @@ export function LogWorkout({
                     : "First time logging this"}
                   {best && ` · best e1RM ${best.e1rm.toFixed(1)} kg`}
                 </p>
+                {suggestion && (
+                  <p className="mt-1.5 text-xs text-accent">
+                    {suggestion.weightKg !== null && (
+                      <span className="font-medium">{suggestion.weightKg} kg · </span>
+                    )}
+                    {suggestion.reason}
+                  </p>
+                )}
               </div>
 
               <div className="divide-y">

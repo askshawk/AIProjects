@@ -38,6 +38,8 @@ export async function prescriptionFor(dayId: number) {
       exerciseId: userProgramExercises.exerciseId,
       exerciseName: exercises.name,
       equipment: exercises.equipment,
+      primaryMuscle: exercises.primaryMuscle,
+      isCompound: exercises.isCompound,
       order: userProgramExercises.order,
       sets: userProgramExercises.sets,
       reps: userProgramExercises.reps,
