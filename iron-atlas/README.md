@@ -22,8 +22,19 @@ npm run db                     # terminal 1 — local Postgres, leave running
 ```bash
 npm run db:push                # terminal 2 — create the tables
 npm run seed:exercises         # load the exercise catalogue (downloads a small model once)
+npm run seed:demo              # one hand-transcribed program so the library isn't empty
 npm run dev                    # http://localhost:3100
 ```
+
+To fill the library, add your `ANTHROPIC_API_KEY` to `.env.local` and generate:
+
+```bash
+npm run generate:program -- "5/3/1 Boring But Big" --slug 531-bbb
+npm run generate:program -- "Layne Norton's PHAT" --slug phat --dry-run   # inspect first
+```
+
+`npm run typecheck` needs `.next/types`, which `next dev` or `next build` generates —
+run one of those first after a clean checkout or `rm -rf .next`.
 
 ## How the database works locally
 
@@ -68,3 +79,25 @@ src/
   lib/            embeddings and shared logic
 scripts/          db server, seeds, program generation
 ```
+
+## What's here
+
+| Route | What it does |
+|---|---|
+| `/coach` | Conversational intake → a real program from the library, with reasoning |
+| `/programs` | Browse and filter; each program adapts to your gym and exports to a spreadsheet |
+| `/exercises` | The 235-movement catalogue everything is validated against |
+| `/gym` | Your equipment — drives substitutions everywhere |
+| `/train` | Today's session: prescription, last time's numbers, suggested loads, set logging |
+| `/history` | Logged sessions and estimated-1RM trends |
+
+## Installing it on a phone
+
+The app ships a web manifest and a service worker, so it installs to a home screen
+and pages you've already opened stay readable without signal. Both only take effect
+in a production build (`npm run build && npm start`) — the service worker is
+deliberately not registered in development, where it would serve stale bundles
+across edits.
+
+Logging a session is *not* queued offline. A set that didn't reach the server
+would be training data silently lost, so the submit fails visibly instead.

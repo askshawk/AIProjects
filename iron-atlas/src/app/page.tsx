@@ -3,6 +3,11 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { exercises, programs } from "@/db/schema";
 
+// The counts come from the database, so this must not be frozen into the
+// build — a prerendered homepage would show whatever the library held the day
+// it was deployed.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [[{ exerciseCount }], [{ programCount }]] = await Promise.all([
     db.select({ exerciseCount: sql<number>`count(*)::int` }).from(exercises),

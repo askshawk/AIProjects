@@ -158,6 +158,17 @@ export default async function TrainPage({
   }
   const day = days[index];
 
+  // Only this week's days are shown; the arrows jump to the same slot in the
+  // adjacent week so stepping through a block stays one tap.
+  const weekDays = days.filter((d) => d.weekNumber === day.weekNumber);
+  const slot = weekDays.findIndex((d) => d.dayId === day.dayId);
+  const dayInWeek = (weekNumber: number) => {
+    const candidates = days.filter((d) => d.weekNumber === weekNumber);
+    return candidates[Math.min(slot, candidates.length - 1)] ?? null;
+  };
+  const prevWeekDay = dayInWeek(day.weekNumber - 1);
+  const nextWeekDay = dayInWeek(day.weekNumber + 1);
+
   const prescription = await prescriptionFor(day.dayId);
   const exerciseIds = [...new Set(prescription.map((p) => p.exerciseId))];
   const [last, bests] = await Promise.all([
@@ -196,18 +207,51 @@ export default async function TrainPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {days.map((d, i) => (
-          <Link
-            key={d.dayId}
-            href={`/train?day=${d.dayId}`}
-            className={`rounded-md border px-2.5 py-1 text-xs ${
-              i === index ? "border-accent bg-accent-soft/30 text-foreground" : "text-muted"
-            }`}
-          >
-            {d.dayName}
-          </Link>
-        ))}
+      {/* A 4-week block is 16 days. Listing them flat buried the actual
+          workout below a wall of buttons on a phone, so show the current
+          week's days and let the lifter step between weeks. */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          {prevWeekDay ? (
+            <Link
+              href={`/train?day=${prevWeekDay.dayId}`}
+              className="shrink-0 rounded-md border px-2 py-1 text-xs text-muted hover:text-foreground"
+            >
+              ← Week {prevWeekDay.weekNumber}
+            </Link>
+          ) : (
+            <span className="shrink-0" />
+          )}
+          <span className="truncate text-xs text-muted">
+            {day.weekLabel ?? `Week ${day.weekNumber}`}
+          </span>
+          {nextWeekDay ? (
+            <Link
+              href={`/train?day=${nextWeekDay.dayId}`}
+              className="shrink-0 rounded-md border px-2 py-1 text-xs text-muted hover:text-foreground"
+            >
+              Week {nextWeekDay.weekNumber} →
+            </Link>
+          ) : (
+            <span className="shrink-0" />
+          )}
+        </div>
+
+        <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {weekDays.map((d) => (
+            <Link
+              key={d.dayId}
+              href={`/train?day=${d.dayId}`}
+              className={`shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs ${
+                d.dayId === day.dayId
+                  ? "border-accent bg-accent-soft/30 text-foreground"
+                  : "text-muted"
+              }`}
+            >
+              {d.dayName}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {params.empty && (

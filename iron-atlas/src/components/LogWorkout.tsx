@@ -159,9 +159,10 @@ export function LogWorkout({
       <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
         <button
           type="submit"
-          className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-black"
+          title={`Finish ${dayName}`}
+          className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-sm font-medium whitespace-nowrap text-black"
         >
-          Finish {dayName}
+          Finish session
         </button>
         <input
           name="notes"
