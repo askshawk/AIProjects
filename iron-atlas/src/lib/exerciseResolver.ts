@@ -2,7 +2,7 @@ import { cosineDistance, desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { exercises } from "@/db/schema";
 import { slugify } from "@/data/parseExercises";
-import { embedOne } from "@/lib/embeddings";
+import { tryEmbedOne } from "@/lib/embeddings";
 
 export type ResolvedExercise = {
   id: number;
@@ -58,7 +58,12 @@ export async function resolveExerciseName(
   const aliased = rows.find((r) => r.aliases.some((a) => slugify(a) === slug));
   if (aliased) return { id: aliased.id, name: aliased.name, via: "alias" };
 
-  const vector = await embedOne(raw, "query");
+  // Without a provider we simply have no similarity tier — exact and alias
+  // matching still work, and an unmatched name fails loudly rather than
+  // resolving to something arbitrary.
+  const vector = await tryEmbedOne(raw, "query");
+  if (!vector) return null;
+
   const similarity = sql<number>`1 - (${cosineDistance(exercises.embedding, vector)})`;
   const [nearest] = await db
     .select({ id: exercises.id, name: exercises.name, similarity })

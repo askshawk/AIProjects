@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, sql } from "@/db";
 import { programDays, programExercises, programWeeks, programs } from "@/db/schema";
 import { resolveExerciseName } from "@/lib/exerciseResolver";
-import { embedOne } from "@/lib/embeddings";
+import { tryEmbedOne } from "@/lib/embeddings";
 
 /**
  * One hand-transcribed program, so the library is never empty and the UI has
@@ -36,7 +36,7 @@ async function main() {
   const summary =
     "Arnold's beginner routine: six compound lifts, three days a week, full body every session.";
 
-  const embedding = await embedOne(
+  const embedding = await tryEmbedOne(
     [
       "Arnold's Golden Six",
       "Arnold Schwarzenegger",

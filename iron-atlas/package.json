@@ -16,7 +16,8 @@
     "generate:program": "tsx scripts/generate-program.ts",
     "seed:demo": "tsx scripts/seed-golden-six.ts",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "backfill:embeddings": "tsx scripts/backfill-embeddings.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.39",

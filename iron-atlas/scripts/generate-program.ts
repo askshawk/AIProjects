@@ -10,7 +10,7 @@ import {
   programs,
 } from "@/db/schema";
 import { slugify } from "@/data/parseExercises";
-import { embedOne } from "@/lib/embeddings";
+import { tryEmbedOne } from "@/lib/embeddings";
 import { resolveExerciseName, type ResolvedExercise } from "@/lib/exerciseResolver";
 import {
   generatedProgramJsonSchema,
@@ -70,7 +70,10 @@ async function generate(request: string): Promise<GeneratedProgram> {
 
   const stream = client.messages.stream({
     model: MODEL,
-    max_tokens: 32000,
+    // Long blocks are genuinely large: a 16-week wave-loaded program with
+    // four training days is thousands of prescribed sets. 32k truncated the
+    // Juggernaut Method mid-cycle.
+    max_tokens: 64000,
     system: [
       { type: "text", text: SYSTEM },
       {
@@ -197,7 +200,9 @@ async function main() {
     .where(inArray(exercises.id, usedIds));
   const equipmentRequired = [...new Set(equipmentRows.map((r) => r.equipment))];
 
-  const embedding = await embedOne(
+  // Null when no embedding provider is configured. The program still saves;
+  // `npm run backfill:embeddings` fills these in once a key exists.
+  const embedding = await tryEmbedOne(
     [
       program.title,
       program.authorName,
