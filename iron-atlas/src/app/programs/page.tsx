@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   equipment as equipmentEnum,
@@ -7,7 +7,7 @@ import {
   goal as goalEnum,
   programs,
 } from "@/db/schema";
-import { Pill, ProvenanceBadge } from "@/components/ProgramBadges";
+import { ProgramCard } from "@/components/ProgramCard";
 
 export const metadata = { title: "Programs · Iron Atlas" };
 
@@ -65,7 +65,11 @@ export default async function ProgramsPage({
     })
     .from(programs)
     .where(filters.length ? and(...filters) : undefined)
-    .orderBy(asc(programs.title));
+    .orderBy(asc(programs.authorName), asc(programs.title));
+
+  // Unfiltered count, so the header describes the library rather than the
+  // current search.
+  const [{ total }] = await db.select({ total: count() }).from(programs);
 
   const select =
     "rounded-md border bg-surface px-3 py-2 text-sm capitalize";
@@ -75,8 +79,12 @@ export default async function ProgramsPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Training blocks from named lifters and coaches. Pick one, adapt it to your gym, and
-          take it with you.
+          {total} training blocks from named lifters and coaches. Pick one, adapt it to your
+          gym, and take it with you — or{" "}
+          <Link href="/programs/authors" className="text-accent hover:underline">
+            browse by coach
+          </Link>
+          .
         </p>
       </div>
 
@@ -128,26 +136,7 @@ export default async function ProgramsPage({
         <ul className="grid gap-3 md:grid-cols-2">
           {rows.map((p) => (
             <li key={p.id}>
-              <Link
-                href={`/programs/${p.slug}`}
-                className="block h-full rounded-lg border bg-surface p-4 transition-colors hover:border-accent/60"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-medium leading-tight">{p.title}</h2>
-                    <p className="text-sm text-muted">{p.authorName}</p>
-                  </div>
-                  <ProvenanceBadge aiGenerated={p.aiGenerated} verified={p.verified} />
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm text-muted">{p.summary}</p>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  <Pill>{label(p.goal)}</Pill>
-                  <Pill>{p.experienceLevel}</Pill>
-                  <Pill>{p.daysPerWeek} days/week</Pill>
-                  <Pill>{p.weeks} weeks</Pill>
-                  <Pill>{p.splitType}</Pill>
-                </div>
-              </Link>
+              <ProgramCard program={p} />
             </li>
           ))}
         </ul>

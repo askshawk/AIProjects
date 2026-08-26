@@ -9,6 +9,9 @@ import { readGymProfile } from "@/lib/gymProfile";
 import { planSwaps } from "@/lib/substitute";
 import { SwapNotice } from "@/components/SwapNotice";
 import { StartProgram } from "@/components/StartProgram";
+import { VerifyToggle } from "@/components/VerifyToggle";
+import { authorSlug } from "@/lib/authors";
+import { getCurrentUser } from "@/lib/auth";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -59,6 +62,9 @@ export default async function ProgramPage({
   const rows = applySwaps(loaded.rows, swaps);
   const weeks = groupByWeek(rows);
 
+  // Only signed-in users can vouch for a reconstruction.
+  const user = await getCurrentUser();
+
   return (
     <div className="space-y-8">
       <div className="space-y-3">
@@ -68,9 +74,17 @@ export default async function ProgramPage({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">{program.title}</h1>
-            <p className="text-muted">{program.authorName}</p>
+            <Link
+              href={`/programs/authors/${authorSlug(program.authorName)}`}
+              className="text-muted transition-colors hover:text-accent"
+            >
+              {program.authorName}
+            </Link>
           </div>
-          <ProvenanceBadge aiGenerated={program.aiGenerated} verified={program.verified} />
+          <div className="flex items-center gap-2">
+            <ProvenanceBadge aiGenerated={program.aiGenerated} verified={program.verified} />
+            {user && <VerifyToggle slug={program.slug} verified={program.verified} />}
+          </div>
         </div>
         <p className="max-w-2xl text-muted">{program.summary}</p>
 
