@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { LastPerformance } from "@/lib/logbook";
 import type { Suggestion } from "@/lib/progression";
+import { RestTimer } from "@/components/RestTimer";
+import { WarmupHint } from "@/components/WarmupHint";
 
 export type PrescribedExercise = {
   id: number;
@@ -13,6 +15,7 @@ export type PrescribedExercise = {
   intensityType: string;
   intensityValue: string | null;
   restSeconds: number | null;
+  equipment: string;
   notes: string | null;
   supersetGroup: string | null;
   substitutedFrom: number | null;
@@ -97,7 +100,12 @@ export function LogWorkout({
                     )}
                     {e.exerciseName}
                   </span>
-                  <span className="font-mono text-xs text-muted">{prescriptionText(e)}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-muted">{prescriptionText(e)}</span>
+                    {e.restSeconds != null && e.restSeconds > 0 && (
+                      <RestTimer seconds={e.restSeconds} />
+                    )}
+                  </span>
                 </div>
                 {e.notes && <p className="mt-1 text-xs text-muted">{e.notes}</p>}
                 <p className="mt-1 text-xs text-muted">
@@ -116,6 +124,11 @@ export function LogWorkout({
                     {suggestion.reason}
                   </p>
                 )}
+                {/* Ramp to whatever the first working set is actually loaded to. */}
+                <WarmupHint
+                  workingKg={suggestion?.weightKg ?? last?.sets[0]?.weightKg}
+                  barbell={e.equipment !== "dumbbell" && e.equipment !== "machine"}
+                />
               </div>
 
               <div className="divide-y">
