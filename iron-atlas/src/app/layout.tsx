@@ -25,7 +25,11 @@ export const metadata: Metadata = {
   title: "Iron Atlas",
   description:
     "A library of lifting programs from the coaches worth reading, adapted to your gym and exported to a spreadsheet.",
-  appleWebApp: { capable: true, title: "Iron Atlas", statusBarStyle: "black-translucent" },
+  appleWebApp: {
+    capable: true,
+    title: "Iron Atlas",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 const NAV = [
@@ -68,7 +72,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </nav>
         </header>
         <ServiceWorker />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
+          {children}
+        </main>
       </body>
     </html>
   );

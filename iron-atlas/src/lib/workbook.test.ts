@@ -48,7 +48,9 @@ describe("definedNameFor", () => {
   it("produces a legal Excel defined name", () => {
     expect(definedNameFor("Back Squat")).toBe("TM_Back_Squat");
     expect(definedNameFor("Farmer's Walk")).toBe("TM_Farmer_s_Walk");
-    expect(definedNameFor("45-Degree Back Extension")).toBe("TM_45_Degree_Back_Extension");
+    expect(definedNameFor("45-Degree Back Extension")).toBe(
+      "TM_45_Degree_Back_Extension",
+    );
   });
 
   it("never starts with a digit or looks like a cell reference", () => {
@@ -64,21 +66,39 @@ describe("definedNameFor", () => {
 describe("maxesLifts", () => {
   it("includes every percentage-prescribed lift", () => {
     const rows = [
-      row({ exerciseName: "Overhead Press", intensityType: "percent_1rm", intensityValue: "65" }),
+      row({
+        exerciseName: "Overhead Press",
+        intensityType: "percent_1rm",
+        intensityValue: "65",
+      }),
       row({ exerciseName: "Cable Fly", equipment: "cable", isCompound: false }),
     ];
     expect(maxesLifts(rows).map((l) => l.name)).toEqual(["Overhead Press"]);
   });
 
   it("includes compound barbell lifts even without percentages", () => {
-    const rows = [row({ exerciseName: "Back Squat", isCompound: true, equipment: "barbell" })];
+    const rows = [
+      row({
+        exerciseName: "Back Squat",
+        isCompound: true,
+        equipment: "barbell",
+      }),
+    ];
     expect(maxesLifts(rows).map((l) => l.name)).toEqual(["Back Squat"]);
   });
 
   it("excludes isolation and machine work", () => {
     const rows = [
-      row({ exerciseName: "Leg Extension", equipment: "machine", isCompound: false }),
-      row({ exerciseName: "Barbell Curl", equipment: "barbell", isCompound: false }),
+      row({
+        exerciseName: "Leg Extension",
+        equipment: "machine",
+        isCompound: false,
+      }),
+      row({
+        exerciseName: "Barbell Curl",
+        equipment: "barbell",
+        isCompound: false,
+      }),
     ];
     expect(maxesLifts(rows)).toEqual([]);
   });
@@ -110,8 +130,14 @@ describe("workbook round-trip", () => {
   /** Rebuilds a real program's workbook and reads it back as Excel would. */
   async function roundTrip(slug: string) {
     const loaded = await loadProgram(slug);
-    if (!loaded) throw new Error(`${slug} is not in the database — run the generator first`);
-    const buffer = await buildProgramWorkbook(loaded.program, loaded.rows).xlsx.writeBuffer();
+    if (!loaded)
+      throw new Error(
+        `${slug} is not in the database — run the generator first`,
+      );
+    const buffer = await buildProgramWorkbook(
+      loaded.program,
+      loaded.rows,
+    ).xlsx.writeBuffer();
     const reread = new ExcelJS.Workbook();
     await reread.xlsx.load(buffer as ArrayBuffer);
     return { workbook: reread, ...loaded };
@@ -130,7 +156,9 @@ describe("workbook round-trip", () => {
     // The real failure mode: a target formula referencing a lift that never got
     // a Maxes row, which opens in Excel as #NAME?.
     const { workbook } = await roundTrip("531-bbb");
-    const defined = new Set(workbook.definedNames.model?.map((d) => d.name) ?? []);
+    const defined = new Set(
+      workbook.definedNames.model?.map((d) => d.name) ?? [],
+    );
     expect(defined.size).toBeGreaterThan(0);
 
     let formulaCount = 0;
@@ -140,7 +168,8 @@ describe("workbook round-trip", () => {
         const cell = r.getCell(6).value;
         if (cell && typeof cell === "object" && "formula" in cell) {
           formulaCount++;
-          const referenced = String(cell.formula).match(/TM_[A-Za-z0-9_]+/g) ?? [];
+          const referenced =
+            String(cell.formula).match(/TM_[A-Za-z0-9_]+/g) ?? [];
           expect(referenced.length).toBeGreaterThan(0);
           for (const name of referenced) expect(defined).toContain(name);
         }
@@ -161,7 +190,9 @@ describe("workbook round-trip", () => {
       const trainingMax = maxes.getRow(rowNumber).getCell(3).value;
       expect(trainingMax).toHaveProperty("formula");
       // Training Max must be computed from the 1RM the user types in column B.
-      expect((trainingMax as { formula: string }).formula).toBe(`ROUND(B${rowNumber}*0.9,1)`);
+      expect((trainingMax as { formula: string }).formula).toBe(
+        `ROUND(B${rowNumber}*0.9,1)`,
+      );
       expect(maxes.getRow(rowNumber).getCell(1).value).toBeTruthy();
     }
   });
@@ -183,7 +214,8 @@ describe("workbook round-trip", () => {
     let found = false;
     about.eachRow((r) => {
       const v = r.getCell(1).value;
-      if (typeof v === "string" && v.includes("RECONSTRUCTED, NOT TRANSCRIBED")) found = true;
+      if (typeof v === "string" && v.includes("RECONSTRUCTED, NOT TRANSCRIBED"))
+        found = true;
     });
     expect(found).toBe(true);
   });
@@ -205,7 +237,9 @@ describe("csv export", () => {
     const loaded = await loadProgram("arnold-golden-six");
     const csv = buildProgramCsv(loaded!.program, loaded!.rows);
     const lines = csv.split("\n");
-    expect(lines[0]).toBe("Week,Day,Exercise,Sets,Reps,Intensity,Rest (s),Notes");
+    expect(lines[0]).toBe(
+      "Week,Day,Exercise,Sets,Reps,Intensity,Rest (s),Notes",
+    );
     expect(lines).toHaveLength(loaded!.rows.length + 1);
   });
 

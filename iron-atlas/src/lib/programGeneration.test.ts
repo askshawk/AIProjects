@@ -1,8 +1,13 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, sql as client } from "@/db";
-import { programDays, programExercises, programWeeks, programs } from "@/db/schema";
-import { isRetryable } from "@/lib/programGeneration";
+import {
+  programDays,
+  programExercises,
+  programWeeks,
+  programs,
+} from "@/db/schema";
+import { isRetryable, isTerminal } from "@/lib/programGeneration";
 
 /**
  * Runs against the local database — start it with `npm run db`.
@@ -18,15 +23,43 @@ afterAll(async () => {
 });
 
 describe("isRetryable", () => {
-  it("retries only the nondeterministic failure", () => {
-    // `empty` clears on a second attempt — Juggernaut and PHAT both did.
+  it("retries the two failures that clear on a second attempt", () => {
+    // `empty` is the model returning nothing (Juggernaut and PHAT both did);
+    // `transport` is a socket closing partway through a long stream.
     expect(isRetryable("empty")).toBe(true);
+    expect(isRetryable("transport")).toBe(true);
   });
 
   it("does not burn tokens retrying failures that will repeat", () => {
     // A truncation costs a full max_tokens billing whether it succeeds or not.
-    for (const kind of ["truncated", "refused", "unresolved", "error"] as const) {
+    for (const kind of [
+      "truncated",
+      "refused",
+      "unresolved",
+      "error",
+    ] as const) {
       expect(isRetryable(kind)).toBe(false);
+    }
+  });
+
+  it("never retries an exhausted balance", () => {
+    // Retrying here is the exact behaviour that wasted thirteen requests.
+    expect(isRetryable("exhausted")).toBe(false);
+  });
+});
+
+describe("isTerminal", () => {
+  it("stops the batch only when nothing later could succeed", () => {
+    expect(isTerminal("exhausted")).toBe(true);
+    for (const kind of [
+      "empty",
+      "truncated",
+      "refused",
+      "unresolved",
+      "transport",
+      "error",
+    ] as const) {
+      expect(isTerminal(kind)).toBe(false);
     }
   });
 });

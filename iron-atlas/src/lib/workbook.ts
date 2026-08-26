@@ -1,5 +1,9 @@
 import ExcelJS from "exceljs";
-import { groupByWeek, type ProgramMeta, type ProgramRow } from "@/lib/programQuery";
+import {
+  groupByWeek,
+  type ProgramMeta,
+  type ProgramRow,
+} from "@/lib/programQuery";
 
 /**
  * Builds the .xlsx you actually take to the gym: one tab per training week,
@@ -23,7 +27,9 @@ const ACCENT = "FFF97316";
  * the last two cases for free.
  */
 export function definedNameFor(exerciseName: string): string {
-  const cleaned = exerciseName.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const cleaned = exerciseName
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
   return `TM_${cleaned}`;
 }
 
@@ -54,7 +60,9 @@ export function maxesLifts(rows: ProgramRow[]) {
   const byName = new Map<string, { name: string; needsFormula: boolean }>();
   for (const row of rows) {
     const needsFormula = row.intensityType === "percent_1rm";
-    const isTrackable = row.isCompound && (row.equipment === "barbell" || row.equipment === "smith");
+    const isTrackable =
+      row.isCompound &&
+      (row.equipment === "barbell" || row.equipment === "smith");
     if (!needsFormula && !isTrackable) continue;
     const existing = byName.get(row.exerciseName);
     byName.set(row.exerciseName, {
@@ -121,7 +129,11 @@ export function buildProgramWorkbook(
   maxesHeader.values = ["Lift", "1RM", "Training Max"];
   maxesHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
   maxesHeader.eachCell((cell) => {
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: HEADER_FILL },
+    };
   });
 
   lifts.forEach((lift, i) => {
@@ -131,7 +143,9 @@ export function buildProgramWorkbook(
     row.getCell(2).value = null; // the user fills this in
     row.getCell(2).numFmt = "0.0";
     row.getCell(2).border = { bottom: { style: "hair" } };
-    row.getCell(3).value = { formula: `ROUND(B${rowNumber}*${TRAINING_MAX_FACTOR},1)` };
+    row.getCell(3).value = {
+      formula: `ROUND(B${rowNumber}*${TRAINING_MAX_FACTOR},1)`,
+    };
     row.getCell(3).numFmt = "0.0";
     liftRowByName.set(lift.name, rowNumber);
 
@@ -141,7 +155,8 @@ export function buildProgramWorkbook(
   });
 
   if (lifts.length === 0) {
-    maxes.getCell("A4").value = "This program prescribes no percentage-based lifts.";
+    maxes.getCell("A4").value =
+      "This program prescribes no percentage-based lifts.";
     maxes.getCell("A4").font = { italic: true };
   }
 
@@ -151,12 +166,16 @@ export function buildProgramWorkbook(
 
   for (const week of weeks.values()) {
     const label = week.meta.weekLabel ?? `Week ${week.meta.weekNumber}`;
-    const sheet = wb.addWorksheet(weekSheetName(week.meta.weekNumber, takenSheetNames), {
-      views: [{ state: "frozen", xSplit: 2, ySplit: 2 }],
-    });
+    const sheet = wb.addWorksheet(
+      weekSheetName(week.meta.weekNumber, takenSheetNames),
+      {
+        views: [{ state: "frozen", xSplit: 2, ySplit: 2 }],
+      },
+    );
 
     const logHeaders: string[] = [];
-    for (let i = 1; i <= MAX_LOG_SETS; i++) logHeaders.push(`S${i} kg`, `S${i} reps`);
+    for (let i = 1; i <= MAX_LOG_SETS; i++)
+      logHeaders.push(`S${i} kg`, `S${i} reps`);
 
     sheet.columns = [
       { key: "day", width: 20 },
@@ -172,7 +191,10 @@ export function buildProgramWorkbook(
 
     sheet.mergeCells(1, 1, 1, 8 + logHeaders.length);
     const title = sheet.getCell("A1");
-    const repeatNote = week.meta.repeatCount > 1 ? ` — repeat for ${week.meta.repeatCount} weeks` : "";
+    const repeatNote =
+      week.meta.repeatCount > 1
+        ? ` — repeat for ${week.meta.repeatCount} weeks`
+        : "";
     title.value = `${program.title} — ${label}${repeatNote}`;
     title.font = { bold: true, size: 13 };
 
@@ -190,7 +212,11 @@ export function buildProgramWorkbook(
     ];
     header.font = { bold: true, color: { argb: "FFFFFFFF" } };
     header.eachCell((cell) => {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: HEADER_FILL },
+      };
       cell.alignment = { vertical: "middle", wrapText: true };
     });
     header.height = 22;
@@ -207,7 +233,11 @@ export function buildProgramWorkbook(
         ? `${day.meta.dayName} — ${day.meta.dayNotes}`
         : day.meta.dayName;
       dayCell.font = { bold: true, color: { argb: ACCENT } };
-      dayCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DAY_FILL } };
+      dayCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: DAY_FILL },
+      };
       cursor++;
 
       for (const item of day.items) {
@@ -324,7 +354,10 @@ export function buildProgramWorkbook(
     aboutCursor++;
     for (const url of program.sourceUrls) {
       about.getCell(`A${aboutCursor}`).value = { text: url, hyperlink: url };
-      about.getCell(`A${aboutCursor}`).font = { color: { argb: "FF0563C1" }, underline: true };
+      about.getCell(`A${aboutCursor}`).font = {
+        color: { argb: "FF0563C1" },
+        underline: true,
+      };
       aboutCursor++;
     }
     aboutCursor++;
@@ -339,7 +372,10 @@ export function buildProgramWorkbook(
 }
 
 /** Flat CSV of the whole block — for pasting into Sheets or a text editor. */
-export function buildProgramCsv(program: ProgramMeta, rows: ProgramRow[]): string {
+export function buildProgramCsv(
+  program: ProgramMeta,
+  rows: ProgramRow[],
+): string {
   const escape = (v: string | number | null) => {
     if (v == null) return "";
     const s = String(v);
@@ -347,7 +383,16 @@ export function buildProgramCsv(program: ProgramMeta, rows: ProgramRow[]): strin
   };
 
   const lines = [
-    ["Week", "Day", "Exercise", "Sets", "Reps", "Intensity", "Rest (s)", "Notes"]
+    [
+      "Week",
+      "Day",
+      "Exercise",
+      "Sets",
+      "Reps",
+      "Intensity",
+      "Rest (s)",
+      "Notes",
+    ]
       .map(escape)
       .join(","),
   ];
@@ -366,7 +411,7 @@ export function buildProgramCsv(program: ProgramMeta, rows: ProgramRow[]): strin
             item.sets,
             item.reps,
             item.intensityValue && item.intensityType !== "none"
-              ? prescriptionText(item).split("@")[1]?.trim() ?? ""
+              ? (prescriptionText(item).split("@")[1]?.trim() ?? "")
               : "",
             item.restSeconds,
             item.exNotes,

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { exercises, setLogs, userProgramDays, workoutSessions } from "@/db/schema";
+import {
+  exercises,
+  setLogs,
+  userProgramDays,
+  workoutSessions,
+} from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { countsTowardE1rm, epley } from "@/lib/e1rm";
 import { E1rmTrend } from "@/components/E1rmTrend";
@@ -20,7 +25,9 @@ export default async function HistoryPage({
     return (
       <div className="max-w-md space-y-3">
         <h1 className="text-2xl font-semibold tracking-tight">History</h1>
-        <p className="text-sm text-muted">Sign in to see your logged sessions.</p>
+        <p className="text-sm text-muted">
+          Sign in to see your logged sessions.
+        </p>
         <Link
           href="/account"
           className="inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
@@ -47,7 +54,10 @@ export default async function HistoryPage({
     .from(workoutSessions)
     .innerJoin(setLogs, eq(setLogs.sessionId, workoutSessions.id))
     .innerJoin(exercises, eq(exercises.id, setLogs.exerciseId))
-    .leftJoin(userProgramDays, eq(userProgramDays.id, workoutSessions.userProgramDayId))
+    .leftJoin(
+      userProgramDays,
+      eq(userProgramDays.id, workoutSessions.userProgramDayId),
+    )
     .where(eq(workoutSessions.userId, user.id))
     .orderBy(desc(workoutSessions.performedAt), sql`${setLogs.setIndex} asc`);
 
@@ -57,7 +67,10 @@ export default async function HistoryPage({
         <h1 className="text-2xl font-semibold tracking-tight">History</h1>
         <p className="text-sm text-muted">
           Nothing logged yet. Finish a session on the{" "}
-          <Link href="/train" className="text-accent underline underline-offset-2">
+          <Link
+            href="/train"
+            className="text-accent underline underline-offset-2"
+          >
             train
           </Link>{" "}
           page and it&apos;ll show up here.
@@ -84,7 +97,9 @@ export default async function HistoryPage({
     const list = series.get(row.exerciseName) ?? [];
     const e1rm = epley(weight!, row.reps!);
     // One point per session per exercise — the best set of that session.
-    const existing = list.find((p) => p.at.getTime() === row.performedAt.getTime());
+    const existing = list.find(
+      (p) => p.at.getTime() === row.performedAt.getTime(),
+    );
     if (existing) existing.e1rm = Math.max(existing.e1rm, e1rm);
     else list.push({ at: row.performedAt, e1rm });
     series.set(row.exerciseName, list);
@@ -119,7 +134,11 @@ export default async function HistoryPage({
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {tracked.map(([name, points]) => (
-              <E1rmTrend key={name} name={name} points={points.map((p) => p.e1rm)} />
+              <E1rmTrend
+                key={name}
+                name={name}
+                points={points.map((p) => p.e1rm)}
+              />
             ))}
           </div>
         </section>
@@ -131,11 +150,17 @@ export default async function HistoryPage({
           {[...sessions.values()].map(({ meta, sets }) => {
             const byExercise = new Map<string, Row[]>();
             for (const s of sets) {
-              byExercise.set(s.exerciseName, [...(byExercise.get(s.exerciseName) ?? []), s]);
+              byExercise.set(s.exerciseName, [
+                ...(byExercise.get(s.exerciseName) ?? []),
+                s,
+              ]);
             }
 
             return (
-              <div key={meta.sessionId} className="rounded-lg border bg-surface p-4">
+              <div
+                key={meta.sessionId}
+                className="rounded-lg border bg-surface p-4"
+              >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-medium">{meta.dayName ?? "Session"}</h3>
                   <time className="text-xs text-muted">
@@ -146,7 +171,9 @@ export default async function HistoryPage({
                     })}
                   </time>
                 </div>
-                {meta.notes && <p className="mt-1 text-sm text-muted">{meta.notes}</p>}
+                {meta.notes && (
+                  <p className="mt-1 text-sm text-muted">{meta.notes}</p>
+                )}
 
                 <ul className="mt-2 space-y-1 text-sm">
                   {[...byExercise.entries()].map(([name, list]) => (

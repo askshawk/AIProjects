@@ -63,8 +63,9 @@ export function Chat() {
                 What are you training for?
               </h1>
               <p className="mt-1 text-sm text-muted">
-                Tell me your goals, how often you train, and what your gym has. I&apos;ll find
-                a program from the library that fits and hand you the spreadsheet.
+                Tell me your goals, how often you train, and what your gym has.
+                I&apos;ll find a program from the library that fits and hand you
+                the spreadsheet.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -101,7 +102,10 @@ export function Chat() {
 
               // The recommendation cards are rendered from the tool's real
               // output, not from the model's description of it.
-              if (isToolUIPart(part) && part.type === "tool-recommendPrograms") {
+              if (
+                isToolUIPart(part) &&
+                part.type === "tool-recommendPrograms"
+              ) {
                 if (part.state === "output-available") {
                   return (
                     <ProgramRecommendation

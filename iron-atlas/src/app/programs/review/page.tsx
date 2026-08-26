@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { reviewQueue, suspiciouslyThin, verificationStats } from "@/lib/verification";
+import {
+  reviewQueue,
+  suspiciouslyThin,
+  verificationStats,
+} from "@/lib/verification";
 
 export const metadata = { title: "Review · Iron Atlas" };
 
@@ -21,31 +25,45 @@ export default async function ReviewPage() {
     suspiciouslyThin(5),
   ]);
 
-  const pct = stats.total ? Math.round((stats.verified / stats.total) * 100) : 0;
+  const pct = stats.total
+    ? Math.round((stats.verified / stats.total) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Review</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          {stats.verified} of {stats.total} programs verified ({pct}%). Everything else is an
-          AI reconstruction that nobody has checked against the source yet.
+          {stats.verified} of {stats.total} programs verified ({pct}%).
+          Everything else is an AI reconstruction that nobody has checked
+          against the source yet — ordered here by how little the model claimed
+          to know, so the ones flagged &ldquo;in this style&rdquo; come first.
         </p>
       </div>
 
       {thin.length > 0 && (
         <section className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-4">
-          <h2 className="text-sm font-medium text-amber-200">Look at these first</h2>
+          <h2 className="text-sm font-medium text-amber-200">
+            Look at these first
+          </h2>
           <p className="mt-1 text-xs text-muted">
-            Fewest prescribed sets relative to block length — the shape a bad reconstruction
-            usually takes.
+            Fewest prescribed sets relative to block length — the shape a bad
+            reconstruction usually takes.
           </p>
           <ul className="mt-3 space-y-1.5">
             {thin.map((p) => (
-              <li key={p.slug} className="flex items-baseline justify-between gap-3 text-sm">
-                <Link href={`/programs/${p.slug}`} className="hover:text-accent">
+              <li
+                key={p.slug}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <Link
+                  href={`/programs/${p.slug}`}
+                  className="hover:text-accent"
+                >
                   {p.title}
-                  <span className="ml-2 text-xs text-muted">{p.authorName}</span>
+                  <span className="ml-2 text-xs text-muted">
+                    {p.authorName}
+                  </span>
                 </Link>
                 <span className="shrink-0 font-mono text-xs text-muted">
                   {p.prescribedSets} sets / {p.weeks}wk
@@ -58,20 +76,33 @@ export default async function ReviewPage() {
 
       {queue.length === 0 ? (
         <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted">
-          Nothing awaiting review — every program in the library has been verified.
+          Nothing awaiting review — every program in the library has been
+          verified.
         </p>
       ) : (
         <ul className="divide-y rounded-lg border bg-surface">
           {queue.map((p) => (
-            <li key={p.slug} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-3">
-              <Link href={`/programs/${p.slug}`} className="font-medium hover:text-accent">
+            <li
+              key={p.slug}
+              className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-3"
+            >
+              <Link
+                href={`/programs/${p.slug}`}
+                className="font-medium hover:text-accent"
+              >
                 {p.title}
               </Link>
               <span className="text-sm text-muted">{p.authorName}</span>
+              {p.confidence === "stylistic" && (
+                <span className="rounded border border-orange-800 bg-orange-950/50 px-1.5 py-0.5 text-[10px] text-orange-300">
+                  in this style
+                </span>
+              )}
               <span className="ml-auto shrink-0 font-mono text-xs text-muted">
                 {p.prescribedSets} sets
                 {p.sourceUrls.length > 0 && ` · ${p.sourceUrls.length} source`}
-                {p.generatedModel && ` · ${p.generatedModel.replace("claude-", "")}`}
+                {p.generatedModel &&
+                  ` · ${p.generatedModel.replace("claude-", "")}`}
               </span>
             </li>
           ))}

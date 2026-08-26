@@ -5,7 +5,13 @@
  * of points, and a dependency would cost more than it saves. Values are shown
  * as text too, so the trend is readable without interpreting the picture.
  */
-export function E1rmTrend({ name, points }: { name: string; points: number[] }) {
+export function E1rmTrend({
+  name,
+  points,
+}: {
+  name: string;
+  points: number[];
+}) {
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;

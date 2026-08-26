@@ -9,7 +9,12 @@ import {
   userPrograms,
   users,
 } from "@/db/schema";
-import { addExercise, adjustVolume, removeExercise, swapExercise } from "@/lib/tweak";
+import {
+  addExercise,
+  adjustVolume,
+  removeExercise,
+  swapExercise,
+} from "@/lib/tweak";
 
 /**
  * Runs against the local database — start it with `npm run db`.
@@ -74,12 +79,31 @@ async function seedFork() {
       .returning({ id: userProgramDays.id });
 
     await db.insert(userProgramExercises).values([
-      { dayId: day.id, exerciseId: squat.id, order: 0, sets: 3, reps: "5", intensityType: "none" },
-      { dayId: day.id, exerciseId: press.id, order: 1, sets: 3, reps: "8", intensityType: "none" },
+      {
+        dayId: day.id,
+        exerciseId: squat.id,
+        order: 0,
+        sets: 3,
+        reps: "5",
+        intensityType: "none",
+      },
+      {
+        dayId: day.id,
+        exerciseId: press.id,
+        order: 1,
+        sets: 3,
+        reps: "8",
+        intensityType: "none",
+      },
     ]);
   }
 
-  return { ownerId: owner.id, strangerId: stranger.id, forkId: fork.id, squatId: squat.id };
+  return {
+    ownerId: owner.id,
+    strangerId: stranger.id,
+    forkId: fork.id,
+    squatId: squat.id,
+  };
 }
 
 async function setsFor(name: string) {
@@ -87,9 +111,17 @@ async function setsFor(name: string) {
     .select({ sets: userProgramExercises.sets, exerciseName: exercises.name })
     .from(userProgramExercises)
     .innerJoin(exercises, eq(exercises.id, userProgramExercises.exerciseId))
-    .innerJoin(userProgramDays, eq(userProgramDays.id, userProgramExercises.dayId))
-    .innerJoin(userProgramWeeks, eq(userProgramWeeks.id, userProgramDays.weekId))
-    .where(and(eq(userProgramWeeks.userProgramId, forkId), eq(exercises.name, name)));
+    .innerJoin(
+      userProgramDays,
+      eq(userProgramDays.id, userProgramExercises.dayId),
+    )
+    .innerJoin(
+      userProgramWeeks,
+      eq(userProgramWeeks.id, userProgramDays.weekId),
+    )
+    .where(
+      and(eq(userProgramWeeks.userProgramId, forkId), eq(exercises.name, name)),
+    );
   return rows.map((r) => r.sets);
 }
 
@@ -122,7 +154,12 @@ describe("ownership", () => {
 
 describe("swapExercise", () => {
   it("replaces the movement everywhere it appears, not just the first", async () => {
-    const result = await swapExercise(forkId, ownerId, "Back Squat", "Front Squat");
+    const result = await swapExercise(
+      forkId,
+      ownerId,
+      "Back Squat",
+      "Front Squat",
+    );
     expect(result.ok).toBe(true);
     expect(await setsFor("Back Squat")).toEqual([]);
     expect(await setsFor("Front Squat")).toEqual([3, 3]);
@@ -133,32 +170,59 @@ describe("swapExercise", () => {
     const [row] = await db
       .select({ from: userProgramExercises.substitutedFromExerciseId })
       .from(userProgramExercises)
-      .innerJoin(userProgramDays, eq(userProgramDays.id, userProgramExercises.dayId))
-      .innerJoin(userProgramWeeks, eq(userProgramWeeks.id, userProgramDays.weekId))
+      .innerJoin(
+        userProgramDays,
+        eq(userProgramDays.id, userProgramExercises.dayId),
+      )
+      .innerJoin(
+        userProgramWeeks,
+        eq(userProgramWeeks.id, userProgramDays.weekId),
+      )
       .where(eq(userProgramWeeks.userProgramId, forkId))
       .limit(1);
     expect(row.from).toBe(squatId);
   });
 
   it("refuses an exercise the program doesn't contain", async () => {
-    const result = await swapExercise(forkId, ownerId, "Leg Press", "Hack Squat");
+    const result = await swapExercise(
+      forkId,
+      ownerId,
+      "Leg Press",
+      "Hack Squat",
+    );
     expect(result).toMatchObject({ ok: false });
   });
 
   it("refuses a name that isn't in the catalogue rather than inventing one", async () => {
-    const result = await swapExercise(forkId, ownerId, "Back Squat", "Nonexistent Machine XYZ");
+    const result = await swapExercise(
+      forkId,
+      ownerId,
+      "Back Squat",
+      "Nonexistent Machine XYZ",
+    );
     expect(result.ok).toBe(false);
   });
 
   it("refuses swapping something for itself", async () => {
-    const result = await swapExercise(forkId, ownerId, "Back Squat", "Back Squat");
-    expect(result).toMatchObject({ ok: false, reason: "those are the same exercise" });
+    const result = await swapExercise(
+      forkId,
+      ownerId,
+      "Back Squat",
+      "Back Squat",
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "those are the same exercise",
+    });
   });
 });
 
 describe("adjustVolume", () => {
   it("scopes to one exercise when named", async () => {
-    await adjustVolume(forkId, ownerId, { exerciseName: "Back Squat", deltaSets: 2 });
+    await adjustVolume(forkId, ownerId, {
+      exerciseName: "Back Squat",
+      deltaSets: 2,
+    });
     expect(await setsFor("Back Squat")).toEqual([5, 5]);
     expect(await setsFor("Overhead Press")).toEqual([3, 3]);
   });

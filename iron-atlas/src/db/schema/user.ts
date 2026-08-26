@@ -47,11 +47,17 @@ export const gymProfiles = pgTable("gym_profiles", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
-  availableEquipment: equipment("available_equipment").array().notNull().default([]),
+  availableEquipment: equipment("available_equipment")
+    .array()
+    .notNull()
+    .default([]),
   /** Named machines the gym lacks, e.g. "hack squat", "pec deck". */
   missingMachines: text("missing_machines").array().notNull().default([]),
   /** Exercises to never prescribe (injuries, dislikes). */
-  bannedExerciseIds: integer("banned_exercise_ids").array().notNull().default([]),
+  bannedExerciseIds: integer("banned_exercise_ids")
+    .array()
+    .notNull()
+    .default([]),
   injuryNotes: text("injury_notes"),
   goal: goal("goal"),
   experienceLevel: experienceLevel("experience_level"),
@@ -97,7 +103,9 @@ export const userProgramWeeks = pgTable(
     notes: text("notes"),
     repeatCount: integer("repeat_count").notNull().default(1),
   },
-  (t) => [unique("user_program_weeks_unique").on(t.userProgramId, t.weekNumber)],
+  (t) => [
+    unique("user_program_weeks_unique").on(t.userProgramId, t.weekNumber),
+  ],
 );
 
 export const userProgramDays = pgTable(
@@ -133,9 +141,9 @@ export const userProgramExercises = pgTable(
       { onDelete: "set null" },
     ),
     /** The exercise originally prescribed, if this row was substituted. */
-    substitutedFromExerciseId: integer("substituted_from_exercise_id").references(
-      () => exercises.id,
-    ),
+    substitutedFromExerciseId: integer(
+      "substituted_from_exercise_id",
+    ).references(() => exercises.id),
     order: integer("order").notNull(),
     sets: integer("sets").notNull(),
     reps: text("reps").notNull(),

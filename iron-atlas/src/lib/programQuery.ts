@@ -35,6 +35,8 @@ export async function loadProgram(slug: string) {
       sourceUrls: programs.sourceUrls,
       aiGenerated: programs.aiGenerated,
       verified: programs.verified,
+      confidence: programs.confidence,
+      confidenceNotes: programs.confidenceNotes,
     })
     .from(programs)
     .where(eq(programs.slug, slug));
@@ -83,14 +85,21 @@ export async function loadProgram(slug: string) {
   return { program, rows };
 }
 
-export type ProgramRow = NonNullable<Awaited<ReturnType<typeof loadProgram>>>["rows"][number];
-export type ProgramMeta = NonNullable<Awaited<ReturnType<typeof loadProgram>>>["program"];
+export type ProgramRow = NonNullable<
+  Awaited<ReturnType<typeof loadProgram>>
+>["rows"][number];
+export type ProgramMeta = NonNullable<
+  Awaited<ReturnType<typeof loadProgram>>
+>["program"];
 
 /** Groups the flat join into weeks → days → exercises, preserving query order. */
 export function groupByWeek(rows: ProgramRow[]) {
   const weeks = new Map<
     number,
-    { meta: ProgramRow; days: Map<number, { meta: ProgramRow; items: ProgramRow[] }> }
+    {
+      meta: ProgramRow;
+      days: Map<number, { meta: ProgramRow; items: ProgramRow[] }>;
+    }
   >();
   for (const row of rows) {
     const week = weeks.get(row.weekId) ?? { meta: row, days: new Map() };
@@ -109,7 +118,10 @@ export function groupByWeek(rows: ProgramRow[]) {
  */
 export function applySwaps(
   rows: ProgramRow[],
-  swaps: Map<number, { to: { id: number; name: string; equipment: string } | null }>,
+  swaps: Map<
+    number,
+    { to: { id: number; name: string; equipment: string } | null }
+  >,
 ): ProgramRow[] {
   return rows.map((row) => {
     const swap = swaps.get(row.exerciseId);

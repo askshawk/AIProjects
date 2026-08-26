@@ -33,7 +33,13 @@ async function logSession(formData: FormData) {
 
   // Parse the flat form into sets. Field names carry their own identity
   // (w-<prescriptionId>-<setIndex>) so the shape survives a form POST.
-  type Parsed = { exerciseId: number; setIndex: number; weight: number | null; reps: number | null; rpe: number | null };
+  type Parsed = {
+    exerciseId: number;
+    setIndex: number;
+    weight: number | null;
+    reps: number | null;
+    rpe: number | null;
+  };
   const parsed: Parsed[] = [];
 
   for (const [key, raw] of formData.entries()) {
@@ -124,7 +130,8 @@ export default async function TrainPage({
         <h1 className="text-2xl font-semibold tracking-tight">Train</h1>
         <p className="text-sm text-muted">
           No active program. Pick one from the library and hit &ldquo;Start this
-          program&rdquo; — it gets copied to your account with your gym&apos;s swaps baked in.
+          program&rdquo; — it gets copied to your account with your gym&apos;s
+          swaps baked in.
         </p>
         <Link
           href="/programs"
@@ -138,12 +145,16 @@ export default async function TrainPage({
 
   const days = await programDaysFor(program.id);
   if (days.length === 0) {
-    return <p className="text-sm text-muted">This program has no training days.</p>;
+    return (
+      <p className="text-sm text-muted">This program has no training days.</p>
+    );
   }
 
   // Which day to show: the requested one, else the one after whatever was
   // logged last, else the start of the block.
-  const requested = Number(Array.isArray(params.day) ? params.day[0] : params.day);
+  const requested = Number(
+    Array.isArray(params.day) ? params.day[0] : params.day,
+  );
   const [lastLogged] = await db
     .select({ dayId: workoutSessions.userProgramDayId })
     .from(workoutSessions)

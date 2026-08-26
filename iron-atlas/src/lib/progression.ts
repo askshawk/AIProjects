@@ -61,7 +61,7 @@ export type RepTarget = { min: number; max: number; isAmrap: boolean };
  */
 export function parseRepTarget(reps: string): RepTarget | null {
   const text = reps.trim().toLowerCase();
-  if (text === "" ) return null;
+  if (text === "") return null;
 
   const isAmrap = text.includes("amrap") || text.includes("+");
   const numbers = text.match(/\d+/g);
@@ -97,13 +97,17 @@ function workingWeight(sets: LoggedSet[]): number | null {
  * Three misses in a row is a stall, but we only see one session here, so the
  * suggestion says "repeat" rather than pretending to know the streak.
  */
-function linear(prescribed: Prescription, last: LoggedSet[]): Suggestion | null {
+function linear(
+  prescribed: Prescription,
+  last: LoggedSet[],
+): Suggestion | null {
   const target = parseRepTarget(prescribed.reps);
   const weight = workingWeight(last);
   if (!target || weight === null) return null;
 
   const done = completed(last);
-  const allHit = done.length >= prescribed.sets && done.every((s) => s.reps! >= target.min);
+  const allHit =
+    done.length >= prescribed.sets && done.every((s) => s.reps! >= target.min);
 
   if (!allHit) {
     return {
@@ -126,7 +130,10 @@ function linear(prescribed: Prescription, last: LoggedSet[]): Suggestion | null 
  * Double progression: climb the rep range at a fixed load, then add weight and
  * drop back to the bottom of the range. The standard hypertrophy driver.
  */
-function doubleProgression(prescribed: Prescription, last: LoggedSet[]): Suggestion | null {
+function doubleProgression(
+  prescribed: Prescription,
+  last: LoggedSet[],
+): Suggestion | null {
   const target = parseRepTarget(prescribed.reps);
   const weight = workingWeight(last);
   if (!target || weight === null) return null;
@@ -140,7 +147,11 @@ function doubleProgression(prescribed: Prescription, last: LoggedSet[]): Suggest
     done.length >= prescribed.sets && done.every((s) => s.reps! >= target.max);
 
   if (toppedOut) {
-    const increment = prescribed.isCompound ? (prescribed.isLowerBody ? 5 : 2.5) : 2.5;
+    const increment = prescribed.isCompound
+      ? prescribed.isLowerBody
+        ? 5
+        : 2.5
+      : 2.5;
     const next = roundToPlate(weight + increment);
     return {
       weightKg: next,
@@ -161,7 +172,10 @@ function doubleProgression(prescribed: Prescription, last: LoggedSet[]): Suggest
  * RPE-autoregulated: the lifter's reported effort sets the next load. Below
  * target means there was more in the tank; above means it was too heavy.
  */
-function rpeAutoregulated(prescribed: Prescription, last: LoggedSet[]): Suggestion | null {
+function rpeAutoregulated(
+  prescribed: Prescription,
+  last: LoggedSet[],
+): Suggestion | null {
   const weight = workingWeight(last);
   const targetRpe = Number(prescribed.intensityValue);
   if (weight === null || !Number.isFinite(targetRpe)) return null;
@@ -232,7 +246,9 @@ export function suggestNext(
   // Percentage work doesn't need history, only an estimated max.
   if (
     prescribed.intensityType === "percent_1rm" &&
-    (scheme === "wave_531" || scheme === "percentage_block" || bestE1rm !== null)
+    (scheme === "wave_531" ||
+      scheme === "percentage_block" ||
+      bestE1rm !== null)
   ) {
     const fromPct = percentageBased(prescribed, bestE1rm);
     if (fromPct) return fromPct;
@@ -254,7 +270,8 @@ export function suggestNext(
       return {
         weightKg: workingWeight(last),
         reps: prescribed.reps,
-        reason: "Log a heavier single or set to establish a max for percentage work.",
+        reason:
+          "Log a heavier single or set to establish a max for percentage work.",
       };
     case "none":
     default:
@@ -267,9 +284,15 @@ export function suggestNext(
  * upper-body lifts. Derived from the catalogue's muscle, not hardcoded names.
  */
 export function isLowerBodyMuscle(primaryMuscle: string): boolean {
-  return ["quads", "hamstrings", "glutes", "calves", "lower_back", "adductors", "abductors"].includes(
-    primaryMuscle,
-  );
+  return [
+    "quads",
+    "hamstrings",
+    "glutes",
+    "calves",
+    "lower_back",
+    "adductors",
+    "abductors",
+  ].includes(primaryMuscle);
 }
 
 /** Convenience for callers that already have an e1RM series. */

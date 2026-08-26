@@ -28,7 +28,9 @@ const LABELS: Record<Equipment, string> = {
 async function saveGym(formData: FormData) {
   "use server";
 
-  const equipment = equipmentEnum.enumValues.filter((e) => formData.get(`eq-${e}`) === "on");
+  const equipment = equipmentEnum.enumValues.filter(
+    (e) => formData.get(`eq-${e}`) === "on",
+  );
   const banned = String(formData.get("banned") ?? "")
     .split(",")
     .map((s) => Number(s.trim()))
@@ -69,8 +71,9 @@ export default async function GymPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Your gym</h1>
         <p className="mt-1 text-sm text-muted">
-          Tell me what you have and every program will flag the movements you can&apos;t do,
-          with a swap that trains the same thing. Leave it blank and nothing is filtered.
+          Tell me what you have and every program will flag the movements you
+          can&apos;t do, with a swap that trains the same thing. Leave it blank
+          and nothing is filtered.
         </p>
       </div>
 
@@ -87,7 +90,9 @@ export default async function GymPage() {
                   type="checkbox"
                   name={`eq-${e}`}
                   defaultChecked={
-                    configured ? gym.equipment.includes(e) : FULL_GYM.includes(e)
+                    configured
+                      ? gym.equipment.includes(e)
+                      : FULL_GYM.includes(e)
                   }
                   className="size-4 accent-[var(--accent)]"
                 />
@@ -102,9 +107,12 @@ export default async function GymPage() {
             Movements to avoid
           </label>
           <p className="text-xs text-muted">
-            Exercise IDs, comma separated — for a machine your gym lacks or something an
-            injury rules out. Find IDs on the{" "}
-            <a href="/exercises" className="text-accent underline underline-offset-2">
+            Exercise IDs, comma separated — for a machine your gym lacks or
+            something an injury rules out. Find IDs on the{" "}
+            <a
+              href="/exercises"
+              className="text-accent underline underline-offset-2"
+            >
               exercise catalogue
             </a>
             .

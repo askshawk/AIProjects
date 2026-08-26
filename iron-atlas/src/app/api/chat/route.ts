@@ -1,5 +1,11 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  tool,
+  type UIMessage,
+} from "ai";
 import { z } from "zod";
 import {
   equipment as equipmentEnum,
@@ -66,7 +72,8 @@ export async function POST(req: Request) {
   ): Promise<T | { ok: false; reason: string }> {
     if (!user) return { ok: false, reason: "the lifter isn't signed in" };
     const fork = await activeProgram(user.id);
-    if (!fork) return { ok: false, reason: "the lifter hasn't started a program yet" };
+    if (!fork)
+      return { ok: false, reason: "the lifter hasn't started a program yet" };
     return fn(fork, user.id);
   }
 
@@ -114,7 +121,9 @@ export async function POST(req: Request) {
         description:
           "Find gym-appropriate replacements for a movement in the lifter's active program. Read-only — call this before swapExercise when they say they can't do something, and let them pick from the result.",
         inputSchema: z.object({
-          exerciseName: z.string().describe("The movement they want to replace."),
+          exerciseName: z
+            .string()
+            .describe("The movement they want to replace."),
         }),
         execute: async ({ exerciseName }) =>
           withActiveProgram((fork, userId) =>
@@ -142,25 +151,41 @@ export async function POST(req: Request) {
           exerciseName: z
             .string()
             .optional()
-            .describe("Limit the change to this movement. Omit to change every exercise."),
-          deltaSets: z.number().int().optional().describe("Sets to add (negative to remove)."),
-          multiplier: z.number().positive().optional().describe("Scale sets by this factor."),
+            .describe(
+              "Limit the change to this movement. Omit to change every exercise.",
+            ),
+          deltaSets: z
+            .number()
+            .int()
+            .optional()
+            .describe("Sets to add (negative to remove)."),
+          multiplier: z
+            .number()
+            .positive()
+            .optional()
+            .describe("Scale sets by this factor."),
         }),
         execute: async (opts) =>
-          withActiveProgram((fork, userId) => adjustVolume(fork.id, userId, opts)),
+          withActiveProgram((fork, userId) =>
+            adjustVolume(fork.id, userId, opts),
+          ),
       }),
 
       addExercise: tool({
         description:
           "Add a movement to a training day in the lifter's active program.",
         inputSchema: z.object({
-          dayName: z.string().describe("Which day — matched loosely against the day names."),
+          dayName: z
+            .string()
+            .describe("Which day — matched loosely against the day names."),
           exerciseName: z.string(),
           sets: z.number().int().describe("Working sets."),
           reps: z.string().describe('Rep target, e.g. "8-12" or "AMRAP".'),
         }),
         execute: async (opts) =>
-          withActiveProgram((fork, userId) => addExercise(fork.id, userId, opts)),
+          withActiveProgram((fork, userId) =>
+            addExercise(fork.id, userId, opts),
+          ),
       }),
 
       removeExercise: tool({
@@ -168,7 +193,9 @@ export async function POST(req: Request) {
           "Drop a movement from the lifter's active program entirely. Prefer swapExercise when they just can't perform it — removing loses the training the program intended.",
         inputSchema: z.object({ exerciseName: z.string() }),
         execute: async ({ exerciseName }) =>
-          withActiveProgram((fork, userId) => removeExercise(fork.id, userId, exerciseName)),
+          withActiveProgram((fork, userId) =>
+            removeExercise(fork.id, userId, exerciseName),
+          ),
       }),
     },
   });

@@ -71,9 +71,18 @@ describe("library integrity", () => {
         actual: sql<string[]>`array_agg(distinct ${exercises.equipment})`,
       })
       .from(programs)
-      .innerJoin(sql`program_weeks`, sql`program_weeks.program_id = ${programs.id}`)
-      .innerJoin(sql`program_days`, sql`program_days.week_id = program_weeks.id`)
-      .innerJoin(programExercises, sql`${programExercises.dayId} = program_days.id`)
+      .innerJoin(
+        sql`program_weeks`,
+        sql`program_weeks.program_id = ${programs.id}`,
+      )
+      .innerJoin(
+        sql`program_days`,
+        sql`program_days.week_id = program_weeks.id`,
+      )
+      .innerJoin(
+        programExercises,
+        sql`${programExercises.dayId} = program_days.id`,
+      )
       .innerJoin(exercises, eq(exercises.id, programExercises.exerciseId))
       .groupBy(programs.slug, programs.equipmentRequired);
 

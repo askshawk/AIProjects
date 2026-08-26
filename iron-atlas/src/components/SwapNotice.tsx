@@ -26,7 +26,9 @@ export function SwapNotice({ swaps }: { swaps: SwapPlan[] }) {
         <ul className="mt-2 space-y-1">
           {swapped.map((s) => (
             <li key={s.from.exerciseId} className="text-muted">
-              <span className="line-through opacity-60">{s.from.exerciseName}</span>
+              <span className="line-through opacity-60">
+                {s.from.exerciseName}
+              </span>
               {" → "}
               <span className="text-foreground">{s.to!.name}</span>
               <span className="text-xs"> ({TIER_LABEL[s.to!.tier]})</span>
@@ -41,8 +43,8 @@ export function SwapNotice({ swaps }: { swaps: SwapPlan[] }) {
           <span className="text-foreground">
             {stuck.map((s) => s.from.exerciseName).join(", ")}
           </span>
-          . Nothing in the catalogue trains the same thing with your equipment — these are
-          left as written.
+          . Nothing in the catalogue trains the same thing with your equipment —
+          these are left as written.
         </p>
       )}
 

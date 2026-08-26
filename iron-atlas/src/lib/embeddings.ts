@@ -53,7 +53,10 @@ type VoyageResponse = {
  */
 export type EmbedKind = "document" | "query";
 
-async function callVoyage(inputs: string[], kind: EmbedKind): Promise<number[][]> {
+async function callVoyage(
+  inputs: string[],
+  kind: EmbedKind,
+): Promise<number[][]> {
   const apiKey = process.env.VOYAGE_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -125,7 +128,8 @@ function* batches(texts: string[]): Generator<string[]> {
 
   for (const text of texts) {
     const cost = Math.ceil(text.length / CHARS_PER_TOKEN);
-    const wouldOverflow = current.length >= MAX_BATCH || tokens + cost > MAX_BATCH_TOKENS;
+    const wouldOverflow =
+      current.length >= MAX_BATCH || tokens + cost > MAX_BATCH_TOKENS;
     if (current.length > 0 && wouldOverflow) {
       yield current;
       current = [];
@@ -148,7 +152,9 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
       if (!e.retryable || attempt >= MAX_RETRIES) throw err;
       // Honour Retry-After when the server sends one; otherwise back off
       // linearly from a minute-scale base, since the limit resets per minute.
-      const waitMs = e.retryAfter ? e.retryAfter * 1000 : BASE_BACKOFF_MS * (attempt + 1);
+      const waitMs = e.retryAfter
+        ? e.retryAfter * 1000
+        : BASE_BACKOFF_MS * (attempt + 1);
       console.warn(
         `  rate limited by Voyage, waiting ${Math.round(waitMs / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})`,
       );
@@ -157,7 +163,10 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function embedOne(text: string, kind: EmbedKind = "document"): Promise<number[]> {
+export async function embedOne(
+  text: string,
+  kind: EmbedKind = "document",
+): Promise<number[]> {
   const [vector] = await embed([text], kind);
   return vector;
 }

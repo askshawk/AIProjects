@@ -22,7 +22,10 @@ export default async function AuthorPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/programs/authors" className="text-sm text-muted hover:text-foreground">
+        <Link
+          href="/programs/authors"
+          className="text-sm text-muted hover:text-foreground"
+        >
           ← All coaches
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">{name}</h1>

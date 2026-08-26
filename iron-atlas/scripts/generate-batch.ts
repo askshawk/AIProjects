@@ -7,6 +7,7 @@ import {
   DEFAULT_MODEL,
   generateAndSave,
   isRetryable,
+  isTerminal,
   type GenerationResult,
 } from "@/lib/programGeneration";
 
@@ -107,12 +108,21 @@ async function main() {
       saved.push(result.slug);
       totalSets += result.prescribedSets;
       console.log(`    ✓ ${result.slug} — ${result.weeks} week(s), ${result.prescribedSets} sets\n`);
-    } else {
-      failed.push({ spec, result });
-      for (const name of result.missing ?? []) {
-        missing.set(name, [...(missing.get(name) ?? []), spec.slug]);
-      }
-      console.log(`    ✗ ${result.kind}: ${result.message}\n`);
+      continue;
+    }
+
+    failed.push({ spec, result });
+    for (const name of result.missing ?? []) {
+      missing.set(name, [...(missing.get(name) ?? []), spec.slug]);
+    }
+    console.log(`    ✗ ${result.kind}: ${result.message}\n`);
+
+    // Out of credit or bad key: everything after this fails the same way.
+    // Stop instead of walking the rest of the manifest — the previous run
+    // spent thirteen requests discovering the balance was empty.
+    if (isTerminal(result.kind)) {
+      console.log(`stopping: ${result.kind} — the remaining ${queue.length - i - 1} would fail identically.\n`);
+      break;
     }
   }
 

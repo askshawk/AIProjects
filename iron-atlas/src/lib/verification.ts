@@ -23,12 +23,17 @@ export type ReviewQueueRow = {
   sourceUrls: string[];
   prescribedSets: number;
   weeks: number;
+  confidence: "documented" | "partial" | "stylistic" | null;
 };
 
 /**
- * Unverified programs, thinnest first — a program with very few prescribed
- * sets is the most likely to be a bad reconstruction, so it should be the
- * first thing a reviewer sees.
+ * Unverified programs, least trustworthy first.
+ *
+ * Ordered by the model's own stated confidence before anything else: a
+ * program whose notes admit "I could not verify this program's contents"
+ * needs a human far more urgently than a thin-but-accurate one. Set count
+ * breaks ties, since a reconstruction that lost most of its content is the
+ * other common failure.
  */
 export async function reviewQueue(): Promise<ReviewQueueRow[]> {
   const rows = await db
@@ -39,6 +44,7 @@ export async function reviewQueue(): Promise<ReviewQueueRow[]> {
       generatedModel: programs.generatedModel,
       sourceUrls: programs.sourceUrls,
       weeks: programs.weeks,
+      confidence: programs.confidence,
       prescribedSets: sql<number>`(
         select count(*)::int from ${programExercises} pe
         join program_days pd on pd.id = pe.day_id
@@ -48,7 +54,16 @@ export async function reviewQueue(): Promise<ReviewQueueRow[]> {
     })
     .from(programs)
     .where(eq(programs.verified, false))
-    .orderBy(asc(programs.authorName), asc(programs.title));
+    .orderBy(
+      // stylistic → partial → documented → unclassified.
+      sql`case ${programs.confidence}
+            when 'stylistic' then 0
+            when 'partial' then 1
+            when 'documented' then 2
+            else 3 end`,
+      asc(programs.authorName),
+      asc(programs.title),
+    );
 
   return rows;
 }

@@ -33,7 +33,11 @@ const hypertrophy: Prescription = {
   isCompound: false,
 };
 
-const set = (weightKg: number | null, reps: number | null, rpe: number | null = null): LoggedSet => ({
+const set = (
+  weightKg: number | null,
+  reps: number | null,
+  rpe: number | null = null,
+): LoggedSet => ({
   weightKg,
   reps,
   rpe,
@@ -83,7 +87,9 @@ describe("suggestNext — no history", () => {
   });
 
   it("ignores rows that were never filled in", () => {
-    expect(suggestNext("linear", upperCompound, [set(null, null), set(null, null)])).toBeNull();
+    expect(
+      suggestNext("linear", upperCompound, [set(null, null), set(null, null)]),
+    ).toBeNull();
   });
 
   it("returns null for a program with no progression scheme", () => {
@@ -93,25 +99,40 @@ describe("suggestNext — no history", () => {
 
 describe("suggestNext — linear", () => {
   it("adds weight when every set hit the target", () => {
-    const result = suggestNext("linear", upperCompound, [set(60, 5), set(60, 5), set(60, 5)])!;
+    const result = suggestNext("linear", upperCompound, [
+      set(60, 5),
+      set(60, 5),
+      set(60, 5),
+    ])!;
     expect(result.weightKg).toBe(62.5);
     expect(result.reason).toContain("add 2.5 kg");
   });
 
   it("uses a bigger jump for lower-body lifts", () => {
-    const result = suggestNext("linear", lowerCompound, [set(100, 5), set(100, 5), set(100, 5)])!;
+    const result = suggestNext("linear", lowerCompound, [
+      set(100, 5),
+      set(100, 5),
+      set(100, 5),
+    ])!;
     expect(result.weightKg).toBe(105);
   });
 
   it("holds the weight when a set was missed", () => {
-    const result = suggestNext("linear", upperCompound, [set(60, 5), set(60, 5), set(60, 3)])!;
+    const result = suggestNext("linear", upperCompound, [
+      set(60, 5),
+      set(60, 5),
+      set(60, 3),
+    ])!;
     expect(result.weightKg).toBe(60);
     expect(result.reason).toContain("missed");
   });
 
   it("holds when fewer sets were completed than prescribed", () => {
     // Two of three sets, both at target, is still not a completed session.
-    const result = suggestNext("linear", upperCompound, [set(60, 5), set(60, 5)])!;
+    const result = suggestNext("linear", upperCompound, [
+      set(60, 5),
+      set(60, 5),
+    ])!;
     expect(result.weightKg).toBe(60);
     expect(result.reason).toContain("missed");
   });
@@ -150,7 +171,11 @@ describe("suggestNext — double progression", () => {
 
   it("falls back to linear when the prescription isn't really a range", () => {
     const fixed = { ...hypertrophy, reps: "5" };
-    const result = suggestNext("double_progression", fixed, [set(60, 5), set(60, 5), set(60, 5)])!;
+    const result = suggestNext("double_progression", fixed, [
+      set(60, 5),
+      set(60, 5),
+      set(60, 5),
+    ])!;
     expect(result.weightKg).toBe(62.5);
   });
 });
@@ -192,7 +217,10 @@ describe("suggestNext — RPE autoregulated", () => {
   });
 
   it("asks for RPE rather than guessing when none was logged", () => {
-    const result = suggestNext("rpe_autoregulated", rpePrescription, [set(100, 5), set(100, 5)])!;
+    const result = suggestNext("rpe_autoregulated", rpePrescription, [
+      set(100, 5),
+      set(100, 5),
+    ])!;
     expect(result.weightKg).toBe(100);
     expect(result.reason).toContain("No RPE logged");
   });
@@ -208,19 +236,31 @@ describe("suggestNext — percentage work", () => {
 
   it("computes from a training max at 90% of the estimated max", () => {
     // 200 kg e1RM -> 180 TM -> 85% = 153 -> rounds to 152.5
-    const result = suggestNext("wave_531", pctPrescription, [set(150, 5)], 200)!;
+    const result = suggestNext(
+      "wave_531",
+      pctPrescription,
+      [set(150, 5)],
+      200,
+    )!;
     expect(result.weightKg).toBe(152.5);
     expect(result.reason).toContain("training max");
   });
 
   it("says what's missing rather than guessing without a max", () => {
-    const result = suggestNext("wave_531", pctPrescription, [set(150, 5)], null)!;
+    const result = suggestNext(
+      "wave_531",
+      pctPrescription,
+      [set(150, 5)],
+      null,
+    )!;
     expect(result.weightKg).toBe(150);
     expect(result.reason).toContain("establish a max");
   });
 
   it("still needs history when there is no max and no logged work", () => {
-    expect(suggestNext("wave_531", pctPrescription, undefined, null)).toBeNull();
+    expect(
+      suggestNext("wave_531", pctPrescription, undefined, null),
+    ).toBeNull();
   });
 });
 

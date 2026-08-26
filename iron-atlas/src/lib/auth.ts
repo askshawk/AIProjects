@@ -1,4 +1,9 @@
-import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from "node:crypto";
+import {
+  randomBytes,
+  scrypt,
+  timingSafeEqual,
+  type ScryptOptions,
+} from "node:crypto";
 import { cookies } from "next/headers";
 import { and, eq, gt, lt } from "drizzle-orm";
 import { db } from "@/db";
@@ -39,7 +44,10 @@ export async function hashPassword(password: string): Promise<string> {
   return `${salt}:${derived.toString("hex")}`;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  stored: string,
+): Promise<boolean> {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
 
@@ -109,7 +117,8 @@ export async function destroySession(): Promise<void> {
 /** Normalises emails so "Alan@X.com " and "alan@x.com" are the same account. */
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-export type AuthResult = { ok: true; userId: number } | { ok: false; error: string };
+export type AuthResult =
+  { ok: true; userId: number } | { ok: false; error: string };
 
 export async function registerUser(
   emailRaw: string,
@@ -124,8 +133,12 @@ export async function registerUser(
     return { ok: false, error: "Password needs to be at least 8 characters." };
   }
 
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
-  if (existing) return { ok: false, error: "An account with that email already exists." };
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email));
+  if (existing)
+    return { ok: false, error: "An account with that email already exists." };
 
   const [created] = await db
     .insert(users)

@@ -167,7 +167,9 @@ export async function activeProgram(userId: number) {
       sourceProgramId: userPrograms.sourceProgramId,
     })
     .from(userPrograms)
-    .where(and(eq(userPrograms.userId, userId), eq(userPrograms.status, "active")))
+    .where(
+      and(eq(userPrograms.userId, userId), eq(userPrograms.status, "active")),
+    )
     .orderBy(asc(userPrograms.startedAt))
     .limit(1);
 

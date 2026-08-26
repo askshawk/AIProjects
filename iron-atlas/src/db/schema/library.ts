@@ -17,6 +17,7 @@ import {
   movementPattern,
   muscle,
   progressionScheme,
+  reconstructionConfidence,
 } from "./enums";
 
 /**
@@ -79,12 +80,20 @@ export const programs = pgTable(
     weeks: integer("weeks").notNull(),
     splitType: text("split_type").notNull(),
     progression: progressionScheme("progression").notNull().default("none"),
-    equipmentRequired: equipment("equipment_required").array().notNull().default([]),
+    equipmentRequired: equipment("equipment_required")
+      .array()
+      .notNull()
+      .default([]),
     tags: text("tags").array().notNull().default([]),
     /** Reconstructed by an LLM rather than transcribed from the source. */
     aiGenerated: boolean("ai_generated").notNull().default(true),
     /** Flipped by hand once the content has been checked against the source. */
     verified: boolean("verified").notNull().default(false),
+    /** The model's own assessment of how faithful this reconstruction is. */
+    confidence: reconstructionConfidence("confidence"),
+    /** The model's reasoning about that, in its own words. Was previously
+     *  appended to `description`, where nothing could sort or filter on it. */
+    confidenceNotes: text("confidence_notes"),
     generatedModel: text("generated_model"),
     generatedAt: timestamp("generated_at"),
     embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),

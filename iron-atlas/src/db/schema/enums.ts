@@ -88,3 +88,22 @@ export const progressionScheme = pgEnum("progression_scheme", [
   "percentage_block",
   "none",
 ]);
+
+/**
+ * How close a reconstruction is to the program its author actually published.
+ *
+ * Nearly the whole library is rebuilt from a model's knowledge rather than
+ * transcribed, and faithfulness varies enormously — the published 5/3/1
+ * percentages are well documented, while several paid Meadows blocks aren't
+ * public anywhere and can only be written *in his style*. Showing both under
+ * one "AI-reconstructed" badge presented a guess and a near-transcript as the
+ * same thing, which is the one claim this library shouldn't make.
+ */
+export const reconstructionConfidence = pgEnum("reconstruction_confidence", [
+  /** The published set/rep/percentage scheme is recalled specifically. */
+  "documented",
+  /** Overall structure is known; some specifics are inferred. */
+  "partial",
+  /** The name is known, the contents are not — written in the author's style. */
+  "stylistic",
+]);

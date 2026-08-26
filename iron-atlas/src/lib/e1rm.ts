@@ -17,7 +17,10 @@ export function epley(weightKg: number, reps: number): number {
 export const E1RM_REP_CEILING = 10;
 
 /** Whether a set is a fair basis for an estimated max. */
-export function countsTowardE1rm(weightKg: number | null, reps: number | null): boolean {
+export function countsTowardE1rm(
+  weightKg: number | null,
+  reps: number | null,
+): boolean {
   return (
     weightKg !== null &&
     reps !== null &&

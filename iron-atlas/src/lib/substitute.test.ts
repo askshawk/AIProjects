@@ -57,7 +57,9 @@ describe("canPerform", () => {
 
   it("allows everything when no gym is configured", async () => {
     const hackSquat = await load("Hack Squat");
-    expect(canPerform(hackSquat, { equipment: [], bannedExerciseIds: [] })).toBe(true);
+    expect(
+      canPerform(hackSquat, { equipment: [], bannedExerciseIds: [] }),
+    ).toBe(true);
   });
 
   it("blocks explicitly banned exercises even with the right equipment", async () => {
@@ -78,7 +80,10 @@ describe.skipIf(!hasEmbeddings)("findSubstitutes", () => {
   });
 
   it("finds the obvious answer for a barbell press without a barbell", async () => {
-    const subs = await findSubstitutes(await load("Barbell Bench Press"), DUMBBELLS);
+    const subs = await findSubstitutes(
+      await load("Barbell Bench Press"),
+      DUMBBELLS,
+    );
     expect(subs[0].name).toBe("Dumbbell Bench Press");
   });
 
@@ -113,7 +118,11 @@ describe.skipIf(!hasEmbeddings)("findSubstitutes", () => {
 
   it("never returns the exercise it was asked to replace", async () => {
     const bench = await load("Barbell Bench Press");
-    const subs = await findSubstitutes(bench, { equipment: [], bannedExerciseIds: [] }, 10);
+    const subs = await findSubstitutes(
+      bench,
+      { equipment: [], bannedExerciseIds: [] },
+      10,
+    );
     expect(subs.map((s) => s.id)).not.toContain(bench.exerciseId);
   });
 
@@ -162,14 +171,26 @@ describe("gym profile cookie", () => {
 
   it("falls back to an empty profile on junk rather than throwing", () => {
     // A stale or hand-edited cookie must not take a page down.
-    expect(parseGymProfile(undefined)).toEqual({ equipment: [], bannedExerciseIds: [] });
-    expect(parseGymProfile("not json")).toEqual({ equipment: [], bannedExerciseIds: [] });
-    expect(parseGymProfile("null")).toEqual({ equipment: [], bannedExerciseIds: [] });
+    expect(parseGymProfile(undefined)).toEqual({
+      equipment: [],
+      bannedExerciseIds: [],
+    });
+    expect(parseGymProfile("not json")).toEqual({
+      equipment: [],
+      bannedExerciseIds: [],
+    });
+    expect(parseGymProfile("null")).toEqual({
+      equipment: [],
+      bannedExerciseIds: [],
+    });
   });
 
   it("drops values that aren't real equipment", () => {
     const raw = encodeURIComponent(
-      JSON.stringify({ equipment: ["barbell", "spaceship"], bannedExerciseIds: [1, "x"] }),
+      JSON.stringify({
+        equipment: ["barbell", "spaceship"],
+        bannedExerciseIds: [1, "x"],
+      }),
     );
     expect(parseGymProfile(raw)).toEqual({
       equipment: ["barbell"],

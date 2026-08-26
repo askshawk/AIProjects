@@ -33,7 +33,9 @@ async function ownedFork(userProgramId: number, userId: number) {
   const [fork] = await db
     .select({ id: userPrograms.id, title: userPrograms.title })
     .from(userPrograms)
-    .where(and(eq(userPrograms.id, userProgramId), eq(userPrograms.userId, userId)));
+    .where(
+      and(eq(userPrograms.id, userProgramId), eq(userPrograms.userId, userId)),
+    );
   return fork ?? null;
 }
 
@@ -52,8 +54,14 @@ async function prescriptionsIn(userProgramId: number) {
     })
     .from(userProgramExercises)
     .innerJoin(exercises, eq(exercises.id, userProgramExercises.exerciseId))
-    .innerJoin(userProgramDays, eq(userProgramDays.id, userProgramExercises.dayId))
-    .innerJoin(userProgramWeeks, eq(userProgramWeeks.id, userProgramDays.weekId))
+    .innerJoin(
+      userProgramDays,
+      eq(userProgramDays.id, userProgramExercises.dayId),
+    )
+    .innerJoin(
+      userProgramWeeks,
+      eq(userProgramWeeks.id, userProgramDays.weekId),
+    )
     .where(eq(userProgramWeeks.userProgramId, userProgramId))
     .orderBy(asc(userProgramWeeks.weekNumber), asc(userProgramDays.dayIndex));
 }
@@ -71,17 +79,26 @@ export async function swapExercise(
   fromName: string,
   toName: string,
 ): Promise<TweakResult> {
-  if (!(await ownedFork(userProgramId, userId))) return { ok: false, reason: "not your program" };
+  if (!(await ownedFork(userProgramId, userId)))
+    return { ok: false, reason: "not your program" };
 
   const [from, to] = await Promise.all([
     resolveExerciseName(fromName),
     resolveExerciseName(toName),
   ]);
-  if (!from) return { ok: false, reason: `"${fromName}" isn't in the exercise catalogue` };
-  if (!to) return { ok: false, reason: `"${toName}" isn't in the exercise catalogue` };
-  if (from.id === to.id) return { ok: false, reason: "those are the same exercise" };
+  if (!from)
+    return {
+      ok: false,
+      reason: `"${fromName}" isn't in the exercise catalogue`,
+    };
+  if (!to)
+    return { ok: false, reason: `"${toName}" isn't in the exercise catalogue` };
+  if (from.id === to.id)
+    return { ok: false, reason: "those are the same exercise" };
 
-  const rows = (await prescriptionsIn(userProgramId)).filter((r) => r.exerciseId === from.id);
+  const rows = (await prescriptionsIn(userProgramId)).filter(
+    (r) => r.exerciseId === from.id,
+  );
   if (rows.length === 0) {
     return { ok: false, reason: `${from.name} isn't in this program` };
   }
@@ -118,7 +135,8 @@ export async function adjustVolume(
   userId: number,
   opts: { exerciseName?: string; deltaSets?: number; multiplier?: number },
 ): Promise<TweakResult> {
-  if (!(await ownedFork(userProgramId, userId))) return { ok: false, reason: "not your program" };
+  if (!(await ownedFork(userProgramId, userId)))
+    return { ok: false, reason: "not your program" };
   if (opts.deltaSets == null && opts.multiplier == null) {
     return { ok: false, reason: "no change requested" };
   }
@@ -126,7 +144,11 @@ export async function adjustVolume(
   let target: { id: number; name: string } | null = null;
   if (opts.exerciseName) {
     const resolved = await resolveExerciseName(opts.exerciseName);
-    if (!resolved) return { ok: false, reason: `"${opts.exerciseName}" isn't in the catalogue` };
+    if (!resolved)
+      return {
+        ok: false,
+        reason: `"${opts.exerciseName}" isn't in the catalogue`,
+      };
     target = { id: resolved.id, name: resolved.name };
   }
 
@@ -134,13 +156,20 @@ export async function adjustVolume(
     (r) => !target || r.exerciseId === target.id,
   );
   if (rows.length === 0) {
-    return { ok: false, reason: target ? `${target.name} isn't in this program` : "nothing to change" };
+    return {
+      ok: false,
+      reason: target
+        ? `${target.name} isn't in this program`
+        : "nothing to change",
+    };
   }
 
   const changes: TweakChange[] = [];
   for (const row of rows) {
     const raw =
-      opts.multiplier != null ? row.sets * opts.multiplier : row.sets + (opts.deltaSets ?? 0);
+      opts.multiplier != null
+        ? row.sets * opts.multiplier
+        : row.sets + (opts.deltaSets ?? 0);
     const next = Math.max(1, Math.min(20, Math.round(raw)));
     if (next === row.sets) continue;
 
@@ -155,7 +184,8 @@ export async function adjustVolume(
     });
   }
 
-  if (changes.length === 0) return { ok: false, reason: "that would leave every set unchanged" };
+  if (changes.length === 0)
+    return { ok: false, reason: "that would leave every set unchanged" };
 
   return {
     ok: true,
@@ -170,15 +200,18 @@ export async function removeExercise(
   userId: number,
   exerciseName: string,
 ): Promise<TweakResult> {
-  if (!(await ownedFork(userProgramId, userId))) return { ok: false, reason: "not your program" };
+  if (!(await ownedFork(userProgramId, userId)))
+    return { ok: false, reason: "not your program" };
 
   const resolved = await resolveExerciseName(exerciseName);
-  if (!resolved) return { ok: false, reason: `"${exerciseName}" isn't in the catalogue` };
+  if (!resolved)
+    return { ok: false, reason: `"${exerciseName}" isn't in the catalogue` };
 
   const rows = (await prescriptionsIn(userProgramId)).filter(
     (r) => r.exerciseId === resolved.id,
   );
-  if (rows.length === 0) return { ok: false, reason: `${resolved.name} isn't in this program` };
+  if (rows.length === 0)
+    return { ok: false, reason: `${resolved.name} isn't in this program` };
 
   await db.delete(userProgramExercises).where(
     inArray(
@@ -203,21 +236,32 @@ export async function addExercise(
   userId: number,
   opts: { dayName: string; exerciseName: string; sets: number; reps: string },
 ): Promise<TweakResult> {
-  if (!(await ownedFork(userProgramId, userId))) return { ok: false, reason: "not your program" };
+  if (!(await ownedFork(userProgramId, userId)))
+    return { ok: false, reason: "not your program" };
 
   const resolved = await resolveExerciseName(opts.exerciseName);
-  if (!resolved) return { ok: false, reason: `"${opts.exerciseName}" isn't in the catalogue` };
+  if (!resolved)
+    return {
+      ok: false,
+      reason: `"${opts.exerciseName}" isn't in the catalogue`,
+    };
 
   const days = await db
     .select({ id: userProgramDays.id, name: userProgramDays.name })
     .from(userProgramDays)
-    .innerJoin(userProgramWeeks, eq(userProgramWeeks.id, userProgramDays.weekId))
+    .innerJoin(
+      userProgramWeeks,
+      eq(userProgramWeeks.id, userProgramDays.weekId),
+    )
     .where(eq(userProgramWeeks.userProgramId, userProgramId));
 
   const needle = opts.dayName.toLowerCase();
   const matched = days.filter((d) => d.name.toLowerCase().includes(needle));
   if (matched.length === 0) {
-    return { ok: false, reason: `no day matching "${opts.dayName}" — days are: ${days.map((d) => d.name).join(", ")}` };
+    return {
+      ok: false,
+      reason: `no day matching "${opts.dayName}" — days are: ${days.map((d) => d.name).join(", ")}`,
+    };
   }
 
   const sets = Math.max(1, Math.min(20, Math.round(opts.sets)));
@@ -225,7 +269,9 @@ export async function addExercise(
 
   for (const day of matched) {
     const [{ next }] = await db
-      .select({ next: sql<number>`coalesce(max(${userProgramExercises.order}), -1)::int + 1` })
+      .select({
+        next: sql<number>`coalesce(max(${userProgramExercises.order}), -1)::int + 1`,
+      })
       .from(userProgramExercises)
       .where(eq(userProgramExercises.dayId, day.id));
 
@@ -238,7 +284,10 @@ export async function addExercise(
       intensityType: "none",
     });
 
-    changes.push({ before: `${day.name}: —`, after: `${day.name}: ${resolved.name} ${sets}×${opts.reps}` });
+    changes.push({
+      before: `${day.name}: —`,
+      after: `${day.name}: ${resolved.name} ${sets}×${opts.reps}`,
+    });
   }
 
   return {
@@ -259,10 +308,15 @@ export async function suggestSwaps(
   exerciseName: string,
   gym: GymProfile,
 ) {
-  if (!(await ownedFork(userProgramId, userId))) return { ok: false as const, reason: "not your program" };
+  if (!(await ownedFork(userProgramId, userId)))
+    return { ok: false as const, reason: "not your program" };
 
   const resolved = await resolveExerciseName(exerciseName);
-  if (!resolved) return { ok: false as const, reason: `"${exerciseName}" isn't in the catalogue` };
+  if (!resolved)
+    return {
+      ok: false as const,
+      reason: `"${exerciseName}" isn't in the catalogue`,
+    };
 
   const [row] = await db
     .select({

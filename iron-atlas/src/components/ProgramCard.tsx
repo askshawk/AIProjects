@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { Pill, ProvenanceBadge } from "@/components/ProgramBadges";
+import {
+  Pill,
+  ProvenanceBadge,
+  type Confidence,
+} from "@/components/ProgramBadges";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -15,6 +19,7 @@ export type ProgramCardRow = {
   splitType: string;
   aiGenerated: boolean;
   verified: boolean;
+  confidence?: Confidence;
 };
 
 /**
@@ -41,7 +46,11 @@ export function ProgramCard({
           <h2 className="font-medium leading-tight">{p.title}</h2>
           {showAuthor && <p className="text-sm text-muted">{p.authorName}</p>}
         </div>
-        <ProvenanceBadge aiGenerated={p.aiGenerated} verified={p.verified} />
+        <ProvenanceBadge
+          aiGenerated={p.aiGenerated}
+          verified={p.verified}
+          confidence={p.confidence ?? null}
+        />
       </div>
       <p className="mt-2 line-clamp-2 text-sm text-muted">{p.summary}</p>
       <div className="mt-3 flex flex-wrap gap-1">

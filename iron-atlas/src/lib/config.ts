@@ -53,7 +53,8 @@ export function checkProductionConfig(env: Env): ConfigProblem[] {
   if (appUrl && !appUrl.startsWith("https://")) {
     problems.push({
       setting: "APP_URL",
-      problem: "is not https. Session cookies are secure-only in production and won't be sent.",
+      problem:
+        "is not https. Session cookies are secure-only in production and won't be sent.",
     });
   }
 

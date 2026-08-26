@@ -6,7 +6,13 @@ import { setVerified } from "@/lib/verificationActions";
  * only accuracy signal the library carries, so it should feel like signing
  * something.
  */
-export function VerifyToggle({ slug, verified }: { slug: string; verified: boolean }) {
+export function VerifyToggle({
+  slug,
+  verified,
+}: {
+  slug: string;
+  verified: boolean;
+}) {
   async function toggle() {
     "use server";
     await setVerified(slug, !verified);

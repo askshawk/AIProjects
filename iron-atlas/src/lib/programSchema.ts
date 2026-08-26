@@ -15,26 +15,46 @@ const exerciseSchema = z.object({
   sets: z.number().int().describe("Number of working sets."),
   reps: z
     .string()
-    .describe('Rep prescription as written, e.g. "8-12", "5", "AMRAP", "5/3/1+".'),
+    .describe(
+      'Rep prescription as written, e.g. "8-12", "5", "AMRAP", "5/3/1+".',
+    ),
   intensityType: z
     .enum(["rpe", "rir", "percent_1rm", "weight", "bodyweight", "none"])
-    .describe("How load is prescribed. Use 'none' if the source doesn't specify."),
+    .describe(
+      "How load is prescribed. Use 'none' if the source doesn't specify.",
+    ),
   intensityValue: z
     .string()
     .nullable()
     .describe('The intensity, e.g. "8" for RPE 8, "75" for 75% of 1RM.'),
-  tempo: z.string().nullable().describe('Tempo notation, e.g. "3010". Null if unspecified.'),
-  restSeconds: z.number().int().nullable().describe("Rest between sets in seconds."),
-  notes: z.string().nullable().describe("Coaching cue or technique note, one sentence."),
+  tempo: z
+    .string()
+    .nullable()
+    .describe('Tempo notation, e.g. "3010". Null if unspecified.'),
+  restSeconds: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Rest between sets in seconds."),
+  notes: z
+    .string()
+    .nullable()
+    .describe("Coaching cue or technique note, one sentence."),
   supersetGroup: z
     .string()
     .nullable()
-    .describe("Same letter for exercises performed as a superset, e.g. 'A'. Null if straight sets."),
+    .describe(
+      "Same letter for exercises performed as a superset, e.g. 'A'. Null if straight sets.",
+    ),
 });
 
 const daySchema = z.object({
   dayIndex: z.number().int().describe("0-based order within the week."),
-  name: z.string().describe('Training day name, e.g. "Push A", "Lower Body", "Deadlift Day".'),
+  name: z
+    .string()
+    .describe(
+      'Training day name, e.g. "Push A", "Lower Body", "Deadlift Day".',
+    ),
   notes: z.string().nullable(),
   exercises: z.array(exerciseSchema),
 });
@@ -55,7 +75,9 @@ const weekSchema = z.object({
 export const generatedProgramSchema = z.object({
   title: z.string().describe("The program's commonly used name."),
   authorName: z.string().describe("The lifter or coach it is attributed to."),
-  summary: z.string().describe("One or two sentences: who this is for and what it does."),
+  summary: z
+    .string()
+    .describe("One or two sentences: who this is for and what it does."),
   description: z
     .string()
     .describe(
@@ -71,8 +93,15 @@ export const generatedProgramSchema = z.object({
   ]),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]),
   daysPerWeek: z.number().int(),
-  weeks: z.number().int().describe("Total length of the block in calendar weeks."),
-  splitType: z.string().describe('e.g. "push/pull/legs", "upper/lower", "full body", "bro split".'),
+  weeks: z
+    .number()
+    .int()
+    .describe("Total length of the block in calendar weeks."),
+  splitType: z
+    .string()
+    .describe(
+      'e.g. "push/pull/legs", "upper/lower", "full body", "bro split".',
+    ),
   progression: z.enum([
     "linear",
     "double_progression",
@@ -81,11 +110,18 @@ export const generatedProgramSchema = z.object({
     "percentage_block",
     "none",
   ]),
-  tags: z.array(z.string()).describe("Short lowercase tags, e.g. 'high volume', 'classic'."),
+  tags: z
+    .array(z.string())
+    .describe("Short lowercase tags, e.g. 'high volume', 'classic'."),
   sourceUrls: z
     .array(z.string())
     .describe(
       "URLs where the real program is published. Only include URLs you are confident exist.",
+    ),
+  confidence: z
+    .enum(["documented", "partial", "stylistic"])
+    .describe(
+      "How faithful this reconstruction is. 'documented': you specifically recall this program's published sets, reps and percentages. 'partial': you know its overall structure but are inferring some specifics. 'stylistic': you know the program exists and know the author's style, but not this program's actual contents. Be honest — 'stylistic' is a useful, respectable answer and far better than dressing a guess as a transcript.",
     ),
   confidenceNotes: z
     .string()
@@ -130,6 +166,9 @@ function stripUnsupported(node: unknown): unknown {
 }
 
 export function generatedProgramJsonSchema(): Record<string, unknown> {
-  const schema = z.toJSONSchema(generatedProgramSchema, { io: "output", target: "draft-7" });
+  const schema = z.toJSONSchema(generatedProgramSchema, {
+    io: "output",
+    target: "draft-7",
+  });
   return stripUnsupported(schema) as Record<string, unknown>;
 }

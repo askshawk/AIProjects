@@ -32,7 +32,11 @@ const split = (cell: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-function oneOf<T extends string>(allowed: readonly T[], value: string, where: string): T {
+function oneOf<T extends string>(
+  allowed: readonly T[],
+  value: string,
+  where: string,
+): T {
   if (!(allowed as readonly string[]).includes(value)) {
     throw new Error(`${where}: "${value}" is not one of ${allowed.join(", ")}`);
   }
@@ -53,9 +57,19 @@ export function parseExerciseRows(source = EXERCISE_ROWS): ParsedExercise[] {
 
     const cells = line.split("|").map((c) => c.trim());
     if (cells.length < 4) {
-      throw new Error(`line ${i + 1}: expected at least 4 columns, got ${cells.length}`);
+      throw new Error(
+        `line ${i + 1}: expected at least 4 columns, got ${cells.length}`,
+      );
     }
-    const [name, pattern, primary, equip, secondary = "", flags = "", aliases = ""] = cells;
+    const [
+      name,
+      pattern,
+      primary,
+      equip,
+      secondary = "",
+      flags = "",
+      aliases = "",
+    ] = cells;
     const where = `line ${i + 1} (${name})`;
     const slug = slugify(name);
     if (seen.has(slug)) throw new Error(`${where}: duplicate slug "${slug}"`);
@@ -63,7 +77,8 @@ export function parseExerciseRows(source = EXERCISE_ROWS): ParsedExercise[] {
 
     const flagList = split(flags);
     for (const f of flagList) {
-      if (f !== "c" && f !== "u" && f !== "x") throw new Error(`${where}: unknown flag "${f}"`);
+      if (f !== "c" && f !== "u" && f !== "x")
+        throw new Error(`${where}: unknown flag "${f}"`);
     }
 
     out.push({
@@ -72,7 +87,9 @@ export function parseExerciseRows(source = EXERCISE_ROWS): ParsedExercise[] {
       aliases: split(aliases),
       movementPattern: oneOf(patternEnum.enumValues, pattern, where),
       primaryMuscle: oneOf(muscleEnum.enumValues, primary, where),
-      secondaryMuscles: split(secondary).map((m) => oneOf(muscleEnum.enumValues, m, where)),
+      secondaryMuscles: split(secondary).map((m) =>
+        oneOf(muscleEnum.enumValues, m, where),
+      ),
       equipment: oneOf(equipmentEnum.enumValues, equip, where),
       isCompound: flagList.includes("c"),
       isUnilateral: flagList.includes("u"),

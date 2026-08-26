@@ -46,7 +46,7 @@ const SYSTEM = `You are a strength-training librarian. You reconstruct well-know
 
 Accuracy rules, in order of importance:
 1. Only prescribe exercises from the catalogue you are given, using the exact catalogue name. If a program calls for a movement that isn't in the catalogue, choose the closest catalogue entry and say so in confidenceNotes.
-2. Never present a guess as fact. In confidenceNotes, state plainly which parts of the program you are confident about and which you are reconstructing from the author's general style.
+2. Never present a guess as fact. Set 'confidence' honestly and explain it in 'confidenceNotes'. Use "documented" only when you specifically recall this program's published numbers; "stylistic" when you know the program exists and know the author's methods but not this program's actual contents. Many well-known programs are paid products that were never published in full — saying so is the correct answer, not a failure.
 3. Preserve what makes the program distinctive — its set/rep schemes, exercise order, intensity prescriptions, and progression rules. A generic program under a famous name is worse than no program.
 4. If weeks differ (wave loading, 5/3/1 cycles), produce a week per variation. If every week is identical, produce one week with repeatCount set to the block length.
 5. Only include sourceUrls you are confident actually exist. An empty array is better than a fabricated link.
@@ -63,7 +63,11 @@ export type FailureKind =
   | "refused"
   /** Prescribed movements that aren't in the catalogue. */
   | "unresolved"
-  /** Network, auth, billing, schema-parse. */
+  /** Connection dropped mid-stream. Long blocks hit this; a retry usually works. */
+  | "transport"
+  /** Out of credit, or the key is bad. Every later request fails identically. */
+  | "exhausted"
+  /** Anything else — schema-parse, unexpected shape. */
   | "error";
 
 export type GenerationFailure = {
@@ -89,9 +93,46 @@ export type GenerationSuccess = {
 
 export type GenerationResult = GenerationSuccess | GenerationFailure;
 
-/** `empty` is worth another attempt; nothing else is. */
+/**
+ * Worth another attempt. `empty` is the model returning nothing usable, and
+ * `transport` is a socket closing partway through a long stream — both clear
+ * on a retry. `truncated` and `refused` repeat identically and each costs a
+ * full billing, so they don't.
+ */
 export function isRetryable(kind: FailureKind): boolean {
-  return kind === "empty";
+  return kind === "empty" || kind === "transport";
+}
+
+/**
+ * Nothing after this can succeed, so a batch should stop rather than march
+ * through the rest of its manifest. Running out of credit mid-run burned
+ * thirteen doomed requests before this existed.
+ */
+export function isTerminal(kind: FailureKind): boolean {
+  return kind === "exhausted";
+}
+
+/** Sorts an API/network failure into something the batch can act on. */
+function classifyError(err: unknown): FailureKind {
+  const tagged = (err as { kind?: FailureKind }).kind;
+  if (tagged) return tagged;
+
+  const message = err instanceof Error ? err.message : String(err);
+  if (
+    /credit balance is too low|insufficient|authentication|invalid x-api-key|401|403/i.test(
+      message,
+    )
+  ) {
+    return "exhausted";
+  }
+  if (
+    /terminated|ECONNRESET|socket hang up|fetch failed|ETIMEDOUT|network/i.test(
+      message,
+    )
+  ) {
+    return "transport";
+  }
+  return "error";
 }
 
 let catalogueCache: string | undefined;
@@ -222,10 +263,9 @@ export async function generateAndSave(
   try {
     program = await generate(request, model);
   } catch (err) {
-    const kind = (err as { kind?: FailureKind }).kind ?? "error";
     return {
       ok: false,
-      kind,
+      kind: classifyError(err),
       message: err instanceof Error ? err.message : String(err),
     };
   }
@@ -326,7 +366,9 @@ export async function generateAndSave(
           authorName: program.authorName,
           sourceUrls: program.sourceUrls,
           summary: program.summary,
-          description: `${program.description}\n\n---\n\n**Reconstruction notes:** ${program.confidenceNotes}`,
+          description: program.description,
+          confidence: program.confidence,
+          confidenceNotes: program.confidenceNotes,
           goal: program.goal,
           experienceLevel: program.experienceLevel,
           daysPerWeek: program.daysPerWeek,

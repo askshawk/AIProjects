@@ -8,7 +8,9 @@ import {
 describe("slugify", () => {
   it("strips punctuation and apostrophes", () => {
     expect(slugify("Farmer's Walk")).toBe("farmers-walk");
-    expect(slugify("45-Degree Back Extension")).toBe("45-degree-back-extension");
+    expect(slugify("45-Degree Back Extension")).toBe(
+      "45-degree-back-extension",
+    );
     expect(slugify("EZ-Bar Curl")).toBe("ez-bar-curl");
   });
 });
@@ -34,30 +36,32 @@ describe("parseExerciseRows", () => {
   });
 
   it("rejects an unknown muscle rather than importing it", () => {
-    expect(() => parseExerciseRows("Fake Lift | squat | eyebrows | barbell | | |")).toThrow(
-      /eyebrows/,
-    );
+    expect(() =>
+      parseExerciseRows("Fake Lift | squat | eyebrows | barbell | | |"),
+    ).toThrow(/eyebrows/);
   });
 
   it("rejects an unknown movement pattern", () => {
-    expect(() => parseExerciseRows("Fake Lift | wiggle | quads | barbell | | |")).toThrow(
-      /wiggle/,
-    );
+    expect(() =>
+      parseExerciseRows("Fake Lift | wiggle | quads | barbell | | |"),
+    ).toThrow(/wiggle/);
   });
 
   it("rejects an unknown flag", () => {
-    expect(() => parseExerciseRows("Fake Lift | squat | quads | barbell | | z |")).toThrow(
-      /unknown flag/,
-    );
+    expect(() =>
+      parseExerciseRows("Fake Lift | squat | quads | barbell | | z |"),
+    ).toThrow(/unknown flag/);
   });
 
   it("rejects a duplicate slug", () => {
-    const source = "Back Squat | squat | quads | barbell | | c |\nBack squat | squat | quads | barbell | | c |";
+    const source =
+      "Back Squat | squat | quads | barbell | | c |\nBack squat | squat | quads | barbell | | c |";
     expect(() => parseExerciseRows(source)).toThrow(/duplicate slug/);
   });
 
   it("skips comments and blank lines", () => {
-    const source = "\n# a comment\nBack Squat | squat | quads | barbell | | c |\n\n";
+    const source =
+      "\n# a comment\nBack Squat | squat | quads | barbell | | c |\n\n";
     expect(parseExerciseRows(source)).toHaveLength(1);
   });
 });

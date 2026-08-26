@@ -102,7 +102,10 @@ export async function lastPerformances(
   const latest = new Map<number, { sessionId: number; performedAt: Date }>();
   for (const row of recent) {
     if (row.rank === 1) {
-      latest.set(row.exerciseId, { sessionId: row.sessionId, performedAt: row.performedAt });
+      latest.set(row.exerciseId, {
+        sessionId: row.sessionId,
+        performedAt: row.performedAt,
+      });
     }
   }
   if (latest.size === 0) return new Map();
@@ -142,7 +145,12 @@ export async function lastPerformances(
   return out;
 }
 
-export type BestSet = { weightKg: number; reps: number; e1rm: number; performedAt: Date };
+export type BestSet = {
+  weightKg: number;
+  reps: number;
+  e1rm: number;
+  performedAt: Date;
+};
 
 /** The lifter's best estimated max per exercise, for PR detection. */
 export async function personalBests(

@@ -27,7 +27,9 @@ export function parseGymProfile(raw: string | undefined): GymProfile {
     const { equipment, bannedExerciseIds } = parsed as Record<string, unknown>;
     return {
       equipment: Array.isArray(equipment)
-        ? equipment.filter((e): e is Equipment => typeof e === "string" && isEquipment(e))
+        ? equipment.filter(
+            (e): e is Equipment => typeof e === "string" && isEquipment(e),
+          )
         : [],
       bannedExerciseIds: Array.isArray(bannedExerciseIds)
         ? bannedExerciseIds.filter((n): n is number => Number.isInteger(n))

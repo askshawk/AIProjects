@@ -35,7 +35,9 @@ export const authorSlug = (name: string) => slugify(canonicalAuthor(name));
 
 /** Every stored spelling, so a lookup can match all of a coach's programs. */
 async function distinctNames(): Promise<string[]> {
-  const rows = await db.selectDistinct({ name: programs.authorName }).from(programs);
+  const rows = await db
+    .selectDistinct({ name: programs.authorName })
+    .from(programs);
   return rows.map((r) => r.name);
 }
 
@@ -51,7 +53,12 @@ export async function listAuthors(): Promise<AuthorSummary[]> {
   for (const row of rows) {
     const name = canonicalAuthor(row.name);
     const slug = authorSlug(row.name);
-    const entry = grouped.get(slug) ?? { slug, name, programCount: 0, verifiedCount: 0 };
+    const entry = grouped.get(slug) ?? {
+      slug,
+      name,
+      programCount: 0,
+      verifiedCount: 0,
+    };
     entry.programCount++;
     if (row.verified) entry.verifiedCount++;
     grouped.set(slug, entry);
@@ -91,8 +98,13 @@ export async function programsByAuthor(canonicalName: string) {
       splitType: programs.splitType,
       aiGenerated: programs.aiGenerated,
       verified: programs.verified,
+      confidence: programs.confidence,
     })
     .from(programs)
-    .where(names.length === 1 ? eq(programs.authorName, names[0]) : inArray(programs.authorName, names))
+    .where(
+      names.length === 1
+        ? eq(programs.authorName, names[0])
+        : inArray(programs.authorName, names),
+    )
     .orderBy(asc(programs.title));
 }

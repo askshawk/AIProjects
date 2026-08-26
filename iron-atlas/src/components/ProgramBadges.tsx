@@ -1,33 +1,80 @@
+export type Confidence = "documented" | "partial" | "stylistic" | null;
+
+const CONFIDENCE_BADGE: Record<
+  NonNullable<Confidence>,
+  { label: string; title: string; className: string }
+> = {
+  documented: {
+    label: "Reconstructed",
+    title:
+      "Rebuilt by an AI, which reported specific recall of this program's published sets, reps and percentages. Still worth checking against the source.",
+    className: "border-sky-800 bg-sky-950/50 text-sky-300",
+  },
+  partial: {
+    label: "Partly inferred",
+    title:
+      "The overall structure is known, but some specifics were inferred rather than recalled. Check the details against the source before running it.",
+    className: "border-amber-800 bg-amber-950/50 text-amber-300",
+  },
+  stylistic: {
+    label: "In this style",
+    title:
+      "The AI knows this program exists and knows the author's methods, but not this program's actual contents — so this is written in their style rather than reproduced. Treat it as inspired-by, not as their program.",
+    className: "border-orange-800 bg-orange-950/50 text-orange-300",
+  },
+};
+
 /**
- * The provenance badge. Every library program says whether a human checked it,
- * because the library is reconstructed by a model and pretending otherwise
- * would be the single most misleading thing this app could do.
+ * The provenance badge. Every library program says how it got here, because
+ * the library is reconstructed by a model and pretending otherwise would be
+ * the single most misleading thing this app could do.
+ *
+ * Faithfulness varies enormously across the library — published 5/3/1
+ * percentages are well documented, while several paid programs aren't public
+ * anywhere and can only be written *in an author's style*. Showing both under
+ * one badge presented a guess and a near-transcript as the same claim, so the
+ * badge now reflects the model's own assessment.
  */
 export function ProvenanceBadge({
   aiGenerated,
   verified,
+  confidence = null,
 }: {
   aiGenerated: boolean;
   verified: boolean;
+  confidence?: Confidence;
 }) {
+  // A human reading it against the source outranks any self-assessment.
   if (verified) {
     return (
-      <span className="rounded border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
+      <span
+        title="Checked against the original source by a human."
+        className="rounded border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-300"
+      >
         Verified
       </span>
     );
   }
-  if (aiGenerated) {
-    return (
-      <span
-        className="rounded border border-amber-800 bg-amber-950/50 px-2 py-0.5 text-[11px] font-medium text-amber-300"
-        title="Reconstructed by an AI from its knowledge of this program — check it against the source before trusting the details."
-      >
-        AI-reconstructed
-      </span>
-    );
-  }
-  return null;
+
+  if (!aiGenerated) return null;
+
+  const style = confidence
+    ? CONFIDENCE_BADGE[confidence]
+    : {
+        label: "AI-reconstructed",
+        title:
+          "Reconstructed by an AI from its knowledge of this program — check it against the source before trusting the details.",
+        className: "border-amber-800 bg-amber-950/50 text-amber-300",
+      };
+
+  return (
+    <span
+      className={`rounded border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${style.className}`}
+      title={style.title}
+    >
+      {style.label}
+    </span>
+  );
 }
 
 export function Pill({ children }: { children: React.ReactNode }) {

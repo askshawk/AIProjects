@@ -44,7 +44,8 @@ export default async function ExercisesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const one = (k: string) => (Array.isArray(params[k]) ? params[k][0] : params[k]) || undefined;
+  const one = (k: string) =>
+    (Array.isArray(params[k]) ? params[k][0] : params[k]) || undefined;
 
   const q = one("q");
   const pattern = one("pattern");
@@ -92,10 +93,13 @@ export default async function ExercisesPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Exercise catalogue</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Exercise catalogue
+        </h1>
         <p className="mt-1 text-sm text-muted">
-          Every set in every program points at a row here — that&apos;s what keeps generated
-          programs from inventing movements, and what powers equipment substitutions.
+          Every set in every program points at a row here — that&apos;s what
+          keeps generated programs from inventing movements, and what powers
+          equipment substitutions.
         </p>
       </div>
 
@@ -106,9 +110,24 @@ export default async function ExercisesPage({
           placeholder="Search name or alias…"
           className="min-w-56 flex-1 rounded-md border bg-surface px-3 py-2 text-sm"
         />
-        <Select name="pattern" value={pattern} options={patternEnum.enumValues} placeholder="Any pattern" />
-        <Select name="muscle" value={muscle} options={muscleEnum.enumValues} placeholder="Any muscle" />
-        <Select name="equipment" value={equip} options={equipmentEnum.enumValues} placeholder="Any equipment" />
+        <Select
+          name="pattern"
+          value={pattern}
+          options={patternEnum.enumValues}
+          placeholder="Any pattern"
+        />
+        <Select
+          name="muscle"
+          value={muscle}
+          options={muscleEnum.enumValues}
+          placeholder="Any muscle"
+        />
+        <Select
+          name="equipment"
+          value={equip}
+          options={equipmentEnum.enumValues}
+          placeholder="Any equipment"
+        />
         <button
           type="submit"
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-opacity hover:opacity-90"
@@ -138,11 +157,16 @@ export default async function ExercisesPage({
                 {label(e.primaryMuscle)}
               </span>
               {e.secondaryMuscles.map((m) => (
-                <span key={m} className="rounded bg-surface-raised px-1.5 py-0.5 capitalize opacity-70">
+                <span
+                  key={m}
+                  className="rounded bg-surface-raised px-1.5 py-0.5 capitalize opacity-70"
+                >
                   {label(m)}
                 </span>
               ))}
-              {e.isUnilateral && <span className="px-1.5 py-0.5">unilateral</span>}
+              {e.isUnilateral && (
+                <span className="px-1.5 py-0.5">unilateral</span>
+              )}
             </div>
           </li>
         ))}

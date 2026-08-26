@@ -1,4 +1,14 @@
-import { and, cosineDistance, desc, eq, inArray, ne, notInArray, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  cosineDistance,
+  desc,
+  eq,
+  inArray,
+  ne,
+  notInArray,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "@/db";
 import { equipment as equipmentEnum, exercises } from "@/db/schema";
 
@@ -120,7 +130,10 @@ export async function findSubstitutes(
   limit = 3,
 ): Promise<SubstituteCandidate[]> {
   const [original] = await db
-    .select({ embedding: exercises.embedding, movementPattern: exercises.movementPattern })
+    .select({
+      embedding: exercises.embedding,
+      movementPattern: exercises.movementPattern,
+    })
     .from(exercises)
     .where(eq(exercises.id, row.exerciseId));
 

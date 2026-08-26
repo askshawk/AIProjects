@@ -18,7 +18,8 @@ async function signIn(formData: FormData) {
     String(formData.get("email") ?? ""),
     String(formData.get("password") ?? ""),
   );
-  if (!result.ok) redirect(`/account?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok)
+    redirect(`/account?error=${encodeURIComponent(result.error)}`);
   await createSession(result.userId);
   redirect("/train");
 }
@@ -29,7 +30,8 @@ async function signUp(formData: FormData) {
     String(formData.get("email") ?? ""),
     String(formData.get("password") ?? ""),
   );
-  if (!result.ok) redirect(`/account?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok)
+    redirect(`/account?error=${encodeURIComponent(result.error)}`);
   await createSession(result.userId);
   redirect("/train");
 }
@@ -72,7 +74,8 @@ export default async function AccountPage({
           <h2 className="text-sm font-medium">Your programs</h2>
           {programs.length === 0 ? (
             <p className="mt-1 text-sm text-muted">
-              None yet. Pick one from the library and hit &ldquo;Start this program&rdquo;.
+              None yet. Pick one from the library and hit &ldquo;Start this
+              program&rdquo;.
             </p>
           ) : (
             <ul className="mt-2 space-y-1 text-sm">
@@ -87,7 +90,10 @@ export default async function AccountPage({
         </div>
 
         <form action={signOut}>
-          <button type="submit" className="rounded-md border px-4 py-2 text-sm font-medium">
+          <button
+            type="submit"
+            className="rounded-md border px-4 py-2 text-sm font-medium"
+          >
             Sign out
           </button>
         </form>
@@ -100,8 +106,8 @@ export default async function AccountPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="mt-1 text-sm text-muted">
-          You need an account to run a program and log your sets. Browsing and exporting
-          work without one.
+          You need an account to run a program and log your sets. Browsing and
+          exporting work without one.
         </p>
       </div>
 

@@ -10,22 +10,30 @@ import { authorSlug, canonicalAuthor } from "@/lib/authors";
 
 describe("canonicalAuthor", () => {
   it("drops a trailing parenthetical qualifier", () => {
-    expect(canonicalAuthor("Mark Rippetoe (popularized with Glenn Pendlay)")).toBe(
-      "Mark Rippetoe",
+    expect(
+      canonicalAuthor("Mark Rippetoe (popularized with Glenn Pendlay)"),
+    ).toBe("Mark Rippetoe");
+    expect(
+      canonicalAuthor(
+        "Sergey Smolov (popularized by online strength community)",
+      ),
+    ).toBe("Sergey Smolov");
+    expect(canonicalAuthor("Bill Starr (adapted by 'Madcow')")).toBe(
+      "Bill Starr",
     );
-    expect(canonicalAuthor("Sergey Smolov (popularized by online strength community)")).toBe(
-      "Sergey Smolov",
-    );
-    expect(canonicalAuthor("Bill Starr (adapted by 'Madcow')")).toBe("Bill Starr");
   });
 
   it("leaves an unqualified name alone", () => {
     expect(canonicalAuthor("John Meadows")).toBe("John Meadows");
-    expect(canonicalAuthor("Arnold Schwarzenegger")).toBe("Arnold Schwarzenegger");
+    expect(canonicalAuthor("Arnold Schwarzenegger")).toBe(
+      "Arnold Schwarzenegger",
+    );
   });
 
   it("only strips a parenthetical at the end, not one mid-name", () => {
-    expect(canonicalAuthor("5/3/1 (BBB) by Wendler")).toBe("5/3/1 (BBB) by Wendler");
+    expect(canonicalAuthor("5/3/1 (BBB) by Wendler")).toBe(
+      "5/3/1 (BBB) by Wendler",
+    );
   });
 
   it("keeps the original when the name is nothing but a parenthetical", () => {

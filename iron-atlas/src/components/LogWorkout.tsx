@@ -26,7 +26,10 @@ type Props = {
   dayName: string;
   exercises: PrescribedExercise[];
   lastPerformances: Record<number, LastPerformance | undefined>;
-  personalBests: Record<number, { weightKg: number; reps: number; e1rm: number } | undefined>;
+  personalBests: Record<
+    number,
+    { weightKg: number; reps: number; e1rm: number } | undefined
+  >;
   /** Keyed by prescription id — what to lift next, and why. */
   suggestions: Record<number, Suggestion | undefined>;
   action: (formData: FormData) => void;
@@ -101,13 +104,17 @@ export function LogWorkout({
                     {e.exerciseName}
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted">{prescriptionText(e)}</span>
+                    <span className="font-mono text-xs text-muted">
+                      {prescriptionText(e)}
+                    </span>
                     {e.restSeconds != null && e.restSeconds > 0 && (
                       <RestTimer seconds={e.restSeconds} />
                     )}
                   </span>
                 </div>
-                {e.notes && <p className="mt-1 text-xs text-muted">{e.notes}</p>}
+                {e.notes && (
+                  <p className="mt-1 text-xs text-muted">{e.notes}</p>
+                )}
                 <p className="mt-1 text-xs text-muted">
                   {last
                     ? `Last time: ${last.sets
@@ -119,7 +126,9 @@ export function LogWorkout({
                 {suggestion && (
                   <p className="mt-1.5 text-xs text-accent">
                     {suggestion.weightKg !== null && (
-                      <span className="font-medium">{suggestion.weightKg} kg · </span>
+                      <span className="font-medium">
+                        {suggestion.weightKg} kg ·{" "}
+                      </span>
                     )}
                     {suggestion.reason}
                   </p>
@@ -127,14 +136,18 @@ export function LogWorkout({
                 {/* Ramp to whatever the first working set is actually loaded to. */}
                 <WarmupHint
                   workingKg={suggestion?.weightKg ?? last?.sets[0]?.weightKg}
-                  barbell={e.equipment !== "dumbbell" && e.equipment !== "machine"}
+                  barbell={
+                    e.equipment !== "dumbbell" && e.equipment !== "machine"
+                  }
                 />
               </div>
 
               <div className="divide-y">
                 {Array.from({ length: e.sets }, (_, i) => (
                   <div key={i} className="flex items-center gap-2 px-4 py-2">
-                    <span className="w-8 shrink-0 text-xs text-muted">#{i + 1}</span>
+                    <span className="w-8 shrink-0 text-xs text-muted">
+                      #{i + 1}
+                    </span>
                     <input
                       name={`w-${e.id}-${i}`}
                       value={values[`w-${e.id}-${i}`] ?? ""}
@@ -160,7 +173,11 @@ export function LogWorkout({
                       placeholder="RPE"
                       className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
                     />
-                    <input type="hidden" name={`x-${e.id}-${i}`} value={e.exerciseId} />
+                    <input
+                      type="hidden"
+                      name={`x-${e.id}-${i}`}
+                      value={e.exerciseId}
+                    />
                   </div>
                 ))}
               </div>

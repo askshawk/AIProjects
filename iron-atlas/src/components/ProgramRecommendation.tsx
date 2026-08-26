@@ -36,7 +36,13 @@ export function ProgramRecommendation({
   );
 }
 
-function Card({ rec, featured = false }: { rec: Recommendation; featured?: boolean }) {
+function Card({
+  rec,
+  featured = false,
+}: {
+  rec: Recommendation;
+  featured?: boolean;
+}) {
   return (
     <div
       className={`rounded-lg border bg-surface p-3 ${
@@ -53,7 +59,12 @@ function Card({ rec, featured = false }: { rec: Recommendation; featured?: boole
           </Link>
           <p className="truncate text-xs text-muted">{rec.authorName}</p>
         </div>
-        {featured && <ProvenanceBadge aiGenerated={rec.aiGenerated} verified={rec.verified} />}
+        {featured && (
+          <ProvenanceBadge
+            aiGenerated={rec.aiGenerated}
+            verified={rec.verified}
+          />
+        )}
       </div>
 
       {featured && <p className="mt-2 text-sm text-muted">{rec.summary}</p>}
@@ -68,7 +79,8 @@ function Card({ rec, featured = false }: { rec: Recommendation; featured?: boole
         <>
           {rec.matched.length > 0 && (
             <p className="mt-2 text-xs text-muted">
-              Matched on {rec.matched.join(", ")} · {Math.round(rec.similarity * 100)}% fit
+              Matched on {rec.matched.join(", ")} ·{" "}
+              {Math.round(rec.similarity * 100)}% fit
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">

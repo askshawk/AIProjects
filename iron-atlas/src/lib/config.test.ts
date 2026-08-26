@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { assertProductionConfig, checkProductionConfig, type Env } from "@/lib/config";
+import {
+  assertProductionConfig,
+  checkProductionConfig,
+  type Env,
+} from "@/lib/config";
 
-const NEON = "postgres://user:pass@ep-cool-name.us-east-2.aws.neon.tech/iron_atlas";
+const NEON =
+  "postgres://user:pass@ep-cool-name.us-east-2.aws.neon.tech/iron_atlas";
 
 const good = {
   DATABASE_URL: NEON,
@@ -25,17 +30,26 @@ describe("checkProductionConfig", () => {
   });
 
   it("catches a missing database URL", () => {
-    const problems = checkProductionConfig({ ...good, DATABASE_URL: undefined });
+    const problems = checkProductionConfig({
+      ...good,
+      DATABASE_URL: undefined,
+    });
     expect(problems[0].setting).toBe("DATABASE_URL");
   });
 
   it("catches a missing API key", () => {
-    const problems = checkProductionConfig({ ...good, ANTHROPIC_API_KEY: undefined });
+    const problems = checkProductionConfig({
+      ...good,
+      ANTHROPIC_API_KEY: undefined,
+    });
     expect(problems.map((p) => p.setting)).toContain("ANTHROPIC_API_KEY");
   });
 
   it("catches a non-https app URL, which silently breaks sign-in", () => {
-    const problems = checkProductionConfig({ ...good, APP_URL: "http://example.com" });
+    const problems = checkProductionConfig({
+      ...good,
+      APP_URL: "http://example.com",
+    });
     expect(problems.map((p) => p.setting)).toContain("APP_URL");
   });
 

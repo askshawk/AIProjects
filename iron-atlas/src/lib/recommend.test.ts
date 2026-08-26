@@ -61,48 +61,75 @@ describe.skipIf(!hasEmbeddings)("recommendPrograms", () => {
     }
   });
 
-  it("sheds equipment first, keeping goal and level intact", async () => {
+  it("keeps goal and level even when equipment has to give", async () => {
     // A barbell-only lifter can still be matched on training intent; the
     // accessory-machine mismatch is what the substitution engine will solve.
+    // Asserts the relaxation *order* — goal and level outrank equipment — not
+    // that the library happens to be too small to satisfy everything.
+    const equipment = ["barbell", "bodyweight"] as const;
     const recs = await recommendPrograms({
       goal: "strength",
       experienceLevel: "intermediate",
       daysPerWeek: 4,
-      availableEquipment: ["barbell", "bodyweight"],
+      availableEquipment: [...equipment],
     });
 
     expect(recs.length).toBeGreaterThan(0);
     expect(recs[0].matched).toContain("goal: strength");
     expect(recs[0].matched).toContain("intermediate level");
-    expect(recs[0].matched).not.toContain("fits your equipment");
     expect(recs[0].goal).toBe("strength");
+
+    // And if it *does* claim the equipment fits, that has to be true — the
+    // whole point of `matched` is that it can't overstate the fit.
+    if (recs[0].matched.includes("fits your equipment")) {
+      for (const rec of recs) {
+        for (const item of rec.equipmentRequired) {
+          expect(equipment).toContain(item);
+        }
+      }
+    }
   });
 
-  it("reports only the constraints that actually held", async () => {
-    // Nothing in the library is 2-day advanced kettlebell-only work, so most
-    // constraints must be dropped — and `matched` has to say so rather than
-    // letting the model claim a fit it didn't get.
+  it("never claims a constraint that doesn't actually hold", async () => {
+    // The contract `matched` exists for: the model reads it as "these fits are
+    // real", so anything listed must be verifiable against the rows returned.
+    // Written as an invariant rather than as a fact about library contents,
+    // which was the earlier mistake — the library outgrew the assumption.
+    const equipment = ["kettlebell"] as const;
     const recs = await recommendPrograms({
       goal: "strength",
       experienceLevel: "advanced",
       daysPerWeek: 2,
-      availableEquipment: ["kettlebell"],
+      availableEquipment: [...equipment],
     });
 
     expect(recs.length).toBeGreaterThan(0);
-    expect(recs[0].matched).not.toContain("advanced level");
-    expect(recs[0].matched).not.toContain("fits your equipment");
+    // One relaxation level applies to the whole result set.
     for (const rec of recs) expect(rec.matched).toEqual(recs[0].matched);
+
+    for (const rec of recs) {
+      if (rec.matched.includes("goal: strength")) expect(rec.goal).toBe("strength");
+      if (rec.matched.includes("advanced level")) {
+        expect(rec.experienceLevel).toBe("advanced");
+      }
+      if (rec.matched.includes("fits your equipment")) {
+        for (const item of rec.equipmentRequired) expect(equipment).toContain(item);
+      }
+    }
   });
 
   it("still returns something when given nothing to filter on", async () => {
-    const recs = await recommendPrograms({ preferences: "I just want big arms" });
+    const recs = await recommendPrograms({
+      preferences: "I just want big arms",
+    });
     expect(recs.length).toBeGreaterThan(0);
     expect(recs[0].matched).toEqual([]);
   });
 
   it("orders by similarity, best first", async () => {
-    const recs = await recommendPrograms({ preferences: "powerlifting percentage work" });
+    const recs = await recommendPrograms({
+      preferences: "powerlifting percentage work",
+    });
     const scores = recs.map((r) => r.similarity);
     expect([...scores].sort((a, b) => b - a)).toEqual(scores);
   });
