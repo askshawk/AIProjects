@@ -17,7 +17,7 @@
  */
 export const EXERCISE_ROWS = `
 # ---------- horizontal push ----------
-Barbell Bench Press | horizontal_push | chest | barbell | triceps,front_delts | c | bench,flat bench,bench press
+Barbell Bench Press | horizontal_push | chest | barbell | triceps,front_delts | c | bench,flat bench,bench press,flat barbell bench press,flat barbell press
 Incline Barbell Bench Press | horizontal_push | chest | barbell | front_delts,triceps | c | incline bench,incline barbell press
 Decline Barbell Bench Press | horizontal_push | chest | barbell | triceps | c | decline bench
 Close-Grip Bench Press | horizontal_push | triceps | barbell | chest,front_delts | c | cgbp,close grip bench
@@ -26,7 +26,7 @@ Floor Press | horizontal_push | triceps | barbell | chest,front_delts | c |
 Spoto Press | horizontal_push | chest | barbell | triceps | c |
 Pause Bench Press | horizontal_push | chest | barbell | triceps,front_delts | c | paused bench
 Larsen Press | horizontal_push | chest | barbell | triceps | c |
-Dumbbell Bench Press | horizontal_push | chest | dumbbell | triceps,front_delts | c | db bench,flat dumbbell press
+Dumbbell Bench Press | horizontal_push | chest | dumbbell | triceps,front_delts | c | db bench,flat dumbbell press,flat dumbbell bench press,flat db bench press
 Incline Dumbbell Press | horizontal_push | chest | dumbbell | front_delts,triceps | c | incline db press
 Decline Dumbbell Press | horizontal_push | chest | dumbbell | triceps | c |
 Dumbbell Floor Press | horizontal_push | triceps | dumbbell | chest | c |

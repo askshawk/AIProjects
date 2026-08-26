@@ -56,13 +56,8 @@ async function seedFork() {
       userId: owner.id,
       title: "Test Block",
       authorName: "Test",
-      goal: "strength",
-      experienceLevel: "intermediate",
-      daysPerWeek: 3,
-      weeks: 4,
-      splitType: "full body",
       progression: "linear",
-      isActive: true,
+      status: "active",
     })
     .returning({ id: userPrograms.id });
 
