@@ -14,10 +14,24 @@ export type ResolvedExercise = {
 
 /**
  * Anything below this is treated as "no match" rather than a bad guess.
- * Calibrated against the catalogue: genuine synonyms land around 0.75+, while
- * unrelated movements sit near 0.4-0.5 (see the resolver tests).
+ *
+ * Recalibrated for Voyage. The old 0.72 came from MiniLM and silently rejected
+ * *everything* after the provider swap — a constant tuned to one model's
+ * distribution means nothing under another. Measured query-to-catalogue scores:
+ *
+ *   0.684  "barbell back squat"      -> High-Bar Back Squat    (want)
+ *   0.565  "seated cable row machine"-> Wide-Grip Seated Row   (want)
+ *   0.418  "flat bench"              -> Barbell Bench Press    (want)
+ *   0.406  "lat pull down machine"   -> Single-Arm Lat Pulldown(want)
+ *   ----------------------------------------------------------- floor
+ *   0.306  "interpretive dance for lats"                       (reject)
+ *   0.254  "qwertyuiop asdfgh"                                 (reject)
+ *
+ * The margin is narrower than it was, so this tier stays the last resort:
+ * exact and alias matching handle the common cases, and a gap found in
+ * generation is better fixed by adding an alias than by lowering this.
  */
-const SIMILARITY_FLOOR = 0.72;
+const SIMILARITY_FLOOR = 0.38;
 
 type CatalogueRow = {
   id: number;

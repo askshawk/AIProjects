@@ -10,7 +10,10 @@ import {
 } from "@/db/schema";
 import { slugify } from "@/data/parseExercises";
 import { tryEmbedOne } from "@/lib/embeddings";
-import { resolveExerciseName, type ResolvedExercise } from "@/lib/exerciseResolver";
+import {
+  resolveExerciseName,
+  type ResolvedExercise,
+} from "@/lib/exerciseResolver";
 import {
   generatedProgramJsonSchema,
   generatedProgramSchema,
@@ -111,7 +114,10 @@ async function catalogueText(): Promise<string> {
   return catalogueCache;
 }
 
-async function generate(request: string, model: string): Promise<GeneratedProgram> {
+async function generate(
+  request: string,
+  model: string,
+): Promise<GeneratedProgram> {
   const client = new Anthropic();
   const catalogue = await catalogueText();
 
@@ -129,7 +135,9 @@ async function generate(request: string, model: string): Promise<GeneratedProgra
         cache_control: { type: "ephemeral" },
       },
     ],
-    output_config: { format: { type: "json_schema", schema: generatedProgramJsonSchema() } },
+    output_config: {
+      format: { type: "json_schema", schema: generatedProgramJsonSchema() },
+    },
     messages: [
       {
         role: "user",
@@ -144,19 +152,24 @@ Give the full block, week by week and day by day, with every exercise, set, and 
 
   if (message.stop_reason === "refusal") {
     throw Object.assign(
-      new Error(`model declined: ${message.stop_details?.explanation ?? "no explanation"}`),
+      new Error(
+        `model declined: ${message.stop_details?.explanation ?? "no explanation"}`,
+      ),
       { kind: "refused" as const },
     );
   }
   if (message.stop_reason === "max_tokens") {
     throw Object.assign(
-      new Error(`output hit max_tokens (${MAX_TOKENS}) — the program was cut off`),
+      new Error(
+        `output hit max_tokens (${MAX_TOKENS}) — the program was cut off`,
+      ),
       { kind: "truncated" as const },
     );
   }
 
   const text = message.content.find((b) => b.type === "text");
-  if (!text || text.type !== "text") throw new Error("no text block in response");
+  if (!text || text.type !== "text")
+    throw new Error("no text block in response");
 
   return generatedProgramSchema.parse(JSON.parse(text.text));
 }
@@ -197,7 +210,12 @@ export async function generateAndSave(
   request: string,
   options: GenerateOptions = {},
 ): Promise<GenerationResult> {
-  const { slug: slugFlag, model = DEFAULT_MODEL, dryRun = false, onProgress } = options;
+  const {
+    slug: slugFlag,
+    model = DEFAULT_MODEL,
+    dryRun = false,
+    onProgress,
+  } = options;
   const say = onProgress ?? (() => {});
 
   let program: GeneratedProgram;
@@ -205,7 +223,11 @@ export async function generateAndSave(
     program = await generate(request, model);
   } catch (err) {
     const kind = (err as { kind?: FailureKind }).kind ?? "error";
-    return { ok: false, kind, message: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      kind,
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
 
   say(
@@ -240,7 +262,8 @@ export async function generateAndSave(
           : "alias",
     }));
 
-  for (const m of fuzzyMatches) say(`matched "${m.requested}" -> ${m.matched} (${m.via})`);
+  for (const m of fuzzyMatches)
+    say(`matched "${m.requested}" -> ${m.matched} (${m.via})`);
 
   if (failures.length > 0) {
     return {
@@ -289,77 +312,93 @@ export async function generateAndSave(
     ].join(". "),
   );
 
-  await db.transaction(async (tx) => {
-    // Idempotent: re-running with the same slug replaces the program. Cascades
-    // clear its weeks/days/exercises; user forks are untouched by design.
-    await tx.delete(programs).where(eq(programs.slug, slug));
+  try {
+    await db.transaction(async (tx) => {
+      // Idempotent: re-running with the same slug replaces the program. Cascades
+      // clear its weeks/days/exercises; user forks are untouched by design.
+      await tx.delete(programs).where(eq(programs.slug, slug));
 
-    const [saved] = await tx
-      .insert(programs)
-      .values({
-        slug,
-        title: program.title,
-        authorName: program.authorName,
-        sourceUrls: program.sourceUrls,
-        summary: program.summary,
-        description: `${program.description}\n\n---\n\n**Reconstruction notes:** ${program.confidenceNotes}`,
-        goal: program.goal,
-        experienceLevel: program.experienceLevel,
-        daysPerWeek: program.daysPerWeek,
-        weeks: program.weeks,
-        splitType: program.splitType,
-        progression: program.progression,
-        equipmentRequired,
-        tags: program.tags,
-        aiGenerated: true,
-        verified: false,
-        generatedModel: model,
-        generatedAt: new Date(),
-        embedding,
-      })
-      .returning({ id: programs.id });
-
-    for (const week of program.weeks_detail) {
-      const [savedWeek] = await tx
-        .insert(programWeeks)
+      const [saved] = await tx
+        .insert(programs)
         .values({
-          programId: saved.id,
-          weekNumber: week.weekNumber,
-          label: week.label,
-          notes: week.notes,
-          repeatCount: Math.max(1, week.repeatCount),
+          slug,
+          title: program.title,
+          authorName: program.authorName,
+          sourceUrls: program.sourceUrls,
+          summary: program.summary,
+          description: `${program.description}\n\n---\n\n**Reconstruction notes:** ${program.confidenceNotes}`,
+          goal: program.goal,
+          experienceLevel: program.experienceLevel,
+          daysPerWeek: program.daysPerWeek,
+          weeks: program.weeks,
+          splitType: program.splitType,
+          progression: program.progression,
+          equipmentRequired,
+          tags: program.tags,
+          aiGenerated: true,
+          verified: false,
+          generatedModel: model,
+          generatedAt: new Date(),
+          embedding,
         })
-        .returning({ id: programWeeks.id });
+        .returning({ id: programs.id });
 
-      for (const day of week.days) {
-        const [savedDay] = await tx
-          .insert(programDays)
+      for (const week of program.weeks_detail) {
+        const [savedWeek] = await tx
+          .insert(programWeeks)
           .values({
-            weekId: savedWeek.id,
-            dayIndex: day.dayIndex,
-            name: day.name,
-            notes: day.notes,
+            programId: saved.id,
+            weekNumber: week.weekNumber,
+            label: week.label,
+            notes: week.notes,
+            repeatCount: Math.max(1, week.repeatCount),
           })
-          .returning({ id: programDays.id });
+          .returning({ id: programWeeks.id });
 
-        await tx.insert(programExercises).values(
-          day.exercises.map((ex, i) => ({
-            dayId: savedDay.id,
-            exerciseId: resolutions.get(ex.exerciseName)!.resolved.id,
-            order: i,
-            sets: ex.sets,
-            reps: ex.reps,
-            intensityType: ex.intensityType,
-            intensityValue: ex.intensityValue,
-            tempo: ex.tempo,
-            restSeconds: ex.restSeconds,
-            notes: ex.notes,
-            supersetGroup: ex.supersetGroup,
-          })),
-        );
+        for (const day of week.days) {
+          const [savedDay] = await tx
+            .insert(programDays)
+            .values({
+              weekId: savedWeek.id,
+              dayIndex: day.dayIndex,
+              name: day.name,
+              notes: day.notes,
+            })
+            .returning({ id: programDays.id });
+
+          // A day can legitimately carry no exercises — a rest day the model
+          // wrote out as a day. Keep the row (the training view should show
+          // "Rest"), but Drizzle throws on .values([]), so skip the insert.
+          if (day.exercises.length === 0) continue;
+
+          await tx.insert(programExercises).values(
+            day.exercises.map((ex, i) => ({
+              dayId: savedDay.id,
+              exerciseId: resolutions.get(ex.exerciseName)!.resolved.id,
+              order: i,
+              sets: ex.sets,
+              reps: ex.reps,
+              intensityType: ex.intensityType,
+              intensityValue: ex.intensityValue,
+              tempo: ex.tempo,
+              restSeconds: ex.restSeconds,
+              notes: ex.notes,
+              supersetGroup: ex.supersetGroup,
+            })),
+          );
+        }
       }
-    }
-  });
+    });
+  } catch (err) {
+    // Generation already returns typed failures; the save has to as well, or
+    // one malformed program aborts a batch of seventy. This is exactly how a
+    // day with zero exercises took down a whole run.
+    return {
+      ok: false,
+      kind: "error",
+      message: `saving "${slug}" failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 
   return {
     ok: true,
