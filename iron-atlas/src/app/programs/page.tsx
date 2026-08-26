@@ -13,6 +13,22 @@ export const metadata = { title: "Programs · Iron Atlas" };
 
 const label = (v: string) => v.replace(/_/g, " ");
 
+/** Enough to browse, small enough to send over a phone connection. */
+const PER_PAGE = 24;
+
+/** Keeps the active filters when moving between pages. */
+function pageHref(params: Record<string, string | string[] | undefined>, page: number) {
+  const next = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "page") continue;
+    const value = Array.isArray(v) ? v[0] : v;
+    if (value) next.set(k, value);
+  }
+  if (page > 1) next.set("page", String(page));
+  const qs = next.toString();
+  return qs ? `/programs?${qs}` : "/programs";
+}
+
 export default async function ProgramsPage({
   searchParams,
 }: {
@@ -22,6 +38,7 @@ export default async function ProgramsPage({
   const one = (k: string) => (Array.isArray(params[k]) ? params[k][0] : params[k]) || undefined;
 
   const q = one("q");
+  const page = Math.max(1, Number(one("page") ?? 1) || 1);
   const goal = one("goal");
   const level = one("level");
   const days = one("days");
@@ -47,6 +64,17 @@ export default async function ProgramsPage({
     filters.push(sql`${programs.equipmentRequired} <@ array[${equipment}]::equipment[]`);
   }
 
+  // Paginated: the full library is now large enough that rendering every card
+  // was a ~half-megabyte response, which is the wrong thing to send a phone on
+  // gym wifi.
+  const [{ matching }] = await db
+    .select({ matching: count() })
+    .from(programs)
+    .where(filters.length ? and(...filters) : undefined);
+
+  const lastPage = Math.max(1, Math.ceil(matching / PER_PAGE));
+  const current = Math.min(page, lastPage);
+
   const rows = await db
     .select({
       id: programs.id,
@@ -65,7 +93,9 @@ export default async function ProgramsPage({
     })
     .from(programs)
     .where(filters.length ? and(...filters) : undefined)
-    .orderBy(asc(programs.authorName), asc(programs.title));
+    .orderBy(asc(programs.authorName), asc(programs.title))
+    .limit(PER_PAGE)
+    .offset((current - 1) * PER_PAGE);
 
   // Unfiltered count, so the header describes the library rather than the
   // current search.
@@ -140,6 +170,28 @@ export default async function ProgramsPage({
             </li>
           ))}
         </ul>
+      )}
+
+      {lastPage > 1 && (
+        <nav className="flex items-center justify-between gap-3 text-sm">
+          {current > 1 ? (
+            <Link href={pageHref(params, current - 1)} className="rounded-md border px-3 py-2 hover:border-accent/60">
+              ← Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-muted">
+            Page {current} of {lastPage} · {matching} match{matching === 1 ? "" : "es"}
+          </span>
+          {current < lastPage ? (
+            <Link href={pageHref(params, current + 1)} className="rounded-md border px-3 py-2 hover:border-accent/60">
+              Next →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
       )}
     </div>
   );
