@@ -150,6 +150,7 @@ export function Chat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Tell me about your training…"
+          aria-label="Message the coach"
           className="flex-1 rounded-md border bg-surface px-4 py-2.5 text-sm"
         />
         <button

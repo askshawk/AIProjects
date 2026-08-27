@@ -144,9 +144,10 @@ export default async function ProgramsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Program or author…"
+          aria-label="Search programs by name or author"
           className="min-w-56 flex-1 rounded-md border bg-surface px-3 py-2 text-sm"
         />
-        <select name="goal" defaultValue={goal ?? ""} className={select}>
+        <select name="goal" defaultValue={goal ?? ""} aria-label="Filter by goal" className={select}>
           <option value="">Any goal</option>
           {goalEnum.enumValues.map((g) => (
             <option key={g} value={g}>
@@ -154,7 +155,7 @@ export default async function ProgramsPage({
             </option>
           ))}
         </select>
-        <select name="level" defaultValue={level ?? ""} className={select}>
+        <select name="level" defaultValue={level ?? ""} aria-label="Filter by experience level" className={select}>
           <option value="">Any level</option>
           {levelEnum.enumValues.map((l) => (
             <option key={l} value={l}>
@@ -165,6 +166,7 @@ export default async function ProgramsPage({
         <select
           name="confidence"
           defaultValue={confidence ?? ""}
+          aria-label="Filter by reconstruction fidelity"
           className={select}
         >
           <option value="">Any fidelity</option>
@@ -172,7 +174,7 @@ export default async function ProgramsPage({
           <option value="partial">Partly inferred</option>
           <option value="stylistic">In this style</option>
         </select>
-        <select name="days" defaultValue={days ?? ""} className={select}>
+        <select name="days" defaultValue={days ?? ""} aria-label="Filter by days per week" className={select}>
           <option value="">Any schedule</option>
           {[2, 3, 4, 5, 6].map((d) => (
             <option key={d} value={d}>

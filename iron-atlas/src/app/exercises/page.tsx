@@ -26,6 +26,7 @@ function Select({
     <select
       name={name}
       defaultValue={value ?? ""}
+      aria-label={placeholder}
       className="rounded-md border bg-surface px-3 py-2 text-sm capitalize"
     >
       <option value="">{placeholder}</option>
@@ -108,6 +109,7 @@ export default async function ExercisesPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search name or alias…"
+          aria-label="Search exercises by name or alias"
           className="min-w-56 flex-1 rounded-md border bg-surface px-3 py-2 text-sm"
         />
         <Select

@@ -154,15 +154,19 @@ export function LogWorkout({
                       onChange={(ev) => set(`w-${e.id}-${i}`, ev.target.value)}
                       inputMode="decimal"
                       placeholder="kg"
+                      aria-label={`Set ${i + 1} weight in kg for ${e.exerciseName}`}
                       className="w-24 rounded-md border bg-background px-2 py-2 text-sm"
                     />
-                    <span className="text-xs text-muted">×</span>
+                    <span className="text-xs text-muted" aria-hidden="true">
+                      ×
+                    </span>
                     <input
                       name={`r-${e.id}-${i}`}
                       value={values[`r-${e.id}-${i}`] ?? ""}
                       onChange={(ev) => set(`r-${e.id}-${i}`, ev.target.value)}
                       inputMode="numeric"
                       placeholder="reps"
+                      aria-label={`Set ${i + 1} reps for ${e.exerciseName}`}
                       className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
                     />
                     <input
@@ -171,6 +175,7 @@ export function LogWorkout({
                       onChange={(ev) => set(`e-${e.id}-${i}`, ev.target.value)}
                       inputMode="decimal"
                       placeholder="RPE"
+                      aria-label={`Set ${i + 1} RPE for ${e.exerciseName}`}
                       className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
                     />
                     <input
@@ -197,6 +202,7 @@ export function LogWorkout({
         <input
           name="notes"
           placeholder="Session notes (optional)"
+          aria-label="Session notes"
           className="flex-1 rounded-md border bg-surface px-3 py-2.5 text-sm"
         />
       </div>
