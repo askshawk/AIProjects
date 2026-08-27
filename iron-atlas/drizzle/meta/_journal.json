@@ -15,6 +15,13 @@
       "when": 1787189097876,
       "tag": "0001_switch_to_voyage_512",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787795105122,
+      "tag": "0002_add_confidence",
+      "breakpoints": true
     }
   ]
 }
