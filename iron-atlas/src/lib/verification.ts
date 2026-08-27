@@ -49,7 +49,7 @@ export async function reviewQueue(): Promise<ReviewQueueRow[]> {
         select count(*)::int from ${programExercises} pe
         join program_days pd on pd.id = pe.day_id
         join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = ${programs.id}
+        where pw.program_id = programs.id
       )`,
     })
     .from(programs)
@@ -90,7 +90,7 @@ export async function suspiciouslyThin(limit = 5) {
         select count(*)::int from ${programExercises} pe
         join program_days pd on pd.id = pe.day_id
         join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = ${programs.id}
+        where pw.program_id = programs.id
       )`,
     })
     .from(programs)
@@ -100,7 +100,7 @@ export async function suspiciouslyThin(limit = 5) {
         select count(*) from ${programExercises} pe
         join program_days pd on pd.id = pe.day_id
         join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = ${programs.id}
+        where pw.program_id = programs.id
       )`),
       desc(programs.weeks),
     )
