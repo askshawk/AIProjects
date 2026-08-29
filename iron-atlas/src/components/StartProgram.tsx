@@ -18,7 +18,13 @@ export async function StartProgram({ slug }: { slug: string }) {
     if (!current) redirect("/account");
 
     const gym = await readGymProfile();
-    const forkId = await forkProgram(current.id, slug, gym);
+    let forkId: number | null;
+    try {
+      forkId = await forkProgram(current.id, slug, gym);
+    } catch (err) {
+      console.error("forkProgram failed:", err);
+      redirect(`/programs/${slug}?forkError=1`);
+    }
     if (!forkId) redirect(`/programs/${slug}`);
 
     revalidatePath("/train");

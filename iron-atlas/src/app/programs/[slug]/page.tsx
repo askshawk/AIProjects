@@ -52,10 +52,13 @@ function prescription(row: {
 
 export default async function ProgramPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
+  const { forkError } = await searchParams;
 
   const loaded = await loadProgram(slug);
   if (!loaded) notFound();
@@ -105,6 +108,12 @@ export default async function ProgramPage({
           </div>
         </div>
         <p className="max-w-2xl text-muted">{program.summary}</p>
+
+        {forkError && (
+          <p className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">
+            Couldn&apos;t start this program — try again in a moment.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <StartProgram slug={program.slug} />

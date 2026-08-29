@@ -29,7 +29,7 @@ async function logSession(formData: FormData) {
   if (!user) redirect("/account");
 
   const dayId = Number(formData.get("dayId"));
-  if (!Number.isInteger(dayId)) redirect("/train");
+  if (!Number.isInteger(dayId)) redirect("/train?badDay=1");
 
   // Parse the flat form into sets. Field names carry their own identity
   // (w-<prescriptionId>-<setIndex>) so the shape survives a form POST.
@@ -70,28 +70,33 @@ async function logSession(formData: FormData) {
 
   if (parsed.length === 0) redirect("/train?empty=1");
 
-  await db.transaction(async (tx) => {
-    const [session] = await tx
-      .insert(workoutSessions)
-      .values({
-        userId: user.id,
-        userProgramDayId: dayId,
-        notes: String(formData.get("notes") ?? "") || null,
-        completedAt: new Date(),
-      })
-      .returning({ id: workoutSessions.id });
+  try {
+    await db.transaction(async (tx) => {
+      const [session] = await tx
+        .insert(workoutSessions)
+        .values({
+          userId: user.id,
+          userProgramDayId: dayId,
+          notes: String(formData.get("notes") ?? "") || null,
+          completedAt: new Date(),
+        })
+        .returning({ id: workoutSessions.id });
 
-    await tx.insert(setLogs).values(
-      parsed.map((p) => ({
-        sessionId: session.id,
-        exerciseId: p.exerciseId,
-        setIndex: p.setIndex,
-        weightKg: p.weight === null ? null : String(p.weight),
-        reps: p.reps,
-        rpe: p.rpe === null ? null : String(p.rpe),
-      })),
-    );
-  });
+      await tx.insert(setLogs).values(
+        parsed.map((p) => ({
+          sessionId: session.id,
+          exerciseId: p.exerciseId,
+          setIndex: p.setIndex,
+          weightKg: p.weight === null ? null : String(p.weight),
+          reps: p.reps,
+          rpe: p.rpe === null ? null : String(p.rpe),
+        })),
+      );
+    });
+  } catch (err) {
+    console.error("logSession failed:", err);
+    redirect(`/train?day=${dayId}&saveError=1`);
+  }
 
   revalidatePath("/train");
   revalidatePath("/history");
@@ -268,6 +273,19 @@ export default async function TrainPage({
       {params.empty && (
         <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3 text-sm text-amber-300">
           Nothing was logged — fill in at least one set before finishing.
+        </p>
+      )}
+
+      {params.saveError && (
+        <p className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">
+          Your sets weren&apos;t saved — the workout server hit an error. Try
+          Finish session again.
+        </p>
+      )}
+
+      {params.badDay && (
+        <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3 text-sm text-amber-300">
+          That session doesn&apos;t exist anymore — showing today&apos;s instead.
         </p>
       )}
 

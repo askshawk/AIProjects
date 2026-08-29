@@ -35,6 +35,12 @@ type Props = {
   action: (formData: FormData) => void;
 };
 
+// Sanity cap on rows rendered per exercise. Nothing legitimate prescribes
+// more than this in one session — adjustVolume itself caps at 20 sets — but
+// bad data (a stale fork, a hand-edited program) shouldn't be able to make
+// this component try to render thousands of inputs and lock up the page.
+const MAX_RENDERED_SETS = 20;
+
 function prescriptionText(e: PrescribedExercise) {
   const base = `${e.sets} × ${e.reps}`;
   if (!e.intensityValue || e.intensityType === "none") return base;
@@ -67,7 +73,7 @@ export function LogWorkout({
     for (const e of exercises) {
       const last = lastPerformances[e.exerciseId];
       const suggested = suggestions[e.id]?.weightKg;
-      for (let i = 0; i < e.sets; i++) {
+      for (let i = 0; i < Math.min(e.sets, MAX_RENDERED_SETS); i++) {
         const prior = last?.sets[i];
         // The suggestion is the point of the feature — prefill it, and fall
         // back to a straight repeat only when there isn't one.
@@ -142,8 +148,16 @@ export function LogWorkout({
                 />
               </div>
 
+              {e.sets > MAX_RENDERED_SETS && (
+                <p className="px-4 pt-2 text-xs text-red-400">
+                  This exercise is prescribed {e.sets} sets, which looks like
+                  bad data — showing the first {MAX_RENDERED_SETS}.
+                </p>
+              )}
               <div className="divide-y">
-                {Array.from({ length: e.sets }, (_, i) => (
+                {Array.from(
+                  { length: Math.min(e.sets, MAX_RENDERED_SETS) },
+                  (_, i) => (
                   <div key={i} className="flex items-center gap-2 px-4 py-2">
                     <span className="w-8 shrink-0 text-xs text-muted">
                       #{i + 1}

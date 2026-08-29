@@ -54,7 +54,12 @@ Changing a program they've already started:
 Keep responses tight. Two or three short paragraphs, no headers, no bullet-point walls.`;
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  let messages: UIMessage[];
+  try {
+    ({ messages } = await req.json());
+  } catch {
+    return new Response("Invalid request", { status: 400 });
+  }
 
   // Resolved once per request, from the session cookie — never from anything
   // the model or the client can influence. A tweak tool can only ever reach
@@ -74,7 +79,12 @@ export async function POST(req: Request) {
     const fork = await activeProgram(user.id);
     if (!fork)
       return { ok: false, reason: "the lifter hasn't started a program yet" };
-    return fn(fork, user.id);
+    try {
+      return await fn(fork, user.id);
+    } catch (err) {
+      console.error("chat tool call failed:", err);
+      return { ok: false, reason: "something went wrong updating the program — try again" };
+    }
   }
 
   const result = streamText({
@@ -114,7 +124,14 @@ export async function POST(req: Request) {
               "Their own words about how they like to train — volume, favourite lifts, what they've enjoyed or hated before. This drives the semantic half of the search.",
             ),
         }),
-        execute: async (profile) => recommendPrograms(profile),
+        execute: async (profile) => {
+          try {
+            return await recommendPrograms(profile);
+          } catch (err) {
+            console.error("recommendPrograms failed:", err);
+            return { ok: false, reason: "the program search hit an error — try again" };
+          }
+        },
       }),
 
       suggestSwaps: tool({
