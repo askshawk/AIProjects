@@ -1,0 +1,57 @@
+name: Iron Atlas CI
+
+on:
+  push:
+    paths:
+      - "iron-atlas/**"
+      - ".github/workflows/iron-atlas-ci.yml"
+  pull_request:
+    paths:
+      - "iron-atlas/**"
+      - ".github/workflows/iron-atlas-ci.yml"
+
+defaults:
+  run:
+    working-directory: iron-atlas
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # PGlite behind a real Postgres wire-protocol socket, same as local dev
+      # (see scripts/db-server.ts) — no external database service needed.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      # Embeddings only. Free tier covers a run of this size many times over —
+      # see README. Required: add it under this repo's Settings > Secrets > Actions.
+      VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: iron-atlas/package-lock.json
+
+      - run: npm ci
+
+      - name: Start local database (PGlite)
+        run: |
+          nohup npm run db > db.log 2>&1 &
+          for i in $(seq 1 30); do
+            (echo > /dev/tcp/127.0.0.1/5432) 2>/dev/null && exit 0
+            sleep 1
+          done
+          echo "PGlite never came up:"; cat db.log; exit 1
+
+      - run: npm run db:push -- --force
+      - run: npm run seed:exercises
+      - run: npm run seed:demo
+
+      - run: npm test
+
+      # `tsc --noEmit` needs .next/types, which only `next build`/`next dev`
+      # generate (see README's "Running it" section).
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: npx eslint src scripts
