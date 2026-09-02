@@ -18,14 +18,16 @@ export default async function Home() {
     <div className="space-y-10">
       <section className="space-y-4">
         <h1 className="text-4xl font-semibold tracking-tight">
-          Train someone else&apos;s program.
+          Reconstructed training programs.
           <br />
-          <span className="text-accent">In your gym.</span>
+          <span className="text-accent">Built for your gym.</span>
         </h1>
         <p className="max-w-2xl text-muted">
-          A library of programs from the coaches worth reading — pick one, swap
-          the movements your gym can&apos;t do, and take it with you as a
-          spreadsheet or a logbook.
+          Iron Atlas reconstructs published training methods from the coaches
+          worth reading, then swaps in the movements your gym actually has.
+          These are AI-built reconstructions, not the coaches&apos; own
+          documents — not affiliated with or endorsed by them. Take a program
+          with you as a spreadsheet or a logbook.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link

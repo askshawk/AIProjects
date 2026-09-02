@@ -23,6 +23,11 @@ export default async function AuthorsPage() {
           </Link>
           .
         </p>
+        <p className="mt-2 max-w-2xl text-xs text-muted">
+          Iron Atlas isn&apos;t affiliated with, endorsed by, or sponsored by
+          any coach listed here. Programs are AI reconstructions of published
+          training methods, credited by name for reference.
+        </p>
       </div>
 
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

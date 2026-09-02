@@ -33,6 +33,13 @@ export default async function AuthorPage({ params }: Props) {
           {rows.length} program{rows.length === 1 ? "" : "s"} in the library
           {verified > 0 && ` · ${verified} verified`}
         </p>
+        {name !== "Iron Atlas" && (
+          <p className="mt-2 max-w-2xl text-xs text-muted">
+            Iron Atlas isn&apos;t affiliated with, endorsed by, or sponsored
+            by {name}. These are AI reconstructions of their published
+            training methods, not their own writing.
+          </p>
+        )}
       </div>
 
       <ul className="grid gap-3 md:grid-cols-2">
