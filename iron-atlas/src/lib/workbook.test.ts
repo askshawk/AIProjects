@@ -220,27 +220,44 @@ describe("workbook round-trip", () => {
     expect(found).toBe(true);
   });
 
-  it("omits the disclaimer for a verified program", async () => {
-    const { workbook } = await roundTrip("arnold-golden-six");
+  it("still discloses provenance for a verified program, worded for the source-checked state", async () => {
+    const { workbook, program } = await roundTrip("arnold-golden-six");
+    expect(program.verified).toBe(true);
+
     const about = workbook.getWorksheet("About")!;
     let found = false;
     about.eachRow((r) => {
       const v = r.getCell(1).value;
-      if (typeof v === "string" && v.includes("RECONSTRUCTED")) found = true;
+      if (
+        typeof v === "string" &&
+        v.includes("SOURCE-CHECKED RECONSTRUCTION")
+      )
+        found = true;
     });
-    expect(found).toBe(false);
+    expect(found).toBe(true);
   });
 });
 
 describe("csv export", () => {
-  it("emits a header plus one line per prescribed exercise", async () => {
+  it("carries an attribution header, then a header row, then one line per exercise", async () => {
     const loaded = await loadProgram("arnold-golden-six");
     const csv = buildProgramCsv(loaded!.program, loaded!.rows);
     const lines = csv.split("\n");
-    expect(lines[0]).toBe(
+    expect(lines[0]).toContain(loaded!.program.title);
+    expect(lines[0]).toContain(loaded!.program.authorName);
+    expect(lines[1]).toContain("SOURCE-CHECKED RECONSTRUCTION");
+
+    const headerIndex = lines.indexOf(
       "Week,Day,Exercise,Sets,Reps,Intensity,Rest (s),Notes",
     );
-    expect(lines).toHaveLength(loaded!.rows.length + 1);
+    expect(headerIndex).toBeGreaterThan(0);
+    expect(lines).toHaveLength(headerIndex + 1 + loaded!.rows.length);
+  });
+
+  it("includes a purchase link when the coach actively sells the program", async () => {
+    const loaded = await loadProgram("nippard-ppl");
+    const csv = buildProgramCsv(loaded!.program, loaded!.rows);
+    expect(csv).toContain(loaded!.program.purchaseUrl);
   });
 
   it("quotes fields containing commas so columns don't shift", () => {
@@ -249,6 +266,11 @@ describe("csv export", () => {
         title: "T",
         authorName: "A",
         slug: "s",
+        firstParty: false,
+        verified: false,
+        confidence: null,
+        sourceUrls: [],
+        purchaseUrl: null,
       } as never,
       [row({ exNotes: "Wide grip, full range" })],
     );

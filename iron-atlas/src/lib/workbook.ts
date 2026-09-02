@@ -91,6 +91,44 @@ export function weekSheetName(weekNumber: number, taken: Set<string>): string {
   return name;
 }
 
+/**
+ * The provenance disclaimer, worded identically to the program page so the
+ * claim a spreadsheet makes never drifts from the claim the web UI makes.
+ * Exported files need this most — whoever's handed one never saw the badge.
+ */
+export function provenanceText(program: ProgramMeta): string {
+  if (program.firstParty) {
+    return "This is an Iron Atlas original program, not a reconstruction of anyone's published work.";
+  }
+  if (program.verified) {
+    return `An AI reconstruction of the training method ${program.authorName} has published, checked against the source by a human. Iron Atlas isn't affiliated with or endorsed by ${program.authorName}.`;
+  }
+  switch (program.confidence) {
+    case "stylistic":
+      return `The AI knows this program exists and knows ${program.authorName}'s methods, but not this program's actual contents. What follows is a faithful imitation of how they train — treat it as inspired-by, and buy the real thing if you want theirs.`;
+    case "partial":
+      return `The overall structure is ${program.authorName}'s; some specifics were inferred rather than recalled. Check the details against the source before running it.`;
+    case "documented":
+      return `Rebuilt by an AI that reported specific recall of this program's published numbers. The structure and prescriptions should be close to ${program.authorName}'s original, but check them against the source before running it.`;
+    default:
+      return `This program was rebuilt by an AI from its knowledge of ${program.authorName}'s work, and hasn't been graded for how closely it matches the original. The structure and intent should be right; specific set and rep numbers may not. Check it against the source before running it.`;
+  }
+}
+
+/** The short, all-caps label that heads {@link provenanceText} in exported files. */
+export function provenanceTitle(program: ProgramMeta): string {
+  if (program.firstParty) return "IRON ATLAS ORIGINAL";
+  if (program.verified) return "SOURCE-CHECKED RECONSTRUCTION";
+  switch (program.confidence) {
+    case "stylistic":
+      return `WRITTEN IN ${program.authorName.toUpperCase()}'S STYLE — NOT THEIR PROGRAM`;
+    case "partial":
+      return "PARTLY INFERRED";
+    default:
+      return "RECONSTRUCTED, NOT TRANSCRIBED";
+  }
+}
+
 export function buildProgramWorkbook(
   program: ProgramMeta,
   rows: ProgramRow[],
@@ -334,17 +372,31 @@ export function buildProgramWorkbook(
   aboutCursor += 2;
 
   // The provenance disclaimer travels with the file. Someone who is handed this
-  // spreadsheet never saw the badge in the web UI.
-  if (program.aiGenerated && !program.verified) {
+  // spreadsheet never saw the badge in the web UI — every program gets this,
+  // not just the unverified ones, since a verified reconstruction is still a
+  // reconstruction and still deserves the "not affiliated" line.
+  {
     const warn = about.getCell(`A${aboutCursor}`);
     about.mergeCells(aboutCursor, 1, aboutCursor, 2);
-    warn.value =
-      `RECONSTRUCTED, NOT TRANSCRIBED — this program was rebuilt by an AI from its knowledge of ` +
-      `${program.authorName}'s work. The structure and intent should be right; specific set and rep ` +
-      `numbers may not match the published original. Check it against the source before running it.`;
-    warn.font = { bold: true, color: { argb: "FFB45309" } };
+    warn.value = `${provenanceTitle(program)} — ${provenanceText(program)}`;
+    warn.font = {
+      bold: true,
+      color: { argb: program.firstParty ? "FF7C3AED" : "FFB45309" },
+    };
     warn.alignment = { wrapText: true, vertical: "top" };
     about.getRow(aboutCursor).height = 46;
+    aboutCursor += 2;
+  }
+
+  if (program.purchaseUrl) {
+    const buy = about.getCell(`A${aboutCursor}`);
+    about.mergeCells(aboutCursor, 1, aboutCursor, 2);
+    buy.value = {
+      text: `Want ${program.authorName}'s actual program? Buy it from them: ${program.purchaseUrl}`,
+      hyperlink: program.purchaseUrl,
+    };
+    buy.font = { color: { argb: "FF0563C1" }, underline: true };
+    buy.alignment = { wrapText: true, vertical: "top" };
     aboutCursor += 2;
   }
 
@@ -382,7 +434,25 @@ export function buildProgramCsv(
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
+  // Attribution travels with the file as leading single-cell rows — a CSV has
+  // nowhere else to carry it, and whoever opens this never saw the badge in
+  // the web UI.
   const lines = [
+    [escape(`${program.title} — ${program.authorName}`)].join(","),
+    [escape(`${provenanceTitle(program)} — ${provenanceText(program)}`)].join(
+      ",",
+    ),
+    ...(program.purchaseUrl
+      ? [
+          [
+            escape(
+              `Want ${program.authorName}'s actual program? Buy it from them: ${program.purchaseUrl}`,
+            ),
+          ].join(","),
+        ]
+      : []),
+    ...program.sourceUrls.map((url) => [escape(`Source: ${url}`)].join(",")),
+    "",
     [
       "Week",
       "Day",
