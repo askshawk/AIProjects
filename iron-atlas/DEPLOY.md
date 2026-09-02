@@ -112,13 +112,21 @@ npm run build && npm start   # http://localhost:3000, now against Neon
 2. **Root Directory**: set to `iron-atlas`. This matters — the repo holds several
    projects and Vercel defaults to the repository root.
 3. Framework preset should auto-detect as Next.js. Leave build settings alone.
-4. **Environment Variables** — add all three, for Production *and* Preview:
+4. **Environment Variables** — add the required three, for Production *and* Preview:
 
    | Name | Value |
    |---|---|
    | `DATABASE_URL` | the Neon connection string |
    | `ANTHROPIC_API_KEY` | your Anthropic key |
    | `VOYAGE_API_KEY` | your Voyage key |
+
+   Optional — the coach chat's spend guards, all with sane defaults if unset:
+
+   | Name | Default | What it does |
+   |---|---|---|
+   | `COACH_DAILY_MESSAGE_CAP` | `40` | Coach messages a non-admin user can send per UTC day. |
+   | `COACH_MONTHLY_BUDGET_USD` | `20` | Total estimated coach spend, across every user, before the coach refuses new requests until next month. |
+   | `COACH_DISABLED` | unset | Set to `1` to take the coach offline instantly (panic switch), regardless of the caps above. |
 
 5. **Deploy**.
 
@@ -132,6 +140,10 @@ what's wrong in the build log rather than serving a broken app.
   standalone and opens straight to `/train`.
 - Sign up for an account on the deployed app; the local one doesn't carry over.
 - Set your gym at `/gym`, pick a program, hit **Start this program**.
+- The coach chat costs real Anthropic spend per message, so it's gated behind
+  sign-in and capped for everyone by default. Your own account is exempt from
+  the caps and gets the better model — mark it as admin directly in Neon's SQL
+  editor: `update users set is_admin = true where email = 'you@example.com';`
 
 ---
 

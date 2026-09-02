@@ -23,10 +23,24 @@ import {
   suggestSwaps,
   swapExercise,
 } from "@/lib/tweak";
+import {
+  claimDailyMessage,
+  DAILY_MESSAGE_CAP,
+  estimateCostUsd,
+  MONTHLY_BUDGET_USD,
+  monthlySpendUsd,
+  recordSpend,
+} from "@/lib/chatLimits";
 
 /** Embeddings and the pg driver are Node-only. */
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+/** Panic switch — set in the host env to take the coach offline instantly. */
+const COACH_DISABLED = process.env.COACH_DISABLED === "1";
+
+const OPUS = "claude-opus-5";
+const SONNET = "claude-sonnet-5";
 
 const SYSTEM = `You are a knowledgeable strength coach helping someone pick a training program from a curated library.
 
@@ -54,6 +68,12 @@ Changing a program they've already started:
 Keep responses tight. Two or three short paragraphs, no headers, no bullet-point walls.`;
 
 export async function POST(req: Request) {
+  if (COACH_DISABLED) {
+    return new Response("The coach is temporarily unavailable.", {
+      status: 503,
+    });
+  }
+
   let messages: UIMessage[];
   try {
     ({ messages } = await req.json());
@@ -65,22 +85,51 @@ export async function POST(req: Request) {
   // the model or the client can influence. A tweak tool can only ever reach
   // the signed-in lifter's own active fork.
   const user = await getCurrentUser();
+  if (!user) {
+    return new Response("Sign in to talk to the coach.", { status: 401 });
+  }
+
+  // The owner's own account is exempt from the spend guards below — the
+  // point of the caps is to stop a stranger from running up Alan's bill, not
+  // to stop Alan from using his own product.
+  if (!user.isAdmin) {
+    const spent = await monthlySpendUsd();
+    if (spent >= MONTHLY_BUDGET_USD) {
+      return new Response(
+        "The coach has hit its budget for this month — try again next month.",
+        { status: 429 },
+      );
+    }
+
+    const claimed = await claimDailyMessage(user.id);
+    if (!claimed) {
+      return new Response(
+        `You've hit today's limit of ${DAILY_MESSAGE_CAP} coach messages — try again tomorrow.`,
+        { status: 429 },
+      );
+    }
+  }
+
+  const model = user.isAdmin ? OPUS : SONNET;
+  // Plain number, not a property on the nullable `user` — TypeScript can't
+  // see across the closure below that `user` was already checked, but it can
+  // see that this was.
+  const userId = user.id;
   const gym = await readGymProfile();
 
   /**
    * Runs a fork mutation, or explains why it can't. Returning a reason rather
-   * than throwing lets the model tell the lifter what to do about it — sign
-   * in, or start a program first.
+   * than throwing lets the model tell the lifter what to do about it — start
+   * a program first, in this case; sign-in is already required to reach here.
    */
   async function withActiveProgram<T>(
     fn: (fork: { id: number }, userId: number) => Promise<T>,
   ): Promise<T | { ok: false; reason: string }> {
-    if (!user) return { ok: false, reason: "the lifter isn't signed in" };
-    const fork = await activeProgram(user.id);
+    const fork = await activeProgram(userId);
     if (!fork)
       return { ok: false, reason: "the lifter hasn't started a program yet" };
     try {
-      return await fn(fork, user.id);
+      return await fn(fork, userId);
     } catch (err) {
       console.error("chat tool call failed:", err);
       return { ok: false, reason: "something went wrong updating the program — try again" };
@@ -88,11 +137,26 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: anthropic("claude-opus-5"),
+    model: anthropic(model),
     system: SYSTEM,
     messages: await convertToModelMessages(messages),
     // Let the model call the tool and then write its answer in the same turn.
     stopWhen: stepCountIs(4),
+    // A capped response keeps a single reply from blowing past what a
+    // strength-coaching answer should ever need.
+    maxOutputTokens: 800,
+    onFinish: async ({ usage }) => {
+      const cost = estimateCostUsd(
+        model,
+        usage.inputTokens ?? 0,
+        usage.outputTokens ?? 0,
+      );
+      try {
+        await recordSpend(userId, cost);
+      } catch (err) {
+        console.error("failed to record coach spend:", err);
+      }
+    },
     tools: {
       recommendPrograms: tool({
         description:

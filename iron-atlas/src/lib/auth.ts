@@ -85,6 +85,7 @@ export type CurrentUser = {
   email: string;
   displayName: string | null;
   unitPreference: string;
+  isAdmin: boolean;
 };
 
 /** Resolves the signed-in user, or null. Safe to call from any server component. */
@@ -99,6 +100,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       email: users.email,
       displayName: users.displayName,
       unitPreference: users.unitPreference,
+      isAdmin: users.isAdmin,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))

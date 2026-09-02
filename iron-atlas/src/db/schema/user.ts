@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   numeric,
@@ -230,4 +231,29 @@ export const chatMessages = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [index("chat_messages_thread_idx").on(t.threadId, t.createdAt)],
+);
+
+/**
+ * One row per user per UTC calendar day. `messageCount` is claimed
+ * atomically before the model is called, so it caps request volume even if a
+ * call never finishes; `estimatedCostUsd` is added after the model responds,
+ * from actual token usage, and is what the monthly budget check sums.
+ */
+export const chatUsage = pgTable(
+  "chat_usage",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    estimatedCostUsd: numeric("estimated_cost_usd", {
+      precision: 10,
+      scale: 4,
+    })
+      .notNull()
+      .default("0"),
+  },
+  (t) => [unique("chat_usage_user_day_unique").on(t.userId, t.day)],
 );
