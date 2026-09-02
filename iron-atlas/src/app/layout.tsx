@@ -75,6 +75,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
           {children}
         </main>
+        <footer className="border-t px-4 py-6 text-xs text-muted">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+            <p>
+              Iron Atlas isn&apos;t affiliated with, endorsed by, or
+              sponsored by any coach in the library.
+            </p>
+            <div className="flex gap-4">
+              <Link href="/about" className="hover:text-foreground">
+                About
+              </Link>
+              <Link href="/terms" className="hover:text-foreground">
+                Terms
+              </Link>
+              <a
+                href="https://github.com/askshawk/AIProjects/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
+                Report an issue
+              </a>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );
