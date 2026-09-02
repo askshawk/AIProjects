@@ -109,6 +109,7 @@ export default async function ProgramsPage({
       aiGenerated: programs.aiGenerated,
       verified: programs.verified,
       confidence: programs.confidence,
+      firstParty: programs.firstParty,
     })
     .from(programs)
     .where(filters.length ? and(...filters) : undefined)

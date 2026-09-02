@@ -34,11 +34,13 @@ export function VerifyToggle({
         }
         title={
           verified
-            ? "Remove the verified badge"
+            ? "Remove the source-checked badge"
             : "Click to mark this as checked against the original source"
         }
       >
-        {verified ? "✓ Verified — click to undo" : "Mark as checked against source"}
+        {verified
+          ? "✓ Source-checked — click to undo"
+          : "Mark as checked against source"}
       </button>
     </form>
   );

@@ -39,19 +39,36 @@ export function ProvenanceBadge({
   aiGenerated,
   verified,
   confidence = null,
+  firstParty = false,
 }: {
   aiGenerated: boolean;
   verified: boolean;
   confidence?: Confidence;
+  firstParty?: boolean;
 }) {
-  // A human reading it against the source outranks any self-assessment.
+  // Nothing is being reconstructed, so no fidelity claim applies — and saying
+  // otherwise would attach a stranger's name to our own programming.
+  if (firstParty) {
+    return (
+      <span
+        title="Written for Iron Atlas. Not a reconstruction of anyone's published program."
+        className="rounded border border-violet-800 bg-violet-950/50 px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-violet-300"
+      >
+        Iron Atlas original
+      </span>
+    );
+  }
+
+  // A human reading it against the source outranks any self-assessment. Worded
+  // as "source-checked" rather than "verified" because the latter, sitting next
+  // to a coach's name, reads as though the coach endorsed it.
   if (verified) {
     return (
       <span
-        title="Checked against the original source by a human."
+        title="Checked against the original source by a human. Not endorsed by, or affiliated with, the author."
         className="rounded border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-300"
       >
-        Verified
+        Source-checked
       </span>
     );
   }

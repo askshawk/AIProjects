@@ -87,6 +87,20 @@ export const programs = pgTable(
     tags: text("tags").array().notNull().default([]),
     /** Reconstructed by an LLM rather than transcribed from the source. */
     aiGenerated: boolean("ai_generated").notNull().default(true),
+    /**
+     * Iron Atlas' own programming, not a reconstruction of anyone's published
+     * work. Set for programs whose titles turned out not to correspond to a
+     * real published program at all — keeping the training content but
+     * dropping a real coach's name off something they never wrote. These carry
+     * no reconstruction badge, because there is nothing being reconstructed.
+     */
+    firstParty: boolean("first_party").notNull().default(false),
+    /**
+     * Where to buy the coach's actual program, when one is being actively sold.
+     * Shown alongside the reconstruction, never instead of it — the point is to
+     * send interested lifters to the source rather than substitute for it.
+     */
+    purchaseUrl: text("purchase_url"),
     /** Flipped by hand once the content has been checked against the source. */
     verified: boolean("verified").notNull().default(false),
     /** The model's own assessment of how faithful this reconstruction is. */

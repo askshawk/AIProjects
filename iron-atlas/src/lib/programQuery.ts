@@ -37,6 +37,8 @@ export async function loadProgram(slug: string) {
       verified: programs.verified,
       confidence: programs.confidence,
       confidenceNotes: programs.confidenceNotes,
+      firstParty: programs.firstParty,
+      purchaseUrl: programs.purchaseUrl,
     })
     .from(programs)
     .where(eq(programs.slug, slug));

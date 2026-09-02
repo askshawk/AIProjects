@@ -89,20 +89,38 @@ export default async function ProgramPage({
             <h1 className="text-3xl font-semibold tracking-tight">
               {program.title}
             </h1>
-            <Link
-              href={`/programs/authors/${authorSlug(program.authorName)}`}
-              className="text-muted transition-colors hover:text-accent"
-            >
-              {program.authorName}
-            </Link>
+            {/* The coach's name is an attribution, never the name of the thing
+                being offered — that distinction is what keeps a factual
+                reference from reading as an endorsed product. */}
+            {program.firstParty ? (
+              <Link
+                href={`/programs/authors/${authorSlug(program.authorName)}`}
+                className="text-muted transition-colors hover:text-accent"
+              >
+                {program.authorName}
+              </Link>
+            ) : (
+              <p className="text-muted">
+                based on the method popularized by{" "}
+                <Link
+                  href={`/programs/authors/${authorSlug(program.authorName)}`}
+                  className="transition-colors hover:text-accent"
+                >
+                  {program.authorName}
+                </Link>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <ProvenanceBadge
               aiGenerated={program.aiGenerated}
               verified={program.verified}
               confidence={program.confidence}
+              firstParty={program.firstParty}
             />
-            {user && (
+            {/* Nothing to check a first-party program against — it isn't
+                reconstructing a source. */}
+            {user && !program.firstParty && (
               <VerifyToggle slug={program.slug} verified={program.verified} />
             )}
           </div>
@@ -144,42 +162,74 @@ export default async function ProgramPage({
         </div>
       </div>
 
-      {program.aiGenerated && !program.verified && (
+      {/* Every program says where it came from — including the source-checked
+          ones, which previously showed no provenance and no source links at all
+          despite making the strongest implicit claim in the library. */}
+      {program.firstParty ? (
+        <div className="rounded-lg border border-violet-900/60 bg-violet-950/20 p-4 text-sm">
+          <p className="font-medium text-violet-300">
+            An Iron Atlas original — not anyone else&apos;s program
+          </p>
+          <p className="mt-1 text-muted">
+            This program was written for Iron Atlas. It isn&apos;t a
+            reconstruction of a published program, and no coach is claimed as
+            its author.
+          </p>
+          {program.confidenceNotes && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-muted hover:text-foreground">
+                Why this program exists
+              </summary>
+              <p className="mt-1.5 text-xs leading-relaxed whitespace-pre-line text-muted">
+                {program.confidenceNotes}
+              </p>
+            </details>
+          )}
+        </div>
+      ) : (
         <div
           className={`rounded-lg border p-4 text-sm ${
-            program.confidence === "stylistic"
-              ? "border-orange-900/60 bg-orange-950/20"
-              : "border-amber-900/60 bg-amber-950/20"
+            program.verified
+              ? "border-emerald-900/60 bg-emerald-950/20"
+              : program.confidence === "stylistic"
+                ? "border-orange-900/60 bg-orange-950/20"
+                : "border-amber-900/60 bg-amber-950/20"
           }`}
         >
           <p
             className={`font-medium ${
-              program.confidence === "stylistic"
-                ? "text-orange-300"
-                : "text-amber-300"
+              program.verified
+                ? "text-emerald-300"
+                : program.confidence === "stylistic"
+                  ? "text-orange-300"
+                  : "text-amber-300"
             }`}
           >
-            {program.confidence === "stylistic"
-              ? `Written in ${program.authorName}'s style — not their program`
-              : program.confidence === "partial"
-                ? "Partly inferred"
-                : "Reconstructed, not transcribed"}
+            {program.verified
+              ? "Source-checked reconstruction"
+              : program.confidence === "stylistic"
+                ? `Written in ${program.authorName}'s style — not their program`
+                : program.confidence === "partial"
+                  ? "Partly inferred"
+                  : "Reconstructed, not transcribed"}
           </p>
           <p className="mt-1 text-muted">
-            {program.confidence === "stylistic"
-              ? `The AI knows this program exists and knows ${program.authorName}'s methods, but not this program's actual contents. What follows is a faithful imitation of how they train — treat it as inspired-by, and buy the real thing if you want theirs.`
-              : program.confidence === "partial"
-                ? `The overall structure is ${program.authorName}'s; some specifics were inferred rather than recalled. Check the details against the source before running it.`
-                : program.confidence === "documented"
-                  ? `Rebuilt by an AI that reported specific recall of this program's published numbers. The structure and prescriptions should be close to ${program.authorName}'s original, but check them against the source before running it.`
-                  : `This program was rebuilt by an AI from its knowledge of ${program.authorName}'s work, and hasn't been graded for how closely it matches the original. The structure and intent should be right; specific set and rep numbers may not. Check it against the source before running it.`}
+            {program.verified
+              ? `An AI reconstruction of the training method ${program.authorName} has published, checked against the source by a human. Iron Atlas isn't affiliated with or endorsed by ${program.authorName}.`
+              : program.confidence === "stylistic"
+                ? `The AI knows this program exists and knows ${program.authorName}'s methods, but not this program's actual contents. What follows is a faithful imitation of how they train — treat it as inspired-by, and buy the real thing if you want theirs.`
+                : program.confidence === "partial"
+                  ? `The overall structure is ${program.authorName}'s; some specifics were inferred rather than recalled. Check the details against the source before running it.`
+                  : program.confidence === "documented"
+                    ? `Rebuilt by an AI that reported specific recall of this program's published numbers. The structure and prescriptions should be close to ${program.authorName}'s original, but check them against the source before running it.`
+                    : `This program was rebuilt by an AI from its knowledge of ${program.authorName}'s work, and hasn't been graded for how closely it matches the original. The structure and intent should be right; specific set and rep numbers may not. Check it against the source before running it.`}
           </p>
           {program.confidenceNotes && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-muted hover:text-foreground">
                 What the AI said about its own reconstruction
               </summary>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              <p className="mt-1.5 text-xs leading-relaxed whitespace-pre-line text-muted">
                 {program.confidenceNotes}
               </p>
             </details>
@@ -199,6 +249,21 @@ export default async function ProgramPage({
                 </li>
               ))}
             </ul>
+          )}
+          {/* Where the coach still sells the real thing, send people there.
+              Alongside the reconstruction, not instead of it. */}
+          {program.purchaseUrl && (
+            <p className="mt-3 border-t border-white/10 pt-3">
+              <a
+                href={program.purchaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-accent underline underline-offset-2"
+              >
+                Want {program.authorName}&apos;s actual program? Buy it from them
+                →
+              </a>
+            </p>
           )}
         </div>
       )}

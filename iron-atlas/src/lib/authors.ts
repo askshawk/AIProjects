@@ -99,6 +99,7 @@ export async function programsByAuthor(canonicalName: string) {
       aiGenerated: programs.aiGenerated,
       verified: programs.verified,
       confidence: programs.confidence,
+      firstParty: programs.firstParty,
     })
     .from(programs)
     .where(

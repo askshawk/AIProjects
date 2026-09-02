@@ -20,6 +20,7 @@ export type ProgramCardRow = {
   aiGenerated: boolean;
   verified: boolean;
   confidence?: Confidence;
+  firstParty?: boolean;
 };
 
 /**
@@ -44,12 +45,17 @@ export function ProgramCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-medium leading-tight">{p.title}</h2>
-          {showAuthor && <p className="text-sm text-muted">{p.authorName}</p>}
+          {showAuthor && (
+            <p className="text-sm text-muted">
+              {p.firstParty ? p.authorName : `based on ${p.authorName}`}
+            </p>
+          )}
         </div>
         <ProvenanceBadge
           aiGenerated={p.aiGenerated}
           verified={p.verified}
           confidence={p.confidence ?? null}
+          firstParty={p.firstParty}
         />
       </div>
       <p className="mt-2 line-clamp-2 text-sm text-muted">{p.summary}</p>
