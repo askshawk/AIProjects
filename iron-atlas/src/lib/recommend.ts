@@ -41,6 +41,8 @@ export type Recommendation = {
   equipmentRequired: string[];
   aiGenerated: boolean;
   verified: boolean;
+  confidence: "documented" | "partial" | "stylistic" | null;
+  firstParty: boolean;
   /** Cosine similarity against the profile, 0-1. Higher is a closer fit. */
   similarity: number;
   /** Which hard filters this program satisfied — shown so a pick is auditable. */
@@ -110,6 +112,15 @@ export async function recommendPrograms(
     // lifter actually has.
     constraints.push({
       label: "fits your equipment",
+      // sql.raw here builds query text from `equipment`, not a bound
+      // parameter — verified safe only because `equipment` was just filtered
+      // through `isEnum` above, so every element is one of a fixed set of
+      // enum values, never arbitrary text. (A parameterized rewrite was
+      // tried and reverted: postgres.js binds a JS array as a row-tuple
+      // `($1, $2)`, not a single array value, which `<@ (...)::equipment[]`
+      // can't cast — Drizzle has no `arrayLiteral`/`<@`-aware helper for
+      // this, so building the literal is the correct approach here, not a
+      // shortcut.)
       clause: sql`${programs.equipmentRequired} <@ ${sql.raw(
         `array[${equipment.map((e) => `'${e}'`).join(",")}]::equipment[]`,
       )}`,
@@ -144,6 +155,8 @@ export async function recommendPrograms(
     equipmentRequired: programs.equipmentRequired,
     aiGenerated: programs.aiGenerated,
     verified: programs.verified,
+    confidence: programs.confidence,
+    firstParty: programs.firstParty,
     similarity,
   };
 

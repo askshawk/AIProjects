@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { asc, inArray } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { equipment as equipmentEnum, exercises } from "@/db/schema";
 import {
@@ -10,8 +10,14 @@ import {
   serializeGymProfile,
 } from "@/lib/gymProfile";
 import { FULL_GYM, type Equipment } from "@/lib/substitute";
+import { BannedExercisePicker } from "@/components/BannedExercisePicker";
 
-export const metadata = { title: "Your gym · Iron Atlas" };
+export const metadata = {
+  title: "Your gym",
+  description:
+    "The equipment you have and the exercises to avoid — drives substitutions across every program.",
+  robots: { index: false },
+};
 
 const LABELS: Record<Equipment, string> = {
   barbell: "Barbell & plates",
@@ -58,13 +64,12 @@ export default async function GymPage() {
   const gym = await readGymProfile();
   const configured = gym.equipment.length > 0;
 
-  const banned = gym.bannedExerciseIds.length
-    ? await db
-        .select({ id: exercises.id, name: exercises.name })
-        .from(exercises)
-        .where(inArray(exercises.id, gym.bannedExerciseIds))
-        .orderBy(asc(exercises.name))
-    : [];
+  // Small enough (235 rows, name + id only) to send whole and search
+  // client-side — no need for a search-as-you-type round trip to the server.
+  const allExercises = await db
+    .select({ id: exercises.id, name: exercises.name })
+    .from(exercises)
+    .orderBy(asc(exercises.name));
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -103,32 +108,18 @@ export default async function GymPage() {
         </fieldset>
 
         <div className="space-y-2">
-          <label htmlFor="banned" className="block text-sm font-medium">
-            Movements to avoid
+          <label className="block text-sm font-medium">
+            Exercises to avoid
           </label>
           <p className="text-xs text-muted">
-            Exercise IDs, comma separated — for a machine your gym lacks or
-            something an injury rules out. Find IDs on the{" "}
-            <a
-              href="/exercises"
-              className="text-accent underline underline-offset-2"
-            >
-              exercise catalogue
-            </a>
-            .
+            For a machine your gym lacks or something an injury rules out —
+            search by name and add as many as you need.
           </p>
-          <input
-            id="banned"
+          <BannedExercisePicker
             name="banned"
-            defaultValue={gym.bannedExerciseIds.join(", ")}
-            placeholder="e.g. 142, 88"
-            className="w-full rounded-md border bg-surface px-3 py-2 text-sm"
+            options={allExercises}
+            initialIds={gym.bannedExerciseIds}
           />
-          {banned.length > 0 && (
-            <p className="text-xs text-muted">
-              Currently avoiding: {banned.map((b) => b.name).join(", ")}
-            </p>
-          )}
         </div>
 
         <div className="flex gap-2">
@@ -148,11 +139,12 @@ export default async function GymPage() {
         </div>
       </form>
 
-      <p className="rounded-lg border border-dashed p-3 text-xs text-muted">
-        {configured
-          ? `Saved: ${gym.equipment.length} of ${equipmentEnum.enumValues.length} equipment types.`
-          : "Nothing saved yet — programs are shown exactly as written."}
-      </p>
+      {configured && (
+        <p className="rounded-lg border border-dashed p-3 text-xs text-muted">
+          Saved: {gym.equipment.length} of {equipmentEnum.enumValues.length}{" "}
+          equipment types.
+        </p>
+      )}
     </div>
   );
 }

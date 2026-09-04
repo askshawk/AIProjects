@@ -38,7 +38,7 @@ export async function StartProgram({ slug }: { slug: string }) {
         href="/account"
         className="rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:border-accent/60"
       >
-        Sign in to run this
+        Sign in
       </Link>
     );
   }

@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { notAffiliatedWith } from "@/lib/disclosure";
 import {
   groupByWeek,
   type ProgramMeta,
@@ -33,6 +34,24 @@ export function definedNameFor(exerciseName: string): string {
   return `TM_${cleaned}`;
 }
 
+/**
+ * "65% 1RM", "102.5 kg", "RPE 8" — empty when there's no intensity to show.
+ * Its own function rather than inline in `prescriptionText`, so a caller that
+ * only wants the intensity (the CSV export) doesn't have to reconstruct it by
+ * formatting the full prescription and parsing it back apart.
+ */
+function intensitySuffix(row: {
+  intensityType: string;
+  intensityValue: string | null;
+}): string {
+  if (!row.intensityValue || row.intensityType === "none") return "";
+  return row.intensityType === "percent_1rm"
+    ? `${row.intensityValue}% 1RM`
+    : row.intensityType === "weight"
+      ? `${row.intensityValue} kg`
+      : `${row.intensityType.toUpperCase()} ${row.intensityValue}`;
+}
+
 /** The prescription as a human reads it: "3 × 8-12 @ RPE 8". */
 export function prescriptionText(row: {
   sets: number;
@@ -41,14 +60,8 @@ export function prescriptionText(row: {
   intensityValue: string | null;
 }): string {
   const base = `${row.sets} × ${row.reps}`;
-  if (!row.intensityValue || row.intensityType === "none") return base;
-  const suffix =
-    row.intensityType === "percent_1rm"
-      ? `${row.intensityValue}% 1RM`
-      : row.intensityType === "weight"
-        ? `${row.intensityValue} kg`
-        : `${row.intensityType.toUpperCase()} ${row.intensityValue}`;
-  return `${base} @ ${suffix}`;
+  const suffix = intensitySuffix(row);
+  return suffix ? `${base} @ ${suffix}` : base;
 }
 
 /**
@@ -101,7 +114,7 @@ export function provenanceText(program: ProgramMeta): string {
     return "This is an Iron Atlas original program, not a reconstruction of anyone's published work.";
   }
   if (program.verified) {
-    return `An AI reconstruction of the training method ${program.authorName} has published, checked against the source by a human. Iron Atlas isn't affiliated with or endorsed by ${program.authorName}.`;
+    return `An AI reconstruction of the training method ${program.authorName} has published, checked against the source by a human. ${notAffiliatedWith(program.authorName)}`;
   }
   switch (program.confidence) {
     case "stylistic":
@@ -480,9 +493,7 @@ export function buildProgramCsv(
               : item.exerciseName,
             item.sets,
             item.reps,
-            item.intensityValue && item.intensityType !== "none"
-              ? (prescriptionText(item).split("@")[1]?.trim() ?? "")
-              : "",
+            intensitySuffix(item),
             item.restSeconds,
             item.exNotes,
           ]

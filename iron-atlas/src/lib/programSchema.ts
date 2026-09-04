@@ -153,7 +153,9 @@ const UNSUPPORTED_KEYWORDS = [
   "$schema",
 ];
 
-function stripUnsupported(node: unknown): unknown {
+/** Exported for other structured-output schemas (see exerciseDescriptionSchema.ts)
+ *  that need the same Anthropic-JSON-schema-subset compatibility pass. */
+export function stripUnsupported(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(stripUnsupported);
   if (node === null || typeof node !== "object") return node;
 

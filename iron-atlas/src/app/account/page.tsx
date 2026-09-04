@@ -10,7 +10,11 @@ import {
   registerUser,
 } from "@/lib/auth";
 
-export const metadata = { title: "Account · Iron Atlas" };
+export const metadata = {
+  title: "Account",
+  description: "Sign in to run a program and log your sets.",
+  robots: { index: false },
+};
 
 async function signIn(formData: FormData) {
   "use server";
@@ -39,7 +43,9 @@ async function signUp(formData: FormData) {
 async function signOut() {
   "use server";
   await destroySession();
-  redirect("/account");
+  // The marker tells ServiceWorker.tsx to clear the offline cache client-side
+  // — see src/components/ServiceWorker.tsx and public/sw.js.
+  redirect("/account?signedOut=1");
 }
 
 export default async function AccountPage({
@@ -112,7 +118,11 @@ export default async function AccountPage({
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">
+        <p
+          id="auth-error"
+          role="alert"
+          className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300"
+        >
           {error}
         </p>
       )}
@@ -128,6 +138,7 @@ export default async function AccountPage({
             type="email"
             required
             autoComplete="email"
+            aria-describedby={error ? "auth-error" : undefined}
             className="mt-1 w-full rounded-md border bg-surface px-3 py-2 text-sm"
           />
         </div>
@@ -142,6 +153,7 @@ export default async function AccountPage({
             required
             minLength={8}
             autoComplete="current-password"
+            aria-describedby={error ? "auth-error" : undefined}
             className="mt-1 w-full rounded-md border bg-surface px-3 py-2 text-sm"
           />
           <p className="mt-1 text-xs text-muted">At least 8 characters.</p>

@@ -32,6 +32,16 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// The client asks for this right after sign-out. A cached /train or /history
+// response holds one lifter's programs and full training log — on a shared
+// device, an offline navigation after someone else signs in must not be able
+// to serve the previous session's page from this cache.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "CLEAR_CACHE") {
+    event.waitUntil(caches.delete(CACHE));
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -41,9 +51,17 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache the chat stream or auth — one is a live SSE response, the
-  // other must always hit the server.
-  if (url.pathname.startsWith("/api/chat") || url.pathname.startsWith("/account")) return;
+  // Never cache the chat stream, auth, or any page that renders a signed-in
+  // lifter's own data. Losing offline support for /train and /history is the
+  // right trade — a stale-but-offline training log on a shared device is
+  // worse than "not available offline".
+  if (
+    url.pathname.startsWith("/api/chat") ||
+    url.pathname.startsWith("/account") ||
+    url.pathname.startsWith("/train") ||
+    url.pathname.startsWith("/history")
+  )
+    return;
 
   event.respondWith(
     fetch(request)

@@ -29,6 +29,7 @@ vi.mock("next/headers", () => ({
 
 const {
   SESSION_COOKIE,
+  SIGN_IN_ATTEMPT_CAP,
   authenticate,
   createSession,
   destroySession,
@@ -112,6 +113,21 @@ describe("registerUser", () => {
     expect(second).toMatchObject({ ok: false });
   });
 
+  it("gives the same friendly error when two signups race on one email", async () => {
+    // The pre-insert select is only a courtesy message for the sequential
+    // case — the real guard is the unique constraint, exercised here by
+    // firing both inserts concurrently so the select can't have caught it.
+    const email = `race-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
+    const [first, second] = await Promise.all([
+      registerUser(email, "a-real-password"),
+      registerUser(email, "a-different-password"),
+    ]);
+    const results = [first, second];
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    const failed = results.find((r) => !r.ok) as { ok: false; error: string };
+    expect(failed.error).toBe("An account with that email already exists.");
+  });
+
   it("treats email case and whitespace as the same account on collision", async () => {
     const { email } = await makeUser();
     const second = await registerUser(`  ${email.toUpperCase()}  `, "another-password");
@@ -147,6 +163,29 @@ describe("authenticate", () => {
     expect((wrongPassword as { error: string }).error).toBe(
       (unknownEmail as { error: string }).error,
     );
+  });
+
+  it("rate-limits repeated attempts against one email before checking the password", async () => {
+    // Correct password included in the burst: the cap has to reject the
+    // attempt itself, not just failed ones — otherwise it isn't a brute-force
+    // guard, since the attacker's whole point is trying many passwords.
+    const { email } = await makeUser();
+    for (let i = 0; i < SIGN_IN_ATTEMPT_CAP; i++) {
+      await authenticate(email, "wrong-password");
+    }
+    const limited = await authenticate(email, "correct-horse-battery");
+    expect(limited).toMatchObject({ ok: false });
+    expect((limited as { error: string }).error).toMatch(/too many attempts/i);
+  });
+
+  it("does not let one email's rate limit affect another", async () => {
+    const a = await makeUser();
+    const b = await makeUser();
+    for (let i = 0; i < SIGN_IN_ATTEMPT_CAP; i++) {
+      await authenticate(a.email, "wrong-password");
+    }
+    const result = await authenticate(b.email, "correct-horse-battery");
+    expect(result.ok).toBe(true);
   });
 });
 

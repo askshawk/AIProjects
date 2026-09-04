@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Chat } from "@/components/Chat";
 import { getCurrentUser } from "@/lib/auth";
 
-export const metadata = { title: "Coach · Iron Atlas" };
+export const metadata = {
+  title: "Coach",
+  description:
+    "Tell the coach your goals, schedule, and equipment, and it finds a real program from the library that fits.",
+};
 
 export default async function CoachPage() {
   const user = await getCurrentUser();
@@ -23,7 +27,7 @@ export default async function CoachPage() {
           href="/account"
           className="inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
         >
-          Sign in or create an account
+          Sign in
         </Link>
       </div>
     );

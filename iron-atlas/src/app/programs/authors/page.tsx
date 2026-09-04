@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { listAuthors } from "@/lib/authors";
+import { notAffiliatedWith } from "@/lib/disclosure";
 
-export const metadata = { title: "Coaches · Iron Atlas" };
+export const metadata = {
+  title: "Coaches",
+  description:
+    "Browse the library by the strength coach whose published training method each program is built on.",
+};
 
 /**
  * The library is organised by who wrote the program as much as by what it
@@ -24,9 +29,9 @@ export default async function AuthorsPage() {
           .
         </p>
         <p className="mt-2 max-w-2xl text-xs text-muted">
-          Iron Atlas isn&apos;t affiliated with, endorsed by, or sponsored by
-          any coach listed here. Programs are AI reconstructions of published
-          training methods, credited by name for reference.
+          {notAffiliatedWith("any coach listed here")} Programs are AI
+          reconstructions of published training methods, credited by name for
+          reference.
         </p>
       </div>
 

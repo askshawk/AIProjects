@@ -1,4 +1,4 @@
-import { epley } from "@/lib/e1rm";
+import { countsTowardE1rm, epley, TRAINING_MAX_REP_CEILING } from "@/lib/e1rm";
 
 /**
  * Turning last session into next session's numbers.
@@ -93,36 +93,88 @@ function workingWeight(sets: LoggedSet[]): number | null {
 }
 
 /**
- * Linear progression: hit the target on every set, add weight; miss it, hold.
- * Three misses in a row is a stall, but we only see one session here, so the
- * suggestion says "repeat" rather than pretending to know the streak.
+ * Only the sets performed at the session's top weight. A ramped session logs
+ * light warm-up-ish sets alongside the real working sets in the same rows
+ * (there's no per-set warm-up flag in the UI), and the rep target should only
+ * ever be judged against the weight it was actually written for — otherwise
+ * three easy ramp sets can "hit the target" while the one set that mattered
+ * didn't.
+ */
+function topSets(sets: LoggedSet[]): LoggedSet[] {
+  const weight = workingWeight(sets);
+  if (weight === null) return [];
+  return completed(sets).filter((s) => s.weightKg === weight);
+}
+
+/**
+ * Whether a session's top-weight sets satisfy the prescription: the right
+ * number of sets, every one at or above the rep floor, and — for an AMRAP
+ * target — genuine evidence of pushing past the floor rather than just
+ * meeting it. Without that last check, "5+" is unfalsifiable: `reps >= 5` is
+ * true for a set of exactly 5, so a scheme that only ever hits the floor
+ * would add weight forever.
+ */
+function metTarget(
+  sets: LoggedSet[],
+  prescribed: Prescription,
+  target: RepTarget,
+): boolean {
+  const top = topSets(sets);
+  if (top.length < prescribed.sets) return false;
+  if (!top.every((s) => s.reps! >= target.min)) return false;
+  if (target.isAmrap) {
+    return Math.max(...top.map((s) => s.reps!)) > target.min;
+  }
+  return true;
+}
+
+/**
+ * Linear progression: hit the target on every set, add weight; miss it,
+ * hold. Three misses in a row at the same weight is a stall — a working set
+ * that consistently comes up short isn't waiting for one more attempt, it's
+ * calling for less weight.
  */
 function linear(
   prescribed: Prescription,
-  last: LoggedSet[],
+  history: LoggedSet[][],
 ): Suggestion | null {
   const target = parseRepTarget(prescribed.reps);
-  const weight = workingWeight(last);
-  if (!target || weight === null) return null;
+  const last = history[0];
+  const weight = last ? workingWeight(last) : null;
+  if (!target || last === undefined || weight === null) return null;
 
-  const done = completed(last);
-  const allHit =
-    done.length >= prescribed.sets && done.every((s) => s.reps! >= target.min);
-
-  if (!allHit) {
+  if (metTarget(last, prescribed, target)) {
+    const increment = prescribed.isLowerBody ? 5 : 2.5;
+    const next = roundToPlate(weight + increment);
     return {
-      weightKg: weight,
+      weightKg: next,
       reps: prescribed.reps,
-      reason: `You missed the target last time — repeat ${weight} kg before adding weight.`,
+      reason: `All sets hit last time at ${weight} kg — add ${increment} kg.`,
     };
   }
 
-  const increment = prescribed.isLowerBody ? 5 : 2.5;
-  const next = roundToPlate(weight + increment);
+  const stalled =
+    history.length >= 3 &&
+    history
+      .slice(0, 3)
+      .every(
+        (sets) =>
+          workingWeight(sets) === weight && !metTarget(sets, prescribed, target),
+      );
+
+  if (stalled) {
+    const next = roundToPlate(weight * 0.9);
+    return {
+      weightKg: next,
+      reps: prescribed.reps,
+      reason: `Missed the target three sessions running at ${weight} kg — deload to ${next} kg and build back up.`,
+    };
+  }
+
   return {
-    weightKg: next,
+    weightKg: weight,
     reps: prescribed.reps,
-    reason: `All sets hit last time at ${weight} kg — add ${increment} kg.`,
+    reason: `You missed the target last time — repeat ${weight} kg before adding weight.`,
   };
 }
 
@@ -138,13 +190,15 @@ function doubleProgression(
   const weight = workingWeight(last);
   if (!target || weight === null) return null;
   if (!Number.isFinite(target.max) || target.max === target.min) {
-    // Not actually a range — fall back to linear rather than misapply the rule.
-    return linear(prescribed, last);
+    // Not actually a range — fall back to linear rather than misapply the
+    // rule. Only one session's worth of history is available here, so this
+    // can hold or add weight but never trigger a stall deload.
+    return linear(prescribed, [last]);
   }
 
-  const done = completed(last);
+  const top = topSets(last);
   const toppedOut =
-    done.length >= prescribed.sets && done.every((s) => s.reps! >= target.max);
+    top.length >= prescribed.sets && top.every((s) => s.reps! >= target.max);
 
   if (toppedOut) {
     const increment = prescribed.isCompound
@@ -160,7 +214,7 @@ function doubleProgression(
     };
   }
 
-  const best = Math.max(...done.map((s) => s.reps!));
+  const best = Math.max(...top.map((s) => s.reps!));
   return {
     weightKg: weight,
     reps: prescribed.reps,
@@ -190,7 +244,9 @@ function rpeAutoregulated(
   }
 
   const avg = rated.reduce((sum, s) => sum + s.rpe!, 0) / rated.length;
-  const delta = targetRpe - avg;
+  // Clamped to ±2: a mis-entered RPE (a "1" meant to be a "9") shouldn't be
+  // able to swing next session's load by more than a plate's worth either way.
+  const delta = Math.max(-2, Math.min(2, targetRpe - avg));
 
   // Roughly 1 RPE ≈ 3% of load near the top end. Deliberately conservative.
   if (Math.abs(delta) < 0.5) {
@@ -212,53 +268,79 @@ function rpeAutoregulated(
   };
 }
 
+/** What `percentageBased` needs — deliberately narrower than `BestSet`, so a
+ * caller can't accidentally hand it an e1RM basis that includes high-rep sets. */
+export type TrainingMaxInput = {
+  /** The best low-rep estimated max on record. */
+  current: number;
+  /** The runner-up, if one exists — see the cap below. */
+  previous: number | null;
+};
+
 /**
  * Percentage-driven blocks (5/3/1 and friends) compute load from a training
  * max, not from last session. We don't ask the lifter to store a TM, so it's
- * derived from their best estimated max at the conventional 90%.
+ * derived from their best low-rep estimated max at the conventional 90%.
+ *
+ * That derivation alone isn't safe on its own: a single big PR raises the
+ * estimated max immediately, which raises this cycle's prescription, which
+ * invites an even bigger PR next time — a training max that ratchets up
+ * faster than real strength does. The cap below ties how far the TM can move
+ * to the runner-up estimate (what the max stood at *before* the latest
+ * record), by the same conventional plate increment `linear` uses. A big
+ * jump still counts — it just can't move the bar the same cycle it happens.
  */
 function percentageBased(
   prescribed: Prescription,
-  bestE1rm: number | null,
+  basis: TrainingMaxInput | null,
 ): Suggestion | null {
   const pct = Number(prescribed.intensityValue);
-  if (!Number.isFinite(pct) || bestE1rm === null || bestE1rm <= 0) return null;
+  if (!Number.isFinite(pct) || pct <= 0 || basis === null || basis.current <= 0)
+    return null;
 
-  const trainingMax = bestE1rm * 0.9;
+  const candidateTM = basis.current * 0.9;
+  const increment = prescribed.isLowerBody ? 5 : 2.5;
+  const ceiling = basis.previous !== null ? basis.previous * 0.9 + increment : null;
+  const trainingMax = ceiling !== null ? Math.min(candidateTM, ceiling) : candidateTM;
+  const capped = ceiling !== null && candidateTM > ceiling;
+
   const next = roundToPlate(trainingMax * (pct / 100));
-  return {
-    weightKg: next,
-    reps: prescribed.reps,
-    reason: `${pct}% of a ${roundToPlate(trainingMax)} kg training max (90% of your best estimated ${bestE1rm.toFixed(1)} kg).`,
-  };
+  const reason = capped
+    ? `${pct}% of a ${roundToPlate(trainingMax)} kg training max — held to last cycle's max plus ${increment} kg, even though your most recent lift implies more.`
+    : `${pct}% of a ${roundToPlate(trainingMax)} kg training max (90% of your best estimated ${basis.current.toFixed(1)} kg, from sets of ${TRAINING_MAX_REP_CEILING} reps or fewer).`;
+
+  return { weightKg: next, reps: prescribed.reps, reason };
 }
 
 /**
- * The one entry point. Returns null when the history can't support a number —
- * a first session, a missing load, an unparseable prescription.
+ * The one entry point. `history` is a lifter's recent sessions for this
+ * exercise, most recent first — `history[0]` is "last time". Returns null
+ * when the history can't support a number — a first session, a missing
+ * load, an unparseable prescription.
  */
 export function suggestNext(
   scheme: ProgressionScheme,
   prescribed: Prescription,
-  last: LoggedSet[] | undefined,
-  bestE1rm: number | null = null,
+  history: LoggedSet[][] | undefined,
+  trainingMax: TrainingMaxInput | null = null,
 ): Suggestion | null {
-  // Percentage work doesn't need history, only an estimated max.
+  // Percentage work doesn't need history, only a training max.
   if (
     prescribed.intensityType === "percent_1rm" &&
     (scheme === "wave_531" ||
       scheme === "percentage_block" ||
-      bestE1rm !== null)
+      trainingMax !== null)
   ) {
-    const fromPct = percentageBased(prescribed, bestE1rm);
+    const fromPct = percentageBased(prescribed, trainingMax);
     if (fromPct) return fromPct;
   }
 
+  const last = history?.[0];
   if (!last || completed(last).length === 0) return null;
 
   switch (scheme) {
     case "linear":
-      return linear(prescribed, last);
+      return linear(prescribed, history!);
     case "double_progression":
       return doubleProgression(prescribed, last);
     case "rpe_autoregulated":
@@ -297,7 +379,7 @@ export function isLowerBodyMuscle(primaryMuscle: string): boolean {
 
 /** Convenience for callers that already have an e1RM series. */
 export function estimatedMax(sets: LoggedSet[]): number | null {
-  const usable = completed(sets).filter((s) => s.reps! <= 10);
+  const usable = sets.filter((s) => countsTowardE1rm(s.weightKg, s.reps));
   if (usable.length === 0) return null;
   return Math.max(...usable.map((s) => epley(s.weightKg!, s.reps!)));
 }

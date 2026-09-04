@@ -3,6 +3,7 @@ import { sql as raw } from "drizzle-orm";
 import { db, sql } from "@/db";
 import { exercises } from "@/db/schema";
 import { exerciseEmbeddingText, parseExerciseRows } from "@/data/parseExercises";
+import { EXERCISE_DESCRIPTIONS } from "@/data/exerciseDescriptions";
 import { embed } from "@/lib/embeddings";
 
 /**
@@ -16,7 +17,14 @@ async function main() {
   console.log("embedding (first run downloads the model)…");
   const vectors = await embed(parsed.map(exerciseEmbeddingText));
 
-  const rows = parsed.map((e, i) => ({ ...e, embedding: vectors[i] }));
+  // description is deliberately kept out of exerciseEmbeddingText above — it
+  // would shift every vector and invalidate the hand-calibrated similarity
+  // floor in exerciseResolver.ts. It's merged in here, DB-column-only.
+  const rows = parsed.map((e, i) => ({
+    ...e,
+    embedding: vectors[i],
+    description: EXERCISE_DESCRIPTIONS[e.slug] ?? null,
+  }));
 
   // Chunked because a single statement with 200+ 384-dim vectors is a big packet.
   const CHUNK = 50;
@@ -36,6 +44,7 @@ async function main() {
           isUnilateral: raw`excluded.is_unilateral`,
           isCompound: raw`excluded.is_compound`,
           isExplosive: raw`excluded.is_explosive`,
+          description: raw`excluded.description`,
           embedding: raw`excluded.embedding`,
         },
       });

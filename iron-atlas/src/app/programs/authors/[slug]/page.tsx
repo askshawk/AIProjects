@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findAuthorName, programsByAuthor } from "@/lib/authors";
+import { notAffiliatedWith } from "@/lib/disclosure";
 import { ProgramCard } from "@/components/ProgramCard";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -8,7 +9,11 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const name = await findAuthorName(slug);
-  return { title: name ? `${name} · Iron Atlas` : "Not found · Iron Atlas" };
+  if (!name) return { title: "Not found" };
+  return {
+    title: name,
+    description: `Every program in the library built on ${name}'s published training method.`,
+  };
 }
 
 export default async function AuthorPage({ params }: Props) {
@@ -35,9 +40,8 @@ export default async function AuthorPage({ params }: Props) {
         </p>
         {name !== "Iron Atlas" && (
           <p className="mt-2 max-w-2xl text-xs text-muted">
-            Iron Atlas isn&apos;t affiliated with, endorsed by, or sponsored
-            by {name}. These are AI reconstructions of their published
-            training methods, not their own writing.
+            {notAffiliatedWith(name)} These are AI reconstructions of their
+            published training methods, not their own writing.
           </p>
         )}
       </div>

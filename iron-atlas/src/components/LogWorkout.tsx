@@ -5,11 +5,14 @@ import type { LastPerformance } from "@/lib/logbook";
 import type { Suggestion } from "@/lib/progression";
 import { RestTimer } from "@/components/RestTimer";
 import { WarmupHint } from "@/components/WarmupHint";
+import { HowToHint } from "@/components/HowToHint";
 
 export type PrescribedExercise = {
   id: number;
   exerciseId: number;
   exerciseName: string;
+  exerciseSlug: string;
+  exerciseDescription: string | null;
   sets: number;
   reps: string;
   intensityType: string;
@@ -101,14 +104,14 @@ export function LogWorkout({
             <div key={e.id} className="rounded-lg border bg-surface">
               <div className="border-b bg-surface-raised px-4 py-2.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-medium">
+                  <h2 className="font-medium">
                     {e.supersetGroup && (
                       <span className="mr-2 text-xs font-semibold text-accent">
                         {e.supersetGroup}
                       </span>
                     )}
                     {e.exerciseName}
-                  </span>
+                  </h2>
                   <span className="flex items-center gap-2">
                     <span className="font-mono text-xs text-muted">
                       {prescriptionText(e)}
@@ -142,16 +145,18 @@ export function LogWorkout({
                 {/* Ramp to whatever the first working set is actually loaded to. */}
                 <WarmupHint
                   workingKg={suggestion?.weightKg ?? last?.sets[0]?.weightKg}
-                  barbell={
-                    e.equipment !== "dumbbell" && e.equipment !== "machine"
-                  }
+                  barbell={e.equipment === "barbell" || e.equipment === "smith"}
+                />
+                <HowToHint
+                  exerciseSlug={e.exerciseSlug}
+                  description={e.exerciseDescription}
                 />
               </div>
 
               {e.sets > MAX_RENDERED_SETS && (
                 <p className="px-4 pt-2 text-xs text-red-400">
-                  This exercise is prescribed {e.sets} sets, which looks like
-                  bad data — showing the first {MAX_RENDERED_SETS}.
+                  This exercise lists {e.sets} sets, more than usual —
+                  showing the first {MAX_RENDERED_SETS}.
                 </p>
               )}
               <div className="divide-y">
@@ -187,9 +192,13 @@ export function LogWorkout({
                       name={`e-${e.id}-${i}`}
                       value={values[`e-${e.id}-${i}`] ?? ""}
                       onChange={(ev) => set(`e-${e.id}-${i}`, ev.target.value)}
+                      type="number"
                       inputMode="decimal"
+                      min={1}
+                      max={10}
+                      step={0.5}
                       placeholder="RPE"
-                      aria-label={`Set ${i + 1} RPE for ${e.exerciseName}`}
+                      aria-label={`Set ${i + 1} RPE, 1 to 10, for ${e.exerciseName}`}
                       className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
                     />
                     <input
@@ -205,7 +214,12 @@ export function LogWorkout({
         })}
       </div>
 
-      <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
+      <div
+        className="sticky bottom-0 flex gap-2 border-t bg-background py-3"
+        style={{
+          paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <button
           type="submit"
           title={`Finish ${dayName}`}

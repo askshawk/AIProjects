@@ -12,11 +12,17 @@ import { getCurrentUser } from "@/lib/auth";
  * verification.ts instead — there is no reason to expose them as actions.
  */
 
-/** Signed-in users can verify. Single-user for now; this is where a role check
- *  goes if the library ever becomes multi-tenant. */
+/**
+ * Only an admin can verify or correct library data. This gates the library's
+ * strongest trust claim — the "source-checked" badge — and edits shared data
+ * every user's forks descend from, so "signed in" isn't enough: anyone could
+ * create an account and flip it. `isAdmin` already exists on `CurrentUser`
+ * and is used the same way by the coach chat's budget exemption.
+ */
 async function requireUser() {
   const user = await getCurrentUser();
   if (!user) throw new Error("sign in to review programs");
+  if (!user.isAdmin) throw new Error("admin access required");
   return user;
 }
 

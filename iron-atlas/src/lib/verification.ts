@@ -15,6 +15,14 @@ import { programExercises, programs } from "@/db/schema";
  * is a claim about accuracy, not a preference.
  */
 
+/** Prescribed-set count for a program, correlated to the outer `programs` row. */
+const prescribedSetsSubquery = sql<number>`(
+  select count(*)::int from ${programExercises} pe
+  join program_days pd on pd.id = pe.day_id
+  join program_weeks pw on pw.id = pd.week_id
+  where pw.program_id = programs.id
+)`;
+
 export type ReviewQueueRow = {
   slug: string;
   title: string;
@@ -45,12 +53,7 @@ export async function reviewQueue(): Promise<ReviewQueueRow[]> {
       sourceUrls: programs.sourceUrls,
       weeks: programs.weeks,
       confidence: programs.confidence,
-      prescribedSets: sql<number>`(
-        select count(*)::int from ${programExercises} pe
-        join program_days pd on pd.id = pe.day_id
-        join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = programs.id
-      )`,
+      prescribedSets: prescribedSetsSubquery,
     })
     .from(programs)
     .where(eq(programs.verified, false))
@@ -86,23 +89,10 @@ export async function suspiciouslyThin(limit = 5) {
       title: programs.title,
       authorName: programs.authorName,
       weeks: programs.weeks,
-      prescribedSets: sql<number>`(
-        select count(*)::int from ${programExercises} pe
-        join program_days pd on pd.id = pe.day_id
-        join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = programs.id
-      )`,
+      prescribedSets: prescribedSetsSubquery,
     })
     .from(programs)
     .where(and(eq(programs.verified, false), eq(programs.aiGenerated, true)))
-    .orderBy(
-      asc(sql`(
-        select count(*) from ${programExercises} pe
-        join program_days pd on pd.id = pe.day_id
-        join program_weeks pw on pw.id = pd.week_id
-        where pw.program_id = programs.id
-      )`),
-      desc(programs.weeks),
-    )
+    .orderBy(asc(prescribedSetsSubquery), desc(programs.weeks))
     .limit(limit);
 }

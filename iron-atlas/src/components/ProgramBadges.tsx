@@ -1,3 +1,5 @@
+import { notAffiliatedWith } from "@/lib/disclosure";
+
 export type Confidence = "documented" | "partial" | "stylistic" | null;
 
 const CONFIDENCE_BADGE: Record<
@@ -65,7 +67,7 @@ export function ProvenanceBadge({
   if (verified) {
     return (
       <span
-        title="Checked against the original source by a human. Not endorsed by, or affiliated with, the author."
+        title={`Checked against the original source by a human. ${notAffiliatedWith("the author")}`}
         className="rounded border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-300"
       >
         Source-checked

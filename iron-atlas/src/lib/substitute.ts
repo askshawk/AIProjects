@@ -52,6 +52,7 @@ export const FULL_GYM: Equipment[] = [
 
 export type SubstituteCandidate = {
   id: number;
+  slug: string;
   name: string;
   equipment: Equipment;
   primaryMuscle: string;
@@ -163,6 +164,7 @@ export async function findSubstitutes(
     const candidates = await db
       .select({
         id: exercises.id,
+        slug: exercises.slug,
         name: exercises.name,
         equipment: exercises.equipment,
         primaryMuscle: exercises.primaryMuscle,

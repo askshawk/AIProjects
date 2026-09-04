@@ -63,6 +63,8 @@ function Card({
           <ProvenanceBadge
             aiGenerated={rec.aiGenerated}
             verified={rec.verified}
+            confidence={rec.confidence}
+            firstParty={rec.firstParty}
           />
         )}
       </div>

@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { countsTowardE1rm, epley } from "@/lib/e1rm";
+import { countsTowardE1rm, countsTowardTrainingMax, epley } from "@/lib/e1rm";
 import {
   exercises,
   setLogs,
@@ -10,7 +10,13 @@ import {
   workoutSessions,
 } from "@/db/schema";
 
-export { epley, countsTowardE1rm, E1RM_REP_CEILING } from "@/lib/e1rm";
+export {
+  epley,
+  countsTowardE1rm,
+  E1RM_REP_CEILING,
+  countsTowardTrainingMax,
+  TRAINING_MAX_REP_CEILING,
+} from "@/lib/e1rm";
 
 /** Days in the fork, in order, with their week context. */
 export async function programDaysFor(userProgramId: number) {
@@ -37,6 +43,8 @@ export async function prescriptionFor(dayId: number) {
       id: userProgramExercises.id,
       exerciseId: userProgramExercises.exerciseId,
       exerciseName: exercises.name,
+      exerciseSlug: exercises.slug,
+      exerciseDescription: exercises.description,
       equipment: exercises.equipment,
       primaryMuscle: exercises.primaryMuscle,
       isCompound: exercises.isCompound,
@@ -94,7 +102,7 @@ export async function lastPerformances(
     .where(
       and(
         eq(workoutSessions.userId, userId),
-        sql`${setLogs.exerciseId} = any(${sql.raw(`array[${exerciseIds.join(",")}]::int[]`)})`,
+        inArray(setLogs.exerciseId, exerciseIds),
         eq(setLogs.isWarmup, false),
       ),
     );
@@ -123,7 +131,7 @@ export async function lastPerformances(
     .from(setLogs)
     .where(
       and(
-        sql`${setLogs.sessionId} = any(${sql.raw(`array[${sessionIds.join(",")}]::int[]`)})`,
+        inArray(setLogs.sessionId, sessionIds),
         eq(setLogs.isWarmup, false),
       ),
     )
@@ -145,6 +153,101 @@ export async function lastPerformances(
   return out;
 }
 
+/**
+ * The last few sessions per exercise, most recent first — what
+ * `lastPerformances` gives you for one session, extended across several.
+ *
+ * This exists for stall detection: whether a lifter hit the target *last*
+ * time only supports "hold or add weight". Telling a lifter to deload
+ * instead needs to see a streak, which means looking past just the most
+ * recent session.
+ */
+export async function recentPerformances(
+  userId: number,
+  exerciseIds: number[],
+  sessionLimit = 3,
+): Promise<Map<number, LastPerformance[]>> {
+  if (exerciseIds.length === 0) return new Map();
+
+  const recent = await db
+    .select({
+      exerciseId: setLogs.exerciseId,
+      sessionId: setLogs.sessionId,
+      performedAt: workoutSessions.performedAt,
+      // Cast to int for the same reason as lastPerformances above — bigint
+      // comes back as a string from postgres.js.
+      rank: sql<number>`(row_number() over (
+        partition by ${setLogs.exerciseId}
+        order by ${workoutSessions.performedAt} desc
+      ))::int`.as("rank"),
+    })
+    .from(setLogs)
+    .innerJoin(workoutSessions, eq(workoutSessions.id, setLogs.sessionId))
+    .where(
+      and(
+        eq(workoutSessions.userId, userId),
+        inArray(setLogs.exerciseId, exerciseIds),
+        eq(setLogs.isWarmup, false),
+      ),
+    );
+
+  const windows = new Map<
+    number,
+    { sessionId: number; performedAt: Date; rank: number }[]
+  >();
+  for (const row of recent) {
+    if (row.rank > sessionLimit) continue;
+    const list = windows.get(row.exerciseId) ?? [];
+    list.push(row);
+    windows.set(row.exerciseId, list);
+  }
+  if (windows.size === 0) return new Map();
+
+  const sessionIds = [
+    ...new Set(
+      [...windows.values()].flatMap((rows) => rows.map((r) => r.sessionId)),
+    ),
+  ];
+  const sets = await db
+    .select({
+      exerciseId: setLogs.exerciseId,
+      sessionId: setLogs.sessionId,
+      setIndex: setLogs.setIndex,
+      weightKg: setLogs.weightKg,
+      reps: setLogs.reps,
+      rpe: setLogs.rpe,
+    })
+    .from(setLogs)
+    .where(
+      and(
+        inArray(setLogs.sessionId, sessionIds),
+        eq(setLogs.isWarmup, false),
+      ),
+    )
+    .orderBy(asc(setLogs.setIndex));
+
+  const out = new Map<number, LastPerformance[]>();
+  for (const [exerciseId, rows] of windows) {
+    const sorted = [...rows].sort((a, b) => a.rank - b.rank);
+    out.set(
+      exerciseId,
+      sorted.map(({ sessionId, performedAt }) => ({
+        performedAt,
+        sets: sets
+          .filter(
+            (s) => s.exerciseId === exerciseId && s.sessionId === sessionId,
+          )
+          .map((s) => ({
+            weightKg: s.weightKg === null ? null : Number(s.weightKg),
+            reps: s.reps,
+            rpe: s.rpe === null ? null : Number(s.rpe),
+          })),
+      })),
+    );
+  }
+  return out;
+}
+
 export type BestSet = {
   weightKg: number;
   reps: number;
@@ -152,14 +255,12 @@ export type BestSet = {
   performedAt: Date;
 };
 
-/** The lifter's best estimated max per exercise, for PR detection. */
-export async function personalBests(
-  userId: number,
-  exerciseIds: number[],
-): Promise<Map<number, BestSet>> {
-  if (exerciseIds.length === 0) return new Map();
+/** Every logged working set across these exercises, newest first — the raw
+ * material both `personalBests` and `trainingMaxBasis` filter down from. */
+async function loggedSetHistory(userId: number, exerciseIds: number[]) {
+  if (exerciseIds.length === 0) return [];
 
-  const rows = await db
+  return db
     .select({
       exerciseId: setLogs.exerciseId,
       weightKg: setLogs.weightKg,
@@ -171,11 +272,19 @@ export async function personalBests(
     .where(
       and(
         eq(workoutSessions.userId, userId),
-        sql`${setLogs.exerciseId} = any(${sql.raw(`array[${exerciseIds.join(",")}]::int[]`)})`,
+        inArray(setLogs.exerciseId, exerciseIds),
         eq(setLogs.isWarmup, false),
       ),
     )
     .orderBy(desc(workoutSessions.performedAt));
+}
+
+/** The lifter's best estimated max per exercise, for PR detection. */
+export async function personalBests(
+  userId: number,
+  exerciseIds: number[],
+): Promise<Map<number, BestSet>> {
+  const rows = await loggedSetHistory(userId, exerciseIds);
 
   const best = new Map<number, BestSet>();
   for (const row of rows) {
@@ -194,4 +303,52 @@ export async function personalBests(
     }
   }
   return best;
+}
+
+export type TrainingMaxBasis = {
+  /** The best low-rep estimated max on record. */
+  current: BestSet;
+  /**
+   * The best low-rep estimated max *before* that record was set — i.e. the
+   * runner-up. `suggestNext`'s percentage-based path uses this to cap how
+   * much a single PR is allowed to move next cycle's prescribed weight, so a
+   * great day doesn't compound into a heavier and heavier AMRAP.
+   */
+  previous: BestSet | null;
+};
+
+/**
+ * Like `personalBests`, but restricted to sets of `TRAINING_MAX_REP_CEILING`
+ * reps or fewer, and keeping the runner-up alongside the record. This is the
+ * only e1RM feed that's safe to prescribe *from* — `personalBests` stays
+ * looser (up to 10 reps) because it only drives PR display, not a number
+ * that ends up on a bar.
+ */
+export async function trainingMaxBasis(
+  userId: number,
+  exerciseIds: number[],
+): Promise<Map<number, TrainingMaxBasis>> {
+  const rows = await loggedSetHistory(userId, exerciseIds);
+
+  const byExercise = new Map<number, BestSet[]>();
+  for (const row of rows) {
+    const weight = row.weightKg === null ? null : Number(row.weightKg);
+    if (!countsTowardTrainingMax(weight, row.reps)) continue;
+
+    const list = byExercise.get(row.exerciseId) ?? [];
+    list.push({
+      weightKg: weight!,
+      reps: row.reps!,
+      e1rm: epley(weight!, row.reps!),
+      performedAt: row.performedAt,
+    });
+    byExercise.set(row.exerciseId, list);
+  }
+
+  const out = new Map<number, TrainingMaxBasis>();
+  for (const [exerciseId, sets] of byExercise) {
+    const sorted = [...sets].sort((a, b) => b.e1rm - a.e1rm);
+    out.set(exerciseId, { current: sorted[0], previous: sorted[1] ?? null });
+  }
+  return out;
 }

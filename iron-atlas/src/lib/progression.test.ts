@@ -88,21 +88,21 @@ describe("suggestNext — no history", () => {
 
   it("ignores rows that were never filled in", () => {
     expect(
-      suggestNext("linear", upperCompound, [set(null, null), set(null, null)]),
+      suggestNext("linear", upperCompound, [
+        [set(null, null), set(null, null)],
+      ]),
     ).toBeNull();
   });
 
   it("returns null for a program with no progression scheme", () => {
-    expect(suggestNext("none", upperCompound, [set(60, 5)])).toBeNull();
+    expect(suggestNext("none", upperCompound, [[set(60, 5)]])).toBeNull();
   });
 });
 
 describe("suggestNext — linear", () => {
   it("adds weight when every set hit the target", () => {
     const result = suggestNext("linear", upperCompound, [
-      set(60, 5),
-      set(60, 5),
-      set(60, 5),
+      [set(60, 5), set(60, 5), set(60, 5)],
     ])!;
     expect(result.weightKg).toBe(62.5);
     expect(result.reason).toContain("add 2.5 kg");
@@ -110,18 +110,14 @@ describe("suggestNext — linear", () => {
 
   it("uses a bigger jump for lower-body lifts", () => {
     const result = suggestNext("linear", lowerCompound, [
-      set(100, 5),
-      set(100, 5),
-      set(100, 5),
+      [set(100, 5), set(100, 5), set(100, 5)],
     ])!;
     expect(result.weightKg).toBe(105);
   });
 
   it("holds the weight when a set was missed", () => {
     const result = suggestNext("linear", upperCompound, [
-      set(60, 5),
-      set(60, 5),
-      set(60, 3),
+      [set(60, 5), set(60, 5), set(60, 3)],
     ])!;
     expect(result.weightKg).toBe(60);
     expect(result.reason).toContain("missed");
@@ -130,20 +126,79 @@ describe("suggestNext — linear", () => {
   it("holds when fewer sets were completed than prescribed", () => {
     // Two of three sets, both at target, is still not a completed session.
     const result = suggestNext("linear", upperCompound, [
-      set(60, 5),
-      set(60, 5),
+      [set(60, 5), set(60, 5)],
     ])!;
     expect(result.weightKg).toBe(60);
     expect(result.reason).toContain("missed");
+  });
+
+  it("does not let ramp-up sets count toward the working-weight set total", () => {
+    // One real top set plus two lighter ramp sets logged in the same rows.
+    // Only one set was actually done at the prescribed working weight, not
+    // the three upperCompound calls for — the ramp sets shouldn't be able to
+    // pad that count just because they also hit their (easier) rep count.
+    const result = suggestNext("linear", upperCompound, [
+      [set(40, 10), set(50, 8), set(60, 5)],
+    ])!;
+    expect(result.weightKg).toBe(60);
+    expect(result.reason).toContain("missed");
+  });
+
+  it("does not advance on an AMRAP prescription that only ever meets the floor", () => {
+    // "5+" is unfalsifiable if reps >= min alone counts as a hit — every set
+    // of exactly 5 would "succeed" forever with no evidence of getting harder.
+    const amrap = { ...upperCompound, reps: "5+" };
+    const result = suggestNext("linear", amrap, [
+      [set(60, 5), set(60, 5), set(60, 5)],
+    ])!;
+    expect(result.weightKg).toBe(60);
+  });
+
+  it("advances an AMRAP prescription once a set genuinely beats the floor", () => {
+    const amrap = { ...upperCompound, reps: "5+" };
+    const result = suggestNext("linear", amrap, [
+      [set(60, 5), set(60, 5), set(60, 8)],
+    ])!;
+    expect(result.weightKg).toBe(62.5);
+  });
+
+  it("deloads after three consecutive misses at the same weight", () => {
+    const missed = set(60, 3);
+    const result = suggestNext("linear", upperCompound, [
+      [missed, missed, missed],
+      [missed, missed, missed],
+      [missed, missed, missed],
+    ])!;
+    // roundToPlate(60 * 0.9) = roundToPlate(54) = 55
+    expect(result.weightKg).toBe(55);
+    expect(result.reason).toContain("deload");
+  });
+
+  it("does not deload across misses at different weights", () => {
+    const result = suggestNext("linear", upperCompound, [
+      [set(60, 3)],
+      [set(57.5, 3)],
+      [set(60, 3)],
+    ])!;
+    expect(result.weightKg).toBe(60);
+    expect(result.reason).toContain("missed");
+    expect(result.reason).not.toContain("deload");
+  });
+
+  it("does not deload with fewer than three sessions of history", () => {
+    const result = suggestNext("linear", upperCompound, [
+      [set(60, 3)],
+      [set(60, 3)],
+    ])!;
+    expect(result.weightKg).toBe(60);
+    expect(result.reason).not.toContain("deload");
   });
 });
 
 describe("suggestNext — double progression", () => {
   it("adds reps while below the top of the range", () => {
     const result = suggestNext("double_progression", hypertrophy, [
-      set(40, 9),
-      set(40, 8),
-      set(40, 8),
+      [set(40, 9), set(40, 8), set(40, 8)],
     ])!;
     expect(result.weightKg).toBe(40);
     expect(result.reason).toContain("add reps");
@@ -152,9 +207,7 @@ describe("suggestNext — double progression", () => {
 
   it("adds weight once the top of the range is hit on every set", () => {
     const result = suggestNext("double_progression", hypertrophy, [
-      set(40, 12),
-      set(40, 12),
-      set(40, 12),
+      [set(40, 12), set(40, 12), set(40, 12)],
     ])!;
     expect(result.weightKg).toBe(42.5);
     expect(result.reason).toContain("drop back to 8");
@@ -162,9 +215,7 @@ describe("suggestNext — double progression", () => {
 
   it("does not advance when only some sets topped out", () => {
     const result = suggestNext("double_progression", hypertrophy, [
-      set(40, 12),
-      set(40, 12),
-      set(40, 10),
+      [set(40, 12), set(40, 12), set(40, 10)],
     ])!;
     expect(result.weightKg).toBe(40);
   });
@@ -172,9 +223,7 @@ describe("suggestNext — double progression", () => {
   it("falls back to linear when the prescription isn't really a range", () => {
     const fixed = { ...hypertrophy, reps: "5" };
     const result = suggestNext("double_progression", fixed, [
-      set(60, 5),
-      set(60, 5),
-      set(60, 5),
+      [set(60, 5), set(60, 5), set(60, 5)],
     ])!;
     expect(result.weightKg).toBe(62.5);
   });
@@ -189,9 +238,7 @@ describe("suggestNext — RPE autoregulated", () => {
 
   it("adds weight when the work was easier than the target", () => {
     const result = suggestNext("rpe_autoregulated", rpePrescription, [
-      set(100, 5, 6),
-      set(100, 5, 6),
-      set(100, 5, 6),
+      [set(100, 5, 6), set(100, 5, 6), set(100, 5, 6)],
     ])!;
     expect(result.weightKg).toBeGreaterThan(100);
     expect(result.reason).toContain("below");
@@ -199,9 +246,7 @@ describe("suggestNext — RPE autoregulated", () => {
 
   it("backs off when the work was harder than the target", () => {
     const result = suggestNext("rpe_autoregulated", rpePrescription, [
-      set(100, 5, 9.5),
-      set(100, 5, 10),
-      set(100, 5, 10),
+      [set(100, 5, 9.5), set(100, 5, 10), set(100, 5, 10)],
     ])!;
     expect(result.weightKg).toBeLessThan(100);
     expect(result.reason).toContain("above");
@@ -209,8 +254,7 @@ describe("suggestNext — RPE autoregulated", () => {
 
   it("holds when effort landed on target", () => {
     const result = suggestNext("rpe_autoregulated", rpePrescription, [
-      set(100, 5, 8),
-      set(100, 5, 8),
+      [set(100, 5, 8), set(100, 5, 8)],
     ])!;
     expect(result.weightKg).toBe(100);
     expect(result.reason).toContain("hold");
@@ -218,11 +262,20 @@ describe("suggestNext — RPE autoregulated", () => {
 
   it("asks for RPE rather than guessing when none was logged", () => {
     const result = suggestNext("rpe_autoregulated", rpePrescription, [
-      set(100, 5),
-      set(100, 5),
+      [set(100, 5), set(100, 5)],
     ])!;
     expect(result.weightKg).toBe(100);
     expect(result.reason).toContain("No RPE logged");
+  });
+
+  it("clamps a mis-logged RPE rather than swinging load by the raw delta", () => {
+    // Target 8, logged 1 (meant to be a 9 — a plausible typo). Unclamped,
+    // delta=7 would mean +21% load; clamped to +2 it's +6%.
+    const result = suggestNext("rpe_autoregulated", rpePrescription, [
+      [set(100, 5, 1)],
+    ])!;
+    // roundToPlate(100 * 1.06) = roundToPlate(106) = 105
+    expect(result.weightKg).toBe(105);
   });
 });
 
@@ -234,23 +287,41 @@ describe("suggestNext — percentage work", () => {
     intensityValue: "85",
   };
 
-  it("computes from a training max at 90% of the estimated max", () => {
+  it("computes from a training max at 90% of the low-rep estimated max", () => {
     // 200 kg e1RM -> 180 TM -> 85% = 153 -> rounds to 152.5
-    const result = suggestNext(
-      "wave_531",
-      pctPrescription,
-      [set(150, 5)],
-      200,
-    )!;
+    const result = suggestNext("wave_531", pctPrescription, undefined, {
+      current: 200,
+      previous: null,
+    })!;
     expect(result.weightKg).toBe(152.5);
     expect(result.reason).toContain("training max");
+  });
+
+  it("caps a big PR at last cycle's max plus the conventional increment", () => {
+    // previous 170 -> implied TM 153; a new e1RM of 220 would imply TM 198,
+    // but isLowerBody caps the move to 153 + 5 = 158.
+    const result = suggestNext("wave_531", pctPrescription, undefined, {
+      current: 220,
+      previous: 170,
+    })!;
+    // roundToPlate(158 * 0.85) = roundToPlate(134.3) = 135
+    expect(result.weightKg).toBe(135);
+    expect(result.reason).toContain("held to");
+  });
+
+  it("does not cap when the new max is within one cycle's increment", () => {
+    const result = suggestNext("wave_531", pctPrescription, undefined, {
+      current: 200,
+      previous: 195,
+    })!;
+    expect(result.reason).not.toContain("held to");
   });
 
   it("says what's missing rather than guessing without a max", () => {
     const result = suggestNext(
       "wave_531",
       pctPrescription,
-      [set(150, 5)],
+      [[set(150, 5)]],
       null,
     )!;
     expect(result.weightKg).toBe(150);

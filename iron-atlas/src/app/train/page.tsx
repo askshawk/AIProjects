@@ -11,6 +11,8 @@ import {
   personalBests,
   prescriptionFor,
   programDaysFor,
+  recentPerformances,
+  trainingMaxBasis,
 } from "@/lib/logbook";
 import { LogWorkout } from "@/components/LogWorkout";
 import {
@@ -20,7 +22,20 @@ import {
   type Suggestion,
 } from "@/lib/progression";
 
-export const metadata = { title: "Train · Iron Atlas" };
+/** RPE is a 1-10 scale of perceived effort. The client input already
+ * constrains this, but a form POST can carry anything — clamp rather than
+ * trust it, since an out-of-range value feeds directly into next session's
+ * suggested weight via rpeAutoregulated. */
+function clampRpe(rpe: number | null): number | null {
+  if (rpe === null) return null;
+  return Math.min(10, Math.max(1, rpe));
+}
+
+export const metadata = {
+  title: "Train",
+  description: "Today's session: prescription, last time's numbers, and set logging.",
+  robots: { index: false },
+};
 
 async function logSession(formData: FormData) {
   "use server";
@@ -64,7 +79,7 @@ async function logSession(formData: FormData) {
       setIndex: Number(idx),
       weight,
       reps,
-      rpe: num(formData.get(`e-${peId}-${idx}`)),
+      rpe: clampRpe(num(formData.get(`e-${peId}-${idx}`))),
     });
   }
 
@@ -151,7 +166,10 @@ export default async function TrainPage({
   const days = await programDaysFor(program.id);
   if (days.length === 0) {
     return (
-      <p className="text-sm text-muted">This program has no training days.</p>
+      <div className="max-w-md space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Train</h1>
+        <p className="text-sm text-muted">This program has no training days.</p>
+      </div>
     );
   }
 
@@ -187,15 +205,22 @@ export default async function TrainPage({
 
   const prescription = await prescriptionFor(day.dayId);
   const exerciseIds = [...new Set(prescription.map((p) => p.exerciseId))];
-  const [last, bests] = await Promise.all([
+  const [last, bests, history, tmBasis] = await Promise.all([
     lastPerformances(user.id, exerciseIds),
     personalBests(user.id, exerciseIds),
+    // A short window of recent sessions, for stall/deload detection — separate
+    // from `last` above, which stays single-session and only drives display.
+    recentPerformances(user.id, exerciseIds, 3),
+    // The stricter, ≤5-rep basis percentage-based schemes prescribe from —
+    // deliberately not `bests`, which stays loose (≤10 reps) for PR display.
+    trainingMaxBasis(user.id, exerciseIds),
   ]);
 
   // What to put on the bar, derived from the program's own scheme plus what
   // was actually logged. Null where the history can't support a number.
   const suggestions: Record<number, Suggestion> = {};
   for (const p of prescription) {
+    const basis = tmBasis.get(p.exerciseId);
     const suggestion = suggestNext(
       program.progression as ProgressionScheme,
       {
@@ -206,8 +231,10 @@ export default async function TrainPage({
         isCompound: p.isCompound,
         isLowerBody: isLowerBodyMuscle(p.primaryMuscle),
       },
-      last.get(p.exerciseId)?.sets,
-      bests.get(p.exerciseId)?.e1rm ?? null,
+      (history.get(p.exerciseId) ?? []).map((h) => h.sets),
+      basis
+        ? { current: basis.current.e1rm, previous: basis.previous?.e1rm ?? null }
+        : null,
     );
     if (suggestion) suggestions[p.id] = suggestion;
   }
@@ -258,7 +285,8 @@ export default async function TrainPage({
             <Link
               key={d.dayId}
               href={`/train?day=${d.dayId}`}
-              className={`shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs ${
+              aria-current={d.dayId === day.dayId ? "page" : undefined}
+              className={`flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 text-xs ${
                 d.dayId === day.dayId
                   ? "border-accent bg-accent-soft/30 text-foreground"
                   : "text-muted"
@@ -278,8 +306,8 @@ export default async function TrainPage({
 
       {params.saveError && (
         <p className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">
-          Your sets weren&apos;t saved — the workout server hit an error. Try
-          Finish session again.
+          Your sets weren&apos;t saved — something went wrong. Try Finish
+          session again.
         </p>
       )}
 

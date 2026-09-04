@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { and, asc, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -7,9 +8,18 @@ import {
   muscle as muscleEnum,
 } from "@/db/schema";
 
-export const metadata = { title: "Exercises · Iron Atlas" };
+export const metadata = {
+  title: "Exercises",
+  description:
+    "The exercise catalogue every program is validated against, with how-to guidance and form cues for each movement.",
+};
 
 const label = (v: string) => v.replace(/_/g, " ");
+
+/** The paragraph before the bullet cues, for a short card preview. */
+function previewText(description: string): string {
+  return description.split("\n\n")[0];
+}
 
 function Select({
   name,
@@ -79,6 +89,7 @@ export default async function ExercisesPage({
   const rows = await db
     .select({
       id: exercises.id,
+      slug: exercises.slug,
       name: exercises.name,
       movementPattern: exercises.movementPattern,
       primaryMuscle: exercises.primaryMuscle,
@@ -86,6 +97,7 @@ export default async function ExercisesPage({
       equipment: exercises.equipment,
       isCompound: exercises.isCompound,
       isUnilateral: exercises.isUnilateral,
+      description: exercises.description,
     })
     .from(exercises)
     .where(filters.length ? and(...filters) : undefined)
@@ -144,32 +156,42 @@ export default async function ExercisesPage({
 
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((e) => (
-          <li key={e.id} className="rounded-lg border bg-surface p-3">
-            <div className="flex items-start justify-between gap-2">
-              <span className="font-medium leading-tight">{e.name}</span>
-              <span className="shrink-0 rounded bg-surface-raised px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted">
-                {label(e.equipment)}
-              </span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted">
-              <span className="rounded bg-accent-soft/40 px-1.5 py-0.5 capitalize text-foreground/80">
-                {label(e.movementPattern)}
-              </span>
-              <span className="rounded bg-surface-raised px-1.5 py-0.5 capitalize">
-                {label(e.primaryMuscle)}
-              </span>
-              {e.secondaryMuscles.map((m) => (
-                <span
-                  key={m}
-                  className="rounded bg-surface-raised px-1.5 py-0.5 capitalize opacity-70"
-                >
-                  {label(m)}
+          <li key={e.id}>
+            <Link
+              href={`/exercises/${e.slug}`}
+              className="block rounded-lg border bg-surface p-3 transition-colors hover:border-accent/60"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium leading-tight">{e.name}</span>
+                <span className="shrink-0 rounded bg-surface-raised px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted">
+                  {label(e.equipment)}
                 </span>
-              ))}
-              {e.isUnilateral && (
-                <span className="px-1.5 py-0.5">unilateral</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted">
+                <span className="rounded bg-accent-soft/40 px-1.5 py-0.5 capitalize text-foreground/80">
+                  {label(e.movementPattern)}
+                </span>
+                <span className="rounded bg-surface-raised px-1.5 py-0.5 capitalize">
+                  {label(e.primaryMuscle)}
+                </span>
+                {e.secondaryMuscles.map((m) => (
+                  <span
+                    key={m}
+                    className="rounded bg-surface-raised px-1.5 py-0.5 capitalize"
+                  >
+                    {label(m)}
+                  </span>
+                ))}
+                {e.isUnilateral && (
+                  <span className="px-1.5 py-0.5">unilateral</span>
+                )}
+              </div>
+              {e.description && (
+                <p className="mt-2 line-clamp-2 text-xs text-muted">
+                  {previewText(e.description)}
+                </p>
               )}
-            </div>
+            </Link>
           </li>
         ))}
       </ul>

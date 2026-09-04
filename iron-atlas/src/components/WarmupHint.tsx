@@ -26,7 +26,7 @@ export function WarmupHint({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-muted transition-colors hover:text-accent"
+        className="flex min-h-11 items-center text-xs text-muted transition-colors hover:text-accent"
       >
         {open ? "Hide warm-up" : `Warm-up (${sets.length} sets)`}
       </button>

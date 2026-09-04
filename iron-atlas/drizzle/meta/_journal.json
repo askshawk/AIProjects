@@ -36,6 +36,20 @@
       "when": 1788388211504,
       "tag": "0004_keen_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788481792383,
+      "tag": "0005_last_tusk",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788482507005,
+      "tag": "0006_mature_prowler",
+      "breakpoints": true
     }
   ]
 }

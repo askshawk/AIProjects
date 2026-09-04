@@ -18,6 +18,21 @@ const OPENERS = [
  * asterisks or pulling in a full markdown pipeline for text that the system
  * prompt already constrains to plain paragraphs.
  */
+/**
+ * `error.message` from useChat is often literally the server's Response body
+ * — see the `new Response("...", {status})` calls in api/chat/route.ts —
+ * which are already written for a lifter to read, so those pass through. A
+ * network failure or a parse error never gets that treatment and reads as
+ * raw browser/JS text instead; catch the recognizable shapes of those and
+ * fall back to something a lifter can actually act on.
+ */
+function friendlyError(message: string): string {
+  if (/fetch|network|NetworkError|ECONNRESET|Unexpected token|JSON\.parse/i.test(message)) {
+    return "Something went wrong sending that — try again.";
+  }
+  return message;
+}
+
 function Formatted({ text }: { text: string }) {
   return (
     <>
@@ -54,14 +69,23 @@ export function Chat() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-11rem)] flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto pb-4">
+    <div className="flex h-[calc(100dvh-11rem)] flex-col">
+      {/* Always present, even once messages exist — the visible headline
+          below is only true while the chat is still empty, but a screen
+          reader user navigating by heading needs one that's always there. */}
+      <h1 className="sr-only">Coach chat</h1>
+      <div
+        role="log"
+        aria-live="polite"
+        aria-busy={busy}
+        className="flex-1 space-y-4 overflow-y-auto pb-4"
+      >
         {messages.length === 0 && (
           <div className="space-y-4 py-8">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <p className="text-2xl font-semibold tracking-tight">
                 What are you training for?
-              </h1>
+              </p>
               <p className="mt-1 text-sm text-muted">
                 Tell me your goals, how often you train, and what your gym has.
                 I&apos;ll find a program from the library that fits and hand you
@@ -131,8 +155,11 @@ export function Chat() {
         )}
 
         {error && (
-          <p className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">
-            Something went wrong: {error.message}
+          <p
+            role="alert"
+            className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300"
+          >
+            {friendlyError(error.message)}
           </p>
         )}
 

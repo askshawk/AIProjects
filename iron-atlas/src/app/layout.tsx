@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { notAffiliatedWith } from "@/lib/disclosure";
+import { siteUrl } from "@/lib/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,25 +23,39 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const DESCRIPTION =
+  "A library of lifting programs built on published training methods, fitted to your equipment and logged as you lift.";
+
 export const metadata: Metadata = {
-  title: "Iron Atlas",
-  description:
-    "A library of lifting programs from the coaches worth reading, adapted to your gym and exported to a spreadsheet.",
+  metadataBase: new URL(siteUrl()),
+  title: { default: "Iron Atlas", template: "%s · Iron Atlas" },
+  description: DESCRIPTION,
   appleWebApp: {
     capable: true,
     title: "Iron Atlas",
     statusBarStyle: "black-translucent",
   },
+  openGraph: {
+    title: "Iron Atlas",
+    description: DESCRIPTION,
+    siteName: "Iron Atlas",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Iron Atlas",
+    description: DESCRIPTION,
+  },
 };
 
 const NAV = [
-  { href: "/coach", label: "Coach" },
+  { href: "/coach", label: "Ask a coach" },
   { href: "/programs", label: "Programs" },
   { href: "/programs/authors", label: "Coaches" },
   { href: "/exercises", label: "Exercises" },
   { href: "/train", label: "Train" },
   { href: "/history", label: "History" },
-  { href: "/gym", label: "Your gym" },
+  { href: "/gym", label: "Gym" },
   { href: "/account", label: "Account" },
 ];
 
@@ -50,7 +66,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        <header className="sticky top-0 z-10 border-b bg-surface/60 backdrop-blur">
+        <header
+          className="sticky top-0 z-10 border-b bg-surface/60 backdrop-blur"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
           {/* Seven links don't fit a phone. Scroll them sideways rather than
               wrapping to a second line, which pushed the page into horizontal
               overflow and left the header background short of the viewport. */}
@@ -77,10 +96,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </main>
         <footer className="border-t px-4 py-6 text-xs text-muted">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-            <p>
-              Iron Atlas isn&apos;t affiliated with, endorsed by, or
-              sponsored by any coach in the library.
-            </p>
+            <p>{notAffiliatedWith("any coach in the library")}</p>
             <div className="flex gap-4">
               <Link href="/about" className="hover:text-foreground">
                 About

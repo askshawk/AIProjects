@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { countsTowardE1rm, epley, E1RM_REP_CEILING } from "@/lib/e1rm";
+import {
+  countsTowardE1rm,
+  countsTowardTrainingMax,
+  epley,
+  E1RM_REP_CEILING,
+  TRAINING_MAX_REP_CEILING,
+} from "@/lib/e1rm";
 
 /**
  * Pure maths only — no database. The estimator is what every trend line and PR
@@ -66,5 +72,32 @@ describe("countsTowardE1rm", () => {
       expect(countsTowardE1rm(w, r)).toBe(true);
       expect(epley(w, r)).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("countsTowardTrainingMax", () => {
+  it("is stricter than countsTowardE1rm — it excludes what that allows above 5 reps", () => {
+    // A 10-rep set is a fair PR-display basis but too high-rep to move a
+    // training max, which feeds directly into the next cycle's prescription.
+    expect(countsTowardE1rm(100, 8)).toBe(true);
+    expect(countsTowardTrainingMax(100, 8)).toBe(false);
+  });
+
+  it("accepts sets at or under the tighter ceiling", () => {
+    expect(countsTowardTrainingMax(100, 1)).toBe(true);
+    expect(countsTowardTrainingMax(100, TRAINING_MAX_REP_CEILING)).toBe(true);
+  });
+
+  it("excludes unloaded, blank, or over-ceiling sets, same as countsTowardE1rm", () => {
+    expect(countsTowardTrainingMax(null, 5)).toBe(false);
+    expect(countsTowardTrainingMax(100, null)).toBe(false);
+    expect(countsTowardTrainingMax(0, 5)).toBe(false);
+    expect(countsTowardTrainingMax(100, TRAINING_MAX_REP_CEILING + 1)).toBe(
+      false,
+    );
+  });
+
+  it("is tighter than the general e1RM ceiling", () => {
+    expect(TRAINING_MAX_REP_CEILING).toBeLessThan(E1RM_REP_CEILING);
   });
 });

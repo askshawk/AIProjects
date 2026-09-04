@@ -52,7 +52,7 @@ export function RestTimer({ seconds }: { seconds: number }) {
         type="button"
         onClick={start}
         title={`Start a ${formatSeconds(seconds)} rest timer`}
-        className="rounded px-1.5 py-0.5 font-mono text-xs text-muted transition-colors hover:bg-surface-raised hover:text-accent"
+        className="flex min-h-11 items-center rounded px-2 font-mono text-xs text-muted transition-colors hover:bg-surface-raised hover:text-accent"
       >
         rest {formatSeconds(seconds)}
       </button>
@@ -65,13 +65,18 @@ export function RestTimer({ seconds }: { seconds: number }) {
       type="button"
       onClick={done ? start : stop}
       title={done ? "Rest again" : "Cancel the timer"}
-      className={`rounded px-1.5 py-0.5 font-mono text-xs tabular-nums transition-colors ${
+      className={`flex min-h-11 items-center rounded px-2 font-mono text-xs tabular-nums transition-colors ${
         done
           ? "bg-accent/20 font-semibold text-accent"
           : "bg-surface-raised text-foreground"
       }`}
     >
       {done ? "go" : formatSeconds(remaining)}
+      {/* Vibration signals completion silently to a screen reader — this
+          announces it too, without narrating the countdown itself. */}
+      <span className="sr-only" aria-live="assertive">
+        {done ? "Rest complete" : ""}
+      </span>
     </button>
   );
 }

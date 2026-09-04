@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { notAffiliatedWith } from "@/lib/disclosure";
 
-export const metadata = { title: "About · Iron Atlas" };
+export const metadata = {
+  title: "About",
+  description:
+    "How Iron Atlas's library gets built, what an AI reconstruction means, and what isn't claimed about the coaches whose methods appear in it.",
+};
 
 export default function AboutPage() {
   return (
@@ -25,11 +30,10 @@ export default function AboutPage() {
           publishes are theirs, and none of that is reproduced here.
         </p>
         <p>
-          Iron Atlas isn&apos;t affiliated with, endorsed by, or sponsored by
-          any coach whose method appears in the library. Where a coach
-          actively sells the real thing, the program page links to it —
-          buying the original is always the better way to get their actual
-          work.
+          {notAffiliatedWith("any coach whose method appears in the library")}{" "}
+          Where a coach actively sells the real thing, the program page links
+          to it — buying the original is always the better way to get their
+          actual work.
         </p>
         <p>
           Some programs carry a coach&apos;s name because that&apos;s who

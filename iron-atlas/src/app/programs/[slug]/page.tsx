@@ -12,6 +12,7 @@ import { StartProgram } from "@/components/StartProgram";
 import { VerifyToggle } from "@/components/VerifyToggle";
 import { authorSlug } from "@/lib/authors";
 import { getCurrentUser } from "@/lib/auth";
+import { provenanceText } from "@/lib/workbook";
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -25,9 +26,9 @@ export async function generateMetadata({
     .select({ title: programs.title, summary: programs.summary })
     .from(programs)
     .where(eq(programs.slug, slug));
-  if (!program) return { title: "Not found · Iron Atlas" };
+  if (!program) return { title: "Not found" };
   return {
-    title: `${program.title} · Iron Atlas`,
+    title: program.title,
     description: program.summary,
   };
 }
@@ -119,8 +120,10 @@ export default async function ProgramPage({
               firstParty={program.firstParty}
             />
             {/* Nothing to check a first-party program against — it isn't
-                reconstructing a source. */}
-            {user && !program.firstParty && (
+                reconstructing a source. The server action rejects a non-admin
+                regardless, but there's no reason to show a control that will
+                only throw when clicked. */}
+            {user?.isAdmin && !program.firstParty && (
               <VerifyToggle slug={program.slug} verified={program.verified} />
             )}
           </div>
@@ -213,17 +216,12 @@ export default async function ProgramPage({
                   ? "Partly inferred"
                   : "Reconstructed, not transcribed"}
           </p>
-          <p className="mt-1 text-muted">
-            {program.verified
-              ? `An AI reconstruction of the training method ${program.authorName} has published, checked against the source by a human. Iron Atlas isn't affiliated with or endorsed by ${program.authorName}.`
-              : program.confidence === "stylistic"
-                ? `The AI knows this program exists and knows ${program.authorName}'s methods, but not this program's actual contents. What follows is a faithful imitation of how they train — treat it as inspired-by, and buy the real thing if you want theirs.`
-                : program.confidence === "partial"
-                  ? `The overall structure is ${program.authorName}'s; some specifics were inferred rather than recalled. Check the details against the source before running it.`
-                  : program.confidence === "documented"
-                    ? `Rebuilt by an AI that reported specific recall of this program's published numbers. The structure and prescriptions should be close to ${program.authorName}'s original, but check them against the source before running it.`
-                    : `This program was rebuilt by an AI from its knowledge of ${program.authorName}'s work, and hasn't been graded for how closely it matches the original. The structure and intent should be right; specific set and rep numbers may not. Check it against the source before running it.`}
-          </p>
+          {/* Same function the .xlsx export calls for its own provenance
+              line (see provenanceText's own doc comment) — this used to
+              retype the same four sentences here, and the retyped copy had
+              quietly lost the "sponsored by" clause the exported version
+              still had. */}
+          <p className="mt-1 text-muted">{provenanceText(program)}</p>
           {program.confidenceNotes && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-muted hover:text-foreground">

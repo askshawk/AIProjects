@@ -19,6 +19,7 @@
     "db:generate": "drizzle-kit generate",
     "backfill:embeddings": "tsx scripts/backfill-embeddings.ts",
     "generate:batch": "tsx scripts/generate-batch.ts",
+    "generate:exercise-descriptions": "tsx scripts/generate-exercise-descriptions.ts",
     "check:embeddings": "tsx scripts/check-embeddings.ts",
     "classify:confidence": "tsx scripts/classify-confidence.ts"
   },

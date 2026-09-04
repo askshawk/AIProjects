@@ -9,7 +9,11 @@ import {
 } from "@/db/schema";
 import { ProgramCard } from "@/components/ProgramCard";
 
-export const metadata = { title: "Programs · Iron Atlas" };
+export const metadata = {
+  title: "Programs",
+  description:
+    "Browse the library of lifting programs built on published training methods — filter by goal, experience, schedule, and equipment.",
+};
 
 const label = (v: string) => v.replace(/_/g, " ");
 
@@ -128,8 +132,8 @@ export default async function ProgramsPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          {total} training blocks from named lifters and coaches. Pick one,
-          adapt it to your gym, and take it with you — or{" "}
+          {total} programs from named coaches. Pick one, adapt it to your
+          gym, and take it with you — or{" "}
           <Link
             href="/programs/authors"
             className="text-accent hover:underline"
@@ -193,9 +197,9 @@ export default async function ProgramsPage({
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted">
-          No programs match. The library is still being filled — run{" "}
-          <code className="text-foreground">npm run generate:program</code> to
-          add one.
+          {total === 0
+            ? "The library is still being filled — check back soon."
+            : "No programs match those filters. Try loosening one — fewer days, a different goal, or any equipment."}
         </p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">

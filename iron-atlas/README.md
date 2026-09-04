@@ -32,6 +32,8 @@ Both `ANTHROPIC_API_KEY` (generation and chat) and `VOYAGE_API_KEY` (embeddings)
 ```bash
 npm run generate:program -- "5/3/1 Boring But Big" --slug 531-bbb
 npm run generate:program -- "Layne Norton's PHAT" --slug phat --dry-run   # inspect first
+npm run generate:exercise-descriptions -- --limit 5 --dry-run            # inspect first
+npm run generate:exercise-descriptions                                   # writes src/data/exerciseDescriptions.ts
 ```
 
 `npm run typecheck` needs `.next/types`, which `next dev` or `next build` generates —
@@ -58,7 +60,10 @@ the fork keeps `source_*` ids so the UI can show what you changed.
 
 **Every prescribed set points at a real exercise row.** The catalogue in `src/data/exercises.ts`
 is the vocabulary; program generation resolves names against it and fails loudly on anything it
-can't match, rather than inventing movements.
+can't match, rather than inventing movements. How-to and form-cue text lives in a separate file,
+`src/data/exerciseDescriptions.ts` — the pipe-delimited catalogue has no way to escape a `|` or a
+newline, so 500-900 characters of generated prose per exercise gets its own file rather than an
+8th column. `npm run seed:exercises` merges both into the `exercises` table.
 
 **Programs are AI-reconstructed and labelled as such.** The library is generated from a model's
 knowledge of well-known programs, not transcribed from the sources. Each row carries
@@ -93,7 +98,7 @@ scripts/          db server, seeds, program generation
 |---|---|
 | `/coach` | Conversational intake → a real program from the library, with reasoning |
 | `/programs` | Browse and filter; each program adapts to your gym and exports to a spreadsheet |
-| `/exercises` | The 235-movement catalogue everything is validated against |
+| `/exercises` | The 235-movement catalogue everything is validated against, each with a how-to guide |
 | `/gym` | Your equipment — drives substitutions everywhere |
 | `/train` | Today's session: prescription, last time's numbers, suggested loads, set logging |
 | `/history` | Logged sessions and estimated-1RM trends |

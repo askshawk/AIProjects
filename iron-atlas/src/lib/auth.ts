@@ -5,9 +5,9 @@ import {
   type ScryptOptions,
 } from "node:crypto";
 import { cookies } from "next/headers";
-import { and, eq, gt, lt } from "drizzle-orm";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { sessions, users } from "@/db/schema";
+import { sessions, signInAttempts, users } from "@/db/schema";
 
 /**
  * Password hashing and sessions, hand-rolled on Node's crypto.
@@ -142,12 +142,68 @@ export async function registerUser(
   if (existing)
     return { ok: false, error: "An account with that email already exists." };
 
-  const [created] = await db
-    .insert(users)
-    .values({ email, passwordHash: await hashPassword(password) })
-    .returning({ id: users.id });
+  // The select above is a courtesy for the common case's error message, not
+  // the actual guard — `users.email` is unique, so two concurrent signups for
+  // the same address can both pass that check and race into this insert.
+  // Catch the constraint violation rather than let it become an unhandled
+  // exception past the AuthResult union.
+  try {
+    const [created] = await db
+      .insert(users)
+      .values({ email, passwordHash: await hashPassword(password) })
+      .returning({ id: users.id });
 
-  return { ok: true, userId: created.id };
+    return { ok: true, userId: created.id };
+  } catch (err) {
+    // postgres.js's own error carries the code; drizzle wraps it in its own
+    // "Failed query" error with that as `.cause`, so check both shapes.
+    const code = (candidate: unknown): unknown =>
+      candidate && typeof candidate === "object" && "code" in candidate
+        ? (candidate as { code: unknown }).code
+        : undefined;
+    if (
+      code(err) === "23505" ||
+      code((err as { cause?: unknown } | undefined)?.cause) === "23505"
+    ) {
+      return {
+        ok: false,
+        error: "An account with that email already exists.",
+      };
+    }
+    throw err;
+  }
+}
+
+/** Sign-in attempts allowed per email within one window. */
+export const SIGN_IN_ATTEMPT_CAP = Number(
+  process.env.SIGN_IN_ATTEMPT_CAP ?? 10,
+);
+const SIGN_IN_WINDOW_MINUTES = 15;
+
+function signInWindow(): string {
+  const bucketMs = SIGN_IN_WINDOW_MINUTES * 60 * 1000;
+  return new Date(Math.floor(Date.now() / bucketMs) * bucketMs).toISOString();
+}
+
+/**
+ * Atomically claims one sign-in attempt for this email in the current
+ * window, before any password check runs. Mirrors chatLimits.ts's
+ * claimDailyMessage: the `setWhere` on the conflict update makes the
+ * check-and-increment a single atomic statement, so concurrent attempts
+ * can't all slip through sitting one under the cap.
+ */
+async function claimSignInAttempt(email: string): Promise<boolean> {
+  const window = signInWindow();
+  const rows = await db
+    .insert(signInAttempts)
+    .values({ email, window, count: 1 })
+    .onConflictDoUpdate({
+      target: [signInAttempts.email, signInAttempts.window],
+      set: { count: sql`${signInAttempts.count} + 1` },
+      setWhere: sql`${signInAttempts.count} < ${SIGN_IN_ATTEMPT_CAP}`,
+    })
+    .returning({ count: signInAttempts.count });
+  return rows.length > 0;
 }
 
 export async function authenticate(
@@ -155,6 +211,16 @@ export async function authenticate(
   password: string,
 ): Promise<AuthResult> {
   const email = normalizeEmail(emailRaw);
+
+  // Claimed before the expensive scrypt check runs, not after — scrypt at
+  // N=2^15 costs real CPU and ~32MB per call, so the cap has to stop an
+  // attempt from being *made*, not just stop it from succeeding.
+  if (!(await claimSignInAttempt(email))) {
+    return {
+      ok: false,
+      error: "Too many attempts — try again in a few minutes.",
+    };
+  }
 
   const [user] = await db
     .select({ id: users.id, passwordHash: users.passwordHash })

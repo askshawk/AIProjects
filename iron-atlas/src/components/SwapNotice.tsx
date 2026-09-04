@@ -26,11 +26,16 @@ export function SwapNotice({ swaps }: { swaps: SwapPlan[] }) {
         <ul className="mt-2 space-y-1">
           {swapped.map((s) => (
             <li key={s.from.exerciseId} className="text-muted">
-              <span className="line-through opacity-60">
+              <span className="line-through opacity-80">
                 {s.from.exerciseName}
               </span>
               {" → "}
-              <span className="text-foreground">{s.to!.name}</span>
+              <Link
+                href={`/exercises/${s.to!.slug}`}
+                className="text-foreground underline decoration-dotted underline-offset-2 hover:text-accent"
+              >
+                {s.to!.name}
+              </Link>
               <span className="text-xs"> ({TIER_LABEL[s.to!.tier]})</span>
             </li>
           ))}

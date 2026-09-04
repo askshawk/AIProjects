@@ -72,6 +72,15 @@ export function formatConfigProblems(problems: ConfigProblem[]): string {
   ].join("\n");
 }
 
+/**
+ * The canonical origin, for anything that needs an absolute URL — metadata's
+ * `metadataBase`, the sitemap, `robots.txt`. Falls back to the local dev
+ * server so those still resolve to *something* valid before APP_URL is set.
+ */
+export function siteUrl(): string {
+  return process.env.APP_URL ?? "http://localhost:3100";
+}
+
 /** Called once at module load in production. No-op in development and tests. */
 export function assertProductionConfig(env: Env = process.env): void {
   if (env.NODE_ENV !== "production") return;

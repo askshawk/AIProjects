@@ -7,7 +7,7 @@ import {
   verificationStats,
 } from "@/lib/verification";
 
-export const metadata = { title: "Review · Iron Atlas" };
+export const metadata = { title: "Review", robots: { index: false } };
 
 /**
  * The review queue. The library is reconstructed by a model, so this is where
@@ -17,7 +17,10 @@ export const metadata = { title: "Review · Iron Atlas" };
  */
 export default async function ReviewPage() {
   const user = await getCurrentUser();
-  if (!user) redirect("/sign-in?next=/programs/review");
+  // Sign-in lives at /account, not /sign-in — this used to point at a route
+  // that doesn't exist. Also admin-only: this is the internal moderation
+  // queue behind the same verification actions that require isAdmin.
+  if (!user?.isAdmin) redirect("/account");
 
   const [queue, stats, thin] = await Promise.all([
     reviewQueue(),

@@ -11,7 +11,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { countsTowardE1rm, epley } from "@/lib/e1rm";
 import { E1rmTrend } from "@/components/E1rmTrend";
 
-export const metadata = { title: "History · Iron Atlas" };
+export const metadata = {
+  title: "History",
+  description: "Your logged sessions and estimated 1RM trends.",
+  robots: { index: false },
+};
 
 export default async function HistoryPage({
   searchParams,

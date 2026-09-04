@@ -76,9 +76,19 @@ export async function POST(req: Request) {
 
   let messages: UIMessage[];
   try {
-    ({ messages } = await req.json());
+    const body = await req.json();
+    // A malformed-but-valid-JSON body (missing/wrong-typed `messages`) used
+    // to sail past this and throw inside convertToModelMessages instead —
+    // same bad-request condition, but as an unhandled 500 rather than this
+    // clean 400.
+    if (!Array.isArray(body.messages)) {
+      throw new Error("messages must be an array");
+    }
+    messages = body.messages;
   } catch {
-    return new Response("Invalid request", { status: 400 });
+    return new Response("Couldn't read that message — try sending it again.", {
+      status: 400,
+    });
   }
 
   // Resolved once per request, from the session cookie — never from anything

@@ -47,14 +47,16 @@ beforeEach(() => {
   cookieStore.clear();
 });
 
-async function signedInUser() {
+async function signedInUser(isAdmin = false) {
   const email = `verify-test-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
   const [user] = await db
     .insert(users)
-    .values({ email, passwordHash: "x" })
+    .values({ email, passwordHash: "x", isAdmin })
     .returning({ id: users.id });
   await createSession(user.id);
 }
+
+const signedInAdmin = () => signedInUser(true);
 
 describe("setVerified", () => {
   it("refuses when nobody is signed in", async () => {
@@ -63,8 +65,15 @@ describe("setVerified", () => {
     );
   });
 
-  it("flips the flag once signed in, and flips it back", async () => {
+  it("refuses a signed-in user who isn't an admin", async () => {
     await signedInUser();
+    await expect(setVerified("arnold-golden-six", true)).rejects.toThrow(
+      /admin/i,
+    );
+  });
+
+  it("flips the flag once signed in as an admin, and flips it back", async () => {
+    await signedInAdmin();
     const [before] = await db
       .select({ verified: programs.verified })
       .from(programs)
@@ -106,8 +115,16 @@ describe("correctPrescription", () => {
     ).rejects.toThrow(/sign in/i);
   });
 
-  it("updates sets and restores the original value afterward", async () => {
+  it("refuses a signed-in user who isn't an admin", async () => {
     await signedInUser();
+    const row = await firstPrescriptionId();
+    await expect(
+      correctPrescription(row.id, { sets: row.sets + 1 }),
+    ).rejects.toThrow(/admin/i);
+  });
+
+  it("updates sets and restores the original value afterward", async () => {
+    await signedInAdmin();
     const row = await firstPrescriptionId();
 
     await correctPrescription(row.id, { sets: row.sets + 1 });
@@ -121,7 +138,7 @@ describe("correctPrescription", () => {
   });
 
   it("ignores a non-positive or non-finite sets value rather than writing garbage", async () => {
-    await signedInUser();
+    await signedInAdmin();
     const row = await firstPrescriptionId();
 
     for (const bad of [0, -5, NaN, Infinity]) {
@@ -135,7 +152,7 @@ describe("correctPrescription", () => {
   });
 
   it("clears notes to null when given an empty string", async () => {
-    await signedInUser();
+    await signedInAdmin();
     const row = await firstPrescriptionId();
 
     await correctPrescription(row.id, { notes: "temporary test note" });
@@ -149,7 +166,7 @@ describe("correctPrescription", () => {
   });
 
   it("does nothing when the patch has no usable fields", async () => {
-    await signedInUser();
+    await signedInAdmin();
     const row = await firstPrescriptionId();
     await expect(correctPrescription(row.id, {})).resolves.toBeUndefined();
   });

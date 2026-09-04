@@ -39,6 +39,25 @@ export const sessions = pgTable("sessions", {
 });
 
 /**
+ * Short-window sign-in attempt counter, keyed by the email being attempted.
+ * scrypt at N=2^15 costs real CPU and ~32MB per call (see hashPassword /
+ * verifyPassword in lib/auth.ts), so unthrottled sign-in spam is both a
+ * brute-force vector and a cheap resource-exhaustion one. `window` buckets
+ * time the same way `chatUsage.day` does, just at minute granularity instead
+ * of daily.
+ */
+export const signInAttempts = pgTable(
+  "sign_in_attempts",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").notNull(),
+    window: text("window").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [unique("sign_in_attempts_email_window_unique").on(t.email, t.window)],
+);
+
+/**
  * What the user's gym actually has. Drives both the recommendation filter and
  * the substitution engine — "no hack squat machine" lives in `missingEquipment`.
  */

@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export const metadata = { title: "Terms · Iron Atlas" };
+export const metadata = {
+  title: "Terms",
+  description:
+    "Plain-language terms for Iron Atlas: no affiliation with any coach in the library, what an AI-reconstructed program is, and how to request a takedown.",
+};
 
 const ISSUES_URL = "https://github.com/askshawk/AIProjects/issues/new";
 
@@ -67,7 +71,10 @@ export default function TermsPage() {
           training carries a real risk of injury. Talk to a doctor before
           starting a new training program, especially if you have an
           existing injury or health condition, and stop any exercise that
-          causes pain.
+          causes pain. This covers the exercise catalogue&apos;s how-to and
+          form-cue text as much as the programs themselves — it&apos;s
+          general training guidance, AI-generated like everything else here,
+          not a substitute for in-person coaching.
         </p>
       </Section>
 

@@ -48,6 +48,14 @@ export const exercises = pgTable(
     /** Trained for speed, not load — jumps, throws, Olympic lifts. */
     isExplosive: boolean("is_explosive").notNull().default(false),
     notes: text("notes"),
+    /**
+     * How to perform it and what good form looks like — one short paragraph
+     * plus a few cues, generated per exercise (see
+     * scripts/generate-exercise-descriptions.ts). General guidance, not
+     * medical advice; deliberately excluded from exerciseEmbeddingText so it
+     * can't shift the substitution similarity vectors.
+     */
+    description: text("description"),
     embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
   },
   (t) => [
