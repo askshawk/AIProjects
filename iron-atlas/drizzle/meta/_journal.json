@@ -50,6 +50,13 @@
       "when": 1788482507005,
       "tag": "0006_mature_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788622943941,
+      "tag": "0007_aromatic_wrecker",
+      "breakpoints": true
     }
   ]
 }

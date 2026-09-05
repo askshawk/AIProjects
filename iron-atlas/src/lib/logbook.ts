@@ -360,7 +360,28 @@ export async function trainingMaxBasis(
   const out = new Map<number, TrainingMaxBasis>();
   for (const [exerciseId, sets] of byExercise) {
     const sorted = [...sets].sort((a, b) => b.e1rm - a.e1rm);
-    out.set(exerciseId, { current: sorted[0], previous: sorted[1] ?? null });
+    const current = sorted[0];
+
+    /**
+     * The best set from a session *strictly earlier* than the record's —
+     * i.e. what the max stood at before this PR happened.
+     *
+     * This used to be `sorted[1]`, the second-best set overall, which on a
+     * good day is simply another set from the same session. That made the
+     * ratchet cap in progression.ts useless: the ceiling it computes
+     * (previous × 0.9 + increment) landed just above the new candidate, so it
+     * never bound and a single big session raised the training max in full —
+     * exactly the runaway the cap exists to prevent.
+     */
+    const recordSession = current.performedAt.getTime();
+    const earlier = sets.filter(
+      (s) => s.performedAt.getTime() < recordSession,
+    );
+    const previous = earlier.length
+      ? earlier.reduce((best, s) => (s.e1rm > best.e1rm ? s : best))
+      : null;
+
+    out.set(exerciseId, { current, previous });
   }
   return out;
 }

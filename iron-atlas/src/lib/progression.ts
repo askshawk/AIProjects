@@ -301,13 +301,22 @@ function percentageBased(
   const candidateTM = basis.current * 0.9;
   const increment = prescribed.isLowerBody ? 5 : 2.5;
   const ceiling = basis.previous !== null ? basis.previous * 0.9 + increment : null;
-  const trainingMax = ceiling !== null ? Math.min(candidateTM, ceiling) : candidateTM;
   const capped = ceiling !== null && candidateTM > ceiling;
 
+  // Rounded *before* the working weight is derived from it, so the number in
+  // the explanation is the one actually used. Rounding only for display let
+  // the two disagree by up to a plate increment, which reads as an arithmetic
+  // error to anyone checking the maths.
+  const trainingMax = roundToPlate(
+    ceiling !== null ? Math.min(candidateTM, ceiling) : candidateTM,
+  );
+
   const next = roundToPlate(trainingMax * (pct / 100));
+  // Deliberately terse: this line repeats under every exercise sharing a
+  // training max, so a long sentence becomes four long sentences on one page.
   const reason = capped
-    ? `${pct}% of a ${roundToPlate(trainingMax)} kg training max — held to last cycle's max plus ${increment} kg, even though your most recent lift implies more.`
-    : `${pct}% of a ${roundToPlate(trainingMax)} kg training max (90% of your best estimated ${basis.current.toFixed(1)} kg, from sets of ${TRAINING_MAX_REP_CEILING} reps or fewer).`;
+    ? `${pct}% of a ${trainingMax} kg training max, capped to last cycle's max + ${increment} kg.`
+    : `${pct}% of a ${trainingMax} kg training max (90% of your best ${basis.current.toFixed(1)} kg estimate).`;
 
   return { weightKg: next, reps: prescribed.reps, reason };
 }

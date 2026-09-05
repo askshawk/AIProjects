@@ -24,12 +24,12 @@ import {
   swapExercise,
 } from "@/lib/tweak";
 import {
+  claimBudget,
   claimDailyMessage,
   DAILY_MESSAGE_CAP,
   estimateCostUsd,
-  MONTHLY_BUDGET_USD,
-  monthlySpendUsd,
   recordSpend,
+  releaseBudget,
 } from "@/lib/chatLimits";
 
 /** Embeddings and the pg driver are Node-only. */
@@ -156,42 +156,20 @@ export async function POST(req: Request) {
     return new Response("Sign in to talk to the coach.", { status: 401 });
   }
 
-  // The owner's own account is exempt from the spend guards below — the
-  // point of the caps is to stop a stranger from running up Alan's bill, not
-  // to stop Alan from using his own product.
-  if (!user.isAdmin) {
-    const spent = await monthlySpendUsd();
-    if (spent >= MONTHLY_BUDGET_USD) {
-      return new Response(
-        "The coach has hit its budget for this month — try again next month.",
-        { status: 429 },
-      );
-    }
-
-    const claimed = await claimDailyMessage(user.id);
-    if (!claimed) {
-      return new Response(
-        `You've hit today's limit of ${DAILY_MESSAGE_CAP} coach messages — try again tomorrow.`,
-        { status: 429 },
-      );
-    }
-  }
-
   const model = user.isAdmin ? OPUS : SONNET;
 
   /**
-   * Charged *before* the model is called, then reconciled to the real figure
-   * in onFinish.
+   * A deliberately pessimistic price for this request, claimed *before* the
+   * model runs and settled to the real figure in onFinish.
    *
-   * Recording spend only on completion left two holes: a client that
-   * disconnects mid-stream cancels it, so onFinish never fired even though
-   * Anthropic had already billed the input — the monthly budget could sit at
-   * $0.00 while real money left the account. And because the budget check is
-   * a plain SUM, concurrent requests all read the same pre-spend total and
-   * all passed. Charging up front closes the first completely and narrows the
-   * second, since in-flight requests are now visible to each other's check.
-   * Erring high is the safe direction: an abandoned request stays
-   * over-charged rather than free.
+   * Spend used to be recorded only on completion, which left the budget
+   * blind twice over: a client that disconnected mid-stream cancelled the
+   * stream so onFinish never fired — even though Anthropic had already billed
+   * the input — and the guard itself read a SUM and then decided in
+   * application code, so a burst of concurrent requests all saw the same
+   * pre-spend total and all passed. Charging up front against an atomically
+   * claimed row closes both. Erring high is the safe direction: an abandoned
+   * request stays over-charged rather than free.
    */
   const approxInputTokens = Math.ceil(
     (SYSTEM.length + JSON.stringify(messages).length) / 4,
@@ -201,6 +179,31 @@ export async function POST(req: Request) {
     approxInputTokens,
     MAX_OUTPUT_TOKENS,
   );
+
+  // The owner's own account is exempt from the guards — their point is to stop
+  // a stranger running up Alan's bill, not to stop Alan using his own product.
+  // Admin usage also deliberately does *not* claim against the shared budget,
+  // so his own (pricier, Opus) messages can never lock everyone else out.
+  if (!user.isAdmin) {
+    if (!(await claimBudget(upfrontEstimate))) {
+      return new Response(
+        "The coach has hit its budget for this month — try again next month.",
+        { status: 429 },
+      );
+    }
+
+    const claimed = await claimDailyMessage(user.id);
+    if (!claimed) {
+      // Hand back the budget we just took — the request isn't happening.
+      await releaseBudget(-upfrontEstimate);
+      return new Response(
+        `You've hit today's limit of ${DAILY_MESSAGE_CAP} coach messages — try again tomorrow.`,
+        { status: 429 },
+      );
+    }
+  }
+
+  // Per-user audit trail, separate from the atomic budget row above.
   try {
     await recordSpend(user.id, upfrontEstimate);
   } catch (err) {
@@ -211,6 +214,9 @@ export async function POST(req: Request) {
   // see across the closure below that `user` was already checked, but it can
   // see that this was.
   const userId = user.id;
+  // Same reason — captured for the onFinish closure, where only non-admin
+  // spend settles back against the shared budget row.
+  const isAdmin = user.isAdmin;
   const gym = await readGymProfile();
 
   /**
@@ -247,10 +253,12 @@ export async function POST(req: Request) {
         usage.inputTokens ?? 0,
         usage.outputTokens ?? 0,
       );
-      // Only the difference — the up-front estimate is already on the ledger,
-      // so this settles it to the real figure and is usually negative.
+      // Only the difference — the up-front estimate is already on both
+      // ledgers, so this settles them to the real figure. Usually negative.
+      const delta = actual - upfrontEstimate;
       try {
-        await recordSpend(userId, actual - upfrontEstimate);
+        await recordSpend(userId, delta);
+        if (!isAdmin) await releaseBudget(delta);
       } catch (err) {
         console.error("failed to reconcile coach spend:", err);
       }

@@ -282,3 +282,24 @@ export const chatUsage = pgTable(
   },
   (t) => [unique("chat_usage_user_day_unique").on(t.userId, t.day)],
 );
+
+/**
+ * One row per calendar month holding total coach spend.
+ *
+ * `chat_usage` already records the same money per user, but it can't gate on
+ * it: the budget is a sum across every user, and checking a SUM then deciding
+ * in application code is a read-then-write race — under load every concurrent
+ * request reads the same pre-spend total and every one of them passes.
+ *
+ * A single row per month gives Postgres something to lock. The conditional
+ * `UPDATE ... WHERE spent + :estimate <= :budget` serialises concurrent
+ * claims on that row, so the check and the increment are one atomic step.
+ * `chat_usage` stays as the per-user audit trail.
+ */
+export const chatBudget = pgTable("chat_budget", {
+  /** "2026-09" — the calendar month this total covers. */
+  month: text("month").primaryKey(),
+  spentUsd: numeric("spent_usd", { precision: 12, scale: 4 })
+    .notNull()
+    .default("0"),
+});

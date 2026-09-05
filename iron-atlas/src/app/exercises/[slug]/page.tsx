@@ -7,6 +7,14 @@ import { splitDescription } from "@/lib/exerciseDescription";
 
 type Props = { params: Promise<{ slug: string }> };
 
+/**
+ * These pages have no dynamic API, so in production they'd otherwise be
+ * cached indefinitely — a re-run of `seed:exercises` (which is how
+ * descriptions get corrected) wouldn't show up until the next deploy. An hour
+ * is plenty for content that changes this rarely.
+ */
+export const revalidate = 3600;
+
 const label = (v: string) => v.replace(/_/g, " ");
 
 async function loadExercise(slug: string) {

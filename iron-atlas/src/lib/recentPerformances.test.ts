@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, sql as client } from "@/db";
 import { exercises, setLogs, users, workoutSessions } from "@/db/schema";
-import { recentPerformances } from "@/lib/logbook";
+import { recentPerformances, trainingMaxBasis } from "@/lib/logbook";
 
 /**
  * Runs against the local database — start it with `npm run db`.
@@ -150,6 +150,59 @@ describe("recentPerformances", () => {
     try {
       const windows = await recentPerformances(userId, [exerciseId], 3);
       expect(windows.get(exerciseId)).toBeUndefined();
+    } finally {
+      await db.delete(users).where(eq(users.id, userId));
+    }
+  });
+});
+
+/**
+ * The "previous" max is what progression.ts caps a training-max jump against.
+ * It has to come from an earlier *session*, not merely be the second-best set
+ * — otherwise a big day supplies both its own record and its own ceiling, and
+ * the cap never binds.
+ */
+describe("trainingMaxBasis", () => {
+  it("takes the previous max from an earlier session, not another set of the same one", async () => {
+    const userId = await makeUser();
+    const exerciseId = await anExerciseId();
+    try {
+      await logSession(userId, exerciseId, new Date("2026-03-01T10:00:00Z"), [
+        { weightKg: 100, reps: 3 },
+      ]);
+      // One big session carrying both the record and a near-miss behind it.
+      await logSession(userId, exerciseId, new Date("2026-03-08T10:00:00Z"), [
+        { weightKg: 140, reps: 3 },
+        { weightKg: 138, reps: 3 },
+      ]);
+
+      const basis = (await trainingMaxBasis(userId, [exerciseId])).get(
+        exerciseId,
+      )!;
+
+      expect(basis.current.weightKg).toBe(140);
+      // The regression: this used to be 138 — the runner-up from the very same
+      // session — which put the ceiling just above the new record.
+      expect(basis.previous?.weightKg).toBe(100);
+    } finally {
+      await db.delete(users).where(eq(users.id, userId));
+    }
+  });
+
+  it("has no previous max when every qualifying set is from one session", async () => {
+    const userId = await makeUser();
+    const exerciseId = await anExerciseId();
+    try {
+      await logSession(userId, exerciseId, new Date("2026-04-01T10:00:00Z"), [
+        { weightKg: 120, reps: 3 },
+        { weightKg: 118, reps: 3 },
+      ]);
+
+      const basis = (await trainingMaxBasis(userId, [exerciseId])).get(
+        exerciseId,
+      )!;
+      expect(basis.current.weightKg).toBe(120);
+      expect(basis.previous).toBeNull();
     } finally {
       await db.delete(users).where(eq(users.id, userId));
     }

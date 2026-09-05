@@ -135,6 +135,9 @@ export function LogWorkout({
                   <h2 className="font-medium">
                     {e.supersetGroup && (
                       <span className="mr-2 text-xs font-semibold text-accent">
+                        {/* A bare "A" next to the name reads as part of it to
+                            a screen reader ("A Seated Cable Row"). */}
+                        <span className="sr-only">Superset </span>
                         {e.supersetGroup}
                       </span>
                     )}

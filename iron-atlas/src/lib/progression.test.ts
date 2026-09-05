@@ -304,9 +304,21 @@ describe("suggestNext — percentage work", () => {
       current: 220,
       previous: 170,
     })!;
-    // roundToPlate(158 * 0.85) = roundToPlate(134.3) = 135
+    // TM 158 rounds to 157.5; roundToPlate(157.5 * 0.85) = 135
     expect(result.weightKg).toBe(135);
-    expect(result.reason).toContain("held to");
+    expect(result.reason).toContain("capped");
+  });
+
+  it("states a training max the prescribed weight was actually derived from", () => {
+    // The explanation used to print a rounded training max while the weight
+    // was computed from the unrounded one, so the two could disagree by up to
+    // a plate increment and the stated maths didn't check out.
+    const result = suggestNext("wave_531", pctPrescription, undefined, {
+      current: 220,
+      previous: 170,
+    })!;
+    const statedTm = Number(/of a ([\d.]+) kg training max/.exec(result.reason)![1]);
+    expect(result.weightKg).toBe(roundToPlate(statedTm * 0.85));
   });
 
   it("does not cap when the new max is within one cycle's increment", () => {

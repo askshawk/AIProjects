@@ -1,6 +1,6 @@
-import { and, gte, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { chatUsage } from "@/db/schema";
+import { chatBudget, chatUsage } from "@/db/schema";
 
 /**
  * Anthropic's list price per million tokens, for the two models the coach can
@@ -78,6 +78,59 @@ export async function recordSpend(
         estimatedCostUsd: sql`${chatUsage.estimatedCostUsd} + ${costUsd}`,
       },
     });
+}
+
+const currentMonth = () => new Date().toISOString().slice(0, 7);
+
+/**
+ * Atomically claims `estimateUsd` against this month's budget. Returns false
+ * if it would exceed it.
+ *
+ * The check and the increment are a single statement against a single row, so
+ * concurrent requests serialise on it. The previous guard read a SUM and then
+ * decided in application code, which meant a burst of requests all saw the
+ * same pre-spend total and all passed — the budget was advisory, with an
+ * overshoot proportional to concurrency.
+ *
+ * Claimed *before* the model runs, using a pessimistic estimate, and settled
+ * to the real figure afterwards by `releaseBudget`.
+ */
+export async function claimBudget(estimateUsd: number): Promise<boolean> {
+  const month = currentMonth();
+
+  // Ensure the row exists so the conditional update below has something to
+  // lock. Does nothing on an existing month.
+  await db
+    .insert(chatBudget)
+    .values({ month, spentUsd: "0" })
+    .onConflictDoNothing();
+
+  const claimed = await db
+    .update(chatBudget)
+    .set({ spentUsd: sql`${chatBudget.spentUsd} + ${estimateUsd}` })
+    .where(
+      and(
+        eq(chatBudget.month, month),
+        sql`${chatBudget.spentUsd} + ${estimateUsd} <= ${MONTHLY_BUDGET_USD}`,
+      ),
+    )
+    .returning({ spent: chatBudget.spentUsd });
+
+  return claimed.length > 0;
+}
+
+/**
+ * Settles a claim to what was actually spent. `deltaUsd` is normally negative
+ * — the pessimistic estimate minus the real cost — and the total is floored at
+ * zero so a bad estimate can't drive it below it.
+ */
+export async function releaseBudget(deltaUsd: number): Promise<void> {
+  await db
+    .update(chatBudget)
+    .set({
+      spentUsd: sql`greatest(0, ${chatBudget.spentUsd} + ${deltaUsd})`,
+    })
+    .where(eq(chatBudget.month, currentMonth()));
 }
 
 /** Total estimated coach spend across every user so far this calendar month. */
