@@ -174,11 +174,16 @@ export async function recentPerformances(
       exerciseId: setLogs.exerciseId,
       sessionId: setLogs.sessionId,
       performedAt: workoutSessions.performedAt,
-      // Cast to int for the same reason as lastPerformances above — bigint
-      // comes back as a string from postgres.js.
-      rank: sql<number>`(row_number() over (
+      // dense_rank, NOT row_number: this ranks *sessions*, and every set
+      // logged in the same session has to share a rank. With row_number, one
+      // session of three sets occupied ranks 1-3 by itself, so a single
+      // missed session was read downstream as three consecutive stalls and
+      // triggered a deload (progression.ts's `stalled` check).
+      // sessionId breaks ties so two sessions sharing a timestamp still rank
+      // separately rather than collapsing into one.
+      rank: sql<number>`(dense_rank() over (
         partition by ${setLogs.exerciseId}
-        order by ${workoutSessions.performedAt} desc
+        order by ${workoutSessions.performedAt} desc, ${setLogs.sessionId} desc
       ))::int`.as("rank"),
     })
     .from(setLogs)
@@ -195,8 +200,15 @@ export async function recentPerformances(
     number,
     { sessionId: number; performedAt: Date; rank: number }[]
   >();
+  // One entry per (exercise, session). The query returns a row per logged
+  // set, and they now share a rank, so without this a 3-set session would
+  // still be pushed three times.
+  const seen = new Set<string>();
   for (const row of recent) {
     if (row.rank > sessionLimit) continue;
+    const key = `${row.exerciseId}:${row.sessionId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     const list = windows.get(row.exerciseId) ?? [];
     list.push(row);
     windows.set(row.exerciseId, list);

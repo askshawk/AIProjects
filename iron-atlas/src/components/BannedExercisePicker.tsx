@@ -72,6 +72,15 @@ export function BannedExercisePicker({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            // This input lives inside the gym form, so Enter would otherwise
+            // submit it — saving the profile *without* the exercise being
+            // searched for, which is the opposite of what pressing Enter here
+            // obviously means.
+            e.preventDefault();
+            if (matches.length > 0) add(matches[0].id);
+          }}
           placeholder="Search an exercise to avoid…"
           aria-label="Search exercises to avoid"
           className="w-full rounded-md border bg-surface px-3 py-2 text-sm"

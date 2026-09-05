@@ -1,8 +1,29 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db, sql as client } from "@/db";
 import { chatUsage, users } from "@/db/schema";
-import { registerUser } from "@/lib/auth";
+
+/**
+ * Registration is rate-limited per caller, so every `makeUser` here has to
+ * look like a different one — otherwise this file's test accounts exhaust a
+ * single bucket and fail on the throttle rather than on anything it's testing.
+ */
+let sourceCounter = 0;
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: () => undefined,
+    set: () => {},
+    delete: () => {},
+  }),
+  headers: async () => ({
+    get: (name: string) =>
+      name.toLowerCase() === "x-forwarded-for"
+        ? `198.18.1.${sourceCounter++ % 250}`
+        : null,
+  }),
+}));
+
+const { registerUser } = await import("@/lib/auth");
 
 /**
  * Runs against the local database — start it with `npm run db`.

@@ -44,6 +44,16 @@ type Props = {
 // this component try to render thousands of inputs and lock up the page.
 const MAX_RENDERED_SETS = 20;
 
+/**
+ * These inputs sit in the same form as "Finish session", so a browser's
+ * implicit submission would end the whole workout when someone presses Enter
+ * (or the mobile keypad's "return", which is the usual way to dismiss a
+ * numeric keyboard) after typing a single set.
+ */
+function swallowEnter(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (event.key === "Enter") event.preventDefault();
+}
+
 function prescriptionText(e: PrescribedExercise) {
   const base = `${e.sets} × ${e.reps}`;
   if (!e.intensityValue || e.intensityType === "none") return base;
@@ -88,8 +98,26 @@ export function LogWorkout({
     return initial;
   });
 
-  const set = (key: string, value: string) =>
+  /**
+   * Which rows the lifter actually performed.
+   *
+   * Prefilled numbers are a *suggestion*, not a record. Without this, every
+   * prescribed row arrived at the server carrying a weight, so the server's
+   * "skip untouched rows" check could never fire and a single tap on Finish
+   * logged the whole day's prescription as completed work — including sets
+   * nobody did. Those phantom sets then fed the training-max maths.
+   */
+  const [done, setDone] = useState<Record<string, boolean>>({});
+
+  const markDone = (rowKey: string, isDone: boolean) =>
+    setDone((prev) => ({ ...prev, [rowKey]: isDone }));
+
+  const set = (key: string, value: string, rowKey: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
+    // Typing into a row is itself a statement that you did it — otherwise
+    // every set would cost two interactions instead of one.
+    setDone((prev) => (prev[rowKey] ? prev : { ...prev, [rowKey]: true }));
+  };
 
   return (
     <form action={action} className="space-y-5">
@@ -162,15 +190,26 @@ export function LogWorkout({
               <div className="divide-y">
                 {Array.from(
                   { length: Math.min(e.sets, MAX_RENDERED_SETS) },
-                  (_, i) => (
-                  <div key={i} className="flex items-center gap-2 px-4 py-2">
+                  (_, i) => {
+                  const rowKey = `${e.id}-${i}`;
+                  const isDone = done[rowKey] ?? false;
+                  return (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 px-4 py-2 ${
+                      isDone ? "" : "opacity-60"
+                    }`}
+                  >
                     <span className="w-8 shrink-0 text-xs text-muted">
                       #{i + 1}
                     </span>
                     <input
                       name={`w-${e.id}-${i}`}
                       value={values[`w-${e.id}-${i}`] ?? ""}
-                      onChange={(ev) => set(`w-${e.id}-${i}`, ev.target.value)}
+                      onChange={(ev) =>
+                        set(`w-${e.id}-${i}`, ev.target.value, rowKey)
+                      }
+                      onKeyDown={swallowEnter}
                       inputMode="decimal"
                       placeholder="kg"
                       aria-label={`Set ${i + 1} weight in kg for ${e.exerciseName}`}
@@ -182,7 +221,10 @@ export function LogWorkout({
                     <input
                       name={`r-${e.id}-${i}`}
                       value={values[`r-${e.id}-${i}`] ?? ""}
-                      onChange={(ev) => set(`r-${e.id}-${i}`, ev.target.value)}
+                      onChange={(ev) =>
+                        set(`r-${e.id}-${i}`, ev.target.value, rowKey)
+                      }
+                      onKeyDown={swallowEnter}
                       inputMode="numeric"
                       placeholder="reps"
                       aria-label={`Set ${i + 1} reps for ${e.exerciseName}`}
@@ -191,7 +233,10 @@ export function LogWorkout({
                     <input
                       name={`e-${e.id}-${i}`}
                       value={values[`e-${e.id}-${i}`] ?? ""}
-                      onChange={(ev) => set(`e-${e.id}-${i}`, ev.target.value)}
+                      onChange={(ev) =>
+                        set(`e-${e.id}-${i}`, ev.target.value, rowKey)
+                      }
+                      onKeyDown={swallowEnter}
                       type="number"
                       inputMode="decimal"
                       min={1}
@@ -201,13 +246,35 @@ export function LogWorkout({
                       aria-label={`Set ${i + 1} RPE, 1 to 10, for ${e.exerciseName}`}
                       className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
                     />
+                    <button
+                      type="button"
+                      onClick={() => markDone(rowKey, !isDone)}
+                      aria-pressed={isDone}
+                      aria-label={`Mark set ${i + 1} of ${e.exerciseName} as ${
+                        isDone ? "not done" : "done"
+                      }`}
+                      className={`ml-auto flex size-11 shrink-0 items-center justify-center rounded-md border text-sm transition-colors ${
+                        isDone
+                          ? "border-accent bg-accent-soft/30 text-accent"
+                          : "text-muted"
+                      }`}
+                    >
+                      <span aria-hidden="true">✓</span>
+                    </button>
                     <input
                       type="hidden"
                       name={`x-${e.id}-${i}`}
                       value={e.exerciseId}
                     />
+                    {/* The marker the server keys on. Prefilled weights mean
+                        a row always *looks* filled in, so "did this happen?"
+                        has to be stated explicitly rather than inferred. */}
+                    {isDone && (
+                      <input type="hidden" name={`d-${e.id}-${i}`} value="1" />
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

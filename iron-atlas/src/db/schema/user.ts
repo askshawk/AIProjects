@@ -50,6 +50,12 @@ export const signInAttempts = pgTable(
   "sign_in_attempts",
   {
     id: serial("id").primaryKey(),
+    /**
+     * The rate-limit bucket key, not necessarily an email — currently
+     * `ip:<address>`. Keeping the original column name avoids a migration for
+     * a rename; see `claimSignInAttempt` for why the key stopped being the
+     * email (keying on it let anyone lock out a known account).
+     */
     email: text("email").notNull(),
     window: text("window").notNull(),
     count: integer("count").notNull().default(0),

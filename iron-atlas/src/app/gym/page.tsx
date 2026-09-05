@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
@@ -19,6 +18,21 @@ export const metadata = {
   robots: { index: false },
 };
 
+/**
+ * Nobody has more than a handful of movements they can't do. The cap exists
+ * because this list is attacker-controllable (it round-trips through a cookie)
+ * and every banned exercise costs several similarity queries per program view.
+ */
+const MAX_BANNED_EXERCISES = 100;
+
+/**
+ * Neither action calls `revalidatePath("/", "layout")` any more. It looked
+ * necessary — every program page derives its swaps from this profile — but the
+ * gym lives in a cookie, so every page that reads it already calls `cookies()`
+ * and is dynamic. The purge was therefore redundant, and since both actions are
+ * deliberately unauthenticated, it also meant one anonymous request could
+ * invalidate the route cache for every visitor on the site.
+ */
 const LABELS: Record<Equipment, string> = {
   barbell: "Barbell & plates",
   dumbbell: "Dumbbells",
@@ -37,10 +51,16 @@ async function saveGym(formData: FormData) {
   const equipment = equipmentEnum.enumValues.filter(
     (e) => formData.get(`eq-${e}`) === "on",
   );
+  // `Number("")` is 0 and `Number.isInteger(0)` is true, so an empty list used
+  // to persist as `[0]` — a phantom id that rendered as a ghost "#0" chip the
+  // user never added. Ids are serial from 1, so anything at or below 0 is
+  // meaningless, and the length cap keeps a hand-crafted submission from
+  // turning one export request into hundreds of similarity queries.
   const banned = String(formData.get("banned") ?? "")
     .split(",")
     .map((s) => Number(s.trim()))
-    .filter(Number.isInteger);
+    .filter((n) => Number.isInteger(n) && n > 0 && n < 2_147_483_647)
+    .slice(0, MAX_BANNED_EXERCISES);
 
   const store = await cookies();
   store.set(
@@ -48,16 +68,12 @@ async function saveGym(formData: FormData) {
     serializeGymProfile({ equipment, bannedExerciseIds: banned }),
     GYM_COOKIE_OPTIONS,
   );
-
-  // Every program page derives its swaps from this, so they all go stale.
-  revalidatePath("/", "layout");
 }
 
 async function clearGym() {
   "use server";
   const store = await cookies();
   store.delete(GYM_COOKIE);
-  revalidatePath("/", "layout");
 }
 
 export default async function GymPage() {
@@ -82,7 +98,17 @@ export default async function GymPage() {
         </p>
       </div>
 
-      <form action={saveGym} className="space-y-6">
+      {/* Keyed on the saved profile so the form genuinely remounts when it
+          changes. Without this, "Clear" appeared to do nothing: the cookie was
+          deleted, but React reused the same instances, and uncontrolled
+          `defaultChecked` boxes plus the picker's mount-time `useState` both
+          kept showing the old profile — so pressing Save afterwards rewrote
+          the very thing that had just been cleared. */}
+      <form
+        key={`${gym.equipment.join(",")}|${gym.bannedExerciseIds.join(",")}`}
+        action={saveGym}
+        className="space-y-6"
+      >
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium">Equipment</legend>
           <div className="grid gap-2 sm:grid-cols-2">

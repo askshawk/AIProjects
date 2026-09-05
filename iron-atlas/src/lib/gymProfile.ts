@@ -14,6 +14,9 @@ import { EMPTY_GYM, type Equipment, type GymProfile } from "@/lib/substitute";
 
 export const GYM_COOKIE = "iron-atlas-gym";
 
+/** Mirrors the cap in the gym form — see the filter in parseGymProfile. */
+const MAX_BANNED_EXERCISE_IDS = 100;
+
 const isEquipment = (v: string): v is Equipment =>
   (equipmentEnum.enumValues as readonly string[]).includes(v);
 
@@ -31,8 +34,19 @@ export function parseGymProfile(raw: string | undefined): GymProfile {
             (e): e is Equipment => typeof e === "string" && isEquipment(e),
           )
         : [],
+      // Bounded on both count and magnitude, because this comes straight off a
+      // user-settable cookie rather than the form. Every banned exercise costs
+      // several vector-similarity queries per program render, so an unbounded
+      // list turns one unauthenticated export request into hundreds of
+      // queries; and `Number.isInteger(1e20)` is true, which would reach an
+      // `integer` column and fail the query outright.
       bannedExerciseIds: Array.isArray(bannedExerciseIds)
-        ? bannedExerciseIds.filter((n): n is number => Number.isInteger(n))
+        ? bannedExerciseIds
+            .filter(
+              (n): n is number =>
+                Number.isInteger(n) && n > 0 && n < 2_147_483_647,
+            )
+            .slice(0, MAX_BANNED_EXERCISE_IDS)
         : [],
     };
   } catch {
@@ -54,4 +68,8 @@ export const GYM_COOKIE_OPTIONS = {
   path: "/",
   maxAge: 60 * 60 * 24 * 365,
   sameSite: "lax",
+  // Only ever written and read on the server, so there's no reason for page
+  // scripts to be able to read or forge it.
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
 } as const;

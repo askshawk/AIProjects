@@ -39,6 +39,47 @@ export const maxDuration = 60;
 /** Panic switch — set in the host env to take the coach offline instantly. */
 const COACH_DISABLED = process.env.COACH_DISABLED === "1";
 
+/**
+ * Hard ceiling on the request body. Generous for a real conversation (a long
+ * coaching thread is a few KB) and far below the point where input-token cost
+ * becomes the dominant spend.
+ */
+const MAX_BODY_BYTES = 64 * 1024;
+/** A thread longer than this is not a coaching conversation. */
+const MAX_MESSAGES = 40;
+/** Per text part, so one message can't carry the whole budget on its own. */
+const MAX_PART_CHARS = 4000;
+/** Also the ceiling used for the up-front spend estimate below. */
+const MAX_OUTPUT_TOKENS = 800;
+
+/**
+ * Only what convertToModelMessages actually needs. Roles are restricted to
+ * user/assistant so a caller can't forge system turns, and every length is
+ * bounded — this schema is a spend guard as much as a correctness one.
+ */
+const requestSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        id: z.string().max(200).optional(),
+        role: z.enum(["user", "assistant"]),
+        parts: z
+          .array(
+            z
+              .object({ type: z.string().max(50) })
+              .catchall(z.unknown())
+              .refine(
+                (p) =>
+                  typeof p.text !== "string" || p.text.length <= MAX_PART_CHARS,
+                { message: "part text too long" },
+              ),
+          )
+          .max(50),
+      }),
+    )
+    .max(MAX_MESSAGES),
+});
+
 const OPUS = "claude-opus-5";
 const SONNET = "claude-sonnet-5";
 
@@ -74,17 +115,33 @@ export async function POST(req: Request) {
     });
   }
 
+  // Size caps come before parsing. Input tokens are billed per request, so an
+  // oversized body is a direct spend multiplier: ~700KB of JSON is ~180k input
+  // tokens (~$0.54) against the ~$0.002 a real coach message costs. The daily
+  // message cap was sized for real messages, so without this one account's
+  // 40 messages could spend the entire monthly budget.
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (declaredLength > MAX_BODY_BYTES) {
+    return new Response("That message is too long — try a shorter one.", {
+      status: 413,
+    });
+  }
+
   let messages: UIMessage[];
   try {
-    const body = await req.json();
-    // A malformed-but-valid-JSON body (missing/wrong-typed `messages`) used
-    // to sail past this and throw inside convertToModelMessages instead —
-    // same bad-request condition, but as an unhandled 500 rather than this
-    // clean 400.
-    if (!Array.isArray(body.messages)) {
-      throw new Error("messages must be an array");
+    const raw = await req.text();
+    // content-length is client-supplied, so re-check against what actually
+    // arrived rather than trusting the header.
+    if (raw.length > MAX_BODY_BYTES) {
+      return new Response("That message is too long — try a shorter one.", {
+        status: 413,
+      });
     }
-    messages = body.messages;
+    // Validated as a shape, not just "is an array" — a malformed-but-valid
+    // JSON body used to pass the array check and then throw inside
+    // convertToModelMessages as an unhandled 500.
+    const body = requestSchema.parse(JSON.parse(raw));
+    messages = body.messages as UIMessage[];
   } catch {
     return new Response("Couldn't read that message — try sending it again.", {
       status: 400,
@@ -121,6 +178,35 @@ export async function POST(req: Request) {
   }
 
   const model = user.isAdmin ? OPUS : SONNET;
+
+  /**
+   * Charged *before* the model is called, then reconciled to the real figure
+   * in onFinish.
+   *
+   * Recording spend only on completion left two holes: a client that
+   * disconnects mid-stream cancels it, so onFinish never fired even though
+   * Anthropic had already billed the input — the monthly budget could sit at
+   * $0.00 while real money left the account. And because the budget check is
+   * a plain SUM, concurrent requests all read the same pre-spend total and
+   * all passed. Charging up front closes the first completely and narrows the
+   * second, since in-flight requests are now visible to each other's check.
+   * Erring high is the safe direction: an abandoned request stays
+   * over-charged rather than free.
+   */
+  const approxInputTokens = Math.ceil(
+    (SYSTEM.length + JSON.stringify(messages).length) / 4,
+  );
+  const upfrontEstimate = estimateCostUsd(
+    model,
+    approxInputTokens,
+    MAX_OUTPUT_TOKENS,
+  );
+  try {
+    await recordSpend(user.id, upfrontEstimate);
+  } catch (err) {
+    console.error("failed to pre-charge coach spend:", err);
+  }
+
   // Plain number, not a property on the nullable `user` — TypeScript can't
   // see across the closure below that `user` was already checked, but it can
   // see that this was.
@@ -154,17 +240,19 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(4),
     // A capped response keeps a single reply from blowing past what a
     // strength-coaching answer should ever need.
-    maxOutputTokens: 800,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
     onFinish: async ({ usage }) => {
-      const cost = estimateCostUsd(
+      const actual = estimateCostUsd(
         model,
         usage.inputTokens ?? 0,
         usage.outputTokens ?? 0,
       );
+      // Only the difference — the up-front estimate is already on the ledger,
+      // so this settles it to the real figure and is usually negative.
       try {
-        await recordSpend(userId, cost);
+        await recordSpend(userId, actual - upfrontEstimate);
       } catch (err) {
-        console.error("failed to record coach spend:", err);
+        console.error("failed to reconcile coach spend:", err);
       }
     },
     tools: {
@@ -290,6 +378,11 @@ export async function POST(req: Request) {
       }),
     },
   });
+
+  // Runs the stream to completion server-side even if the browser goes away
+  // mid-response, so onFinish (and the spend reconciliation in it) still
+  // fires. Deliberately not awaited — the response must start streaming now.
+  void result.consumeStream();
 
   return result.toUIMessageStreamResponse();
 }

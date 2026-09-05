@@ -4,7 +4,7 @@ import {
   timingSafeEqual,
   type ScryptOptions,
 } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, signInAttempts, users } from "@/db/schema";
@@ -122,6 +122,28 @@ export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 export type AuthResult =
   { ok: true; userId: number } | { ok: false; error: string };
 
+/**
+ * Every message these functions can return.
+ *
+ * Exported so the sign-in page can whitelist what it renders. Failures
+ * round-trip through the URL, and echoing that text back unchecked let anyone
+ * put arbitrary wording in a styled alert directly above the real password
+ * field, on the real domain over HTTPS — a convincing phishing setup even
+ * though React escapes the markup. Anything not in this set is replaced with a
+ * generic message.
+ */
+export const AUTH_MESSAGES = [
+  "That doesn't look like an email address.",
+  "Password needs to be at least 8 characters.",
+  "An account with that email already exists.",
+  "Email or password is incorrect.",
+  "Too many attempts — try again in a few minutes.",
+] as const;
+
+export function isKnownAuthMessage(value: string): boolean {
+  return (AUTH_MESSAGES as readonly string[]).includes(value);
+}
+
 export async function registerUser(
   emailRaw: string,
   password: string,
@@ -131,8 +153,23 @@ export async function registerUser(
   if (!email.includes("@") || email.length < 3) {
     return { ok: false, error: "That doesn't look like an email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { ok: false, error: "That doesn't look like an email address." };
+  }
   if (password.length < 8) {
     return { ok: false, error: "Password needs to be at least 8 characters." };
+  }
+
+  // Registration was the one unthrottled entrance in the app, which mattered
+  // more than it looks: every spend guard on the coach is keyed per user, so
+  // unlimited free accounts meant unlimited daily message allowances against
+  // one API key. It also ran scrypt (~32MB, real CPU) for any anonymous
+  // caller. Same bucket mechanism as sign-in, keyed on the caller.
+  if (!(await claimSignInAttempt(`signup:${await requestSource()}`))) {
+    return {
+      ok: false,
+      error: "Too many attempts — try again in a few minutes.",
+    };
   }
 
   const [existing] = await db
@@ -174,11 +211,13 @@ export async function registerUser(
   }
 }
 
-/** Sign-in attempts allowed per email within one window. */
+/** Sign-in attempts allowed from one source within a window. */
 export const SIGN_IN_ATTEMPT_CAP = Number(
   process.env.SIGN_IN_ATTEMPT_CAP ?? 10,
 );
 const SIGN_IN_WINDOW_MINUTES = 15;
+/** Longest string accepted as an email — RFC 5321's limit. */
+const MAX_EMAIL_LENGTH = 254;
 
 function signInWindow(): string {
   const bucketMs = SIGN_IN_WINDOW_MINUTES * 60 * 1000;
@@ -186,23 +225,54 @@ function signInWindow(): string {
 }
 
 /**
- * Atomically claims one sign-in attempt for this email in the current
- * window, before any password check runs. Mirrors chatLimits.ts's
- * claimDailyMessage: the `setWhere` on the conflict update makes the
- * check-and-increment a single atomic statement, so concurrent attempts
- * can't all slip through sitting one under the cap.
+ * Best-effort client address. Only ever used as a rate-limit bucket key, so a
+ * spoofed or missing value costs nothing beyond sharing a bucket — it is never
+ * treated as identity.
  */
-async function claimSignInAttempt(email: string): Promise<boolean> {
+async function requestSource(): Promise<string> {
+  try {
+    const h = await headers();
+    const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const ip = forwarded || h.get("x-real-ip")?.trim();
+    return ip ? `ip:${ip.slice(0, 64)}` : "ip:unknown";
+  } catch {
+    // No request scope (scripts, tests) — one shared bucket is fine.
+    return "ip:unknown";
+  }
+}
+
+/**
+ * Atomically claims one sign-in attempt for a bucket in the current window.
+ * The `setWhere` on the conflict update makes check-and-increment a single
+ * statement, so concurrent attempts can't all slip through at the cap.
+ *
+ * The bucket is the **request source, not the email**. Keying it on the email
+ * meant anyone who knew an address — the owner's is in this repo's commit
+ * history — could burn its attempts with garbage passwords and lock the real
+ * owner out for the rest of the window, indefinitely, including the admin
+ * account. Rate-limiting the caller instead still throttles brute force and
+ * still shields scrypt (~32MB and real CPU per call) from being driven by an
+ * anonymous request, without handing anyone a way to disable someone else's
+ * account.
+ */
+async function claimSignInAttempt(subject: string): Promise<boolean> {
   const window = signInWindow();
   const rows = await db
     .insert(signInAttempts)
-    .values({ email, window, count: 1 })
+    .values({ email: subject, window, count: 1 })
     .onConflictDoUpdate({
       target: [signInAttempts.email, signInAttempts.window],
       set: { count: sql`${signInAttempts.count} + 1` },
       setWhere: sql`${signInAttempts.count} < ${SIGN_IN_ATTEMPT_CAP}`,
     })
     .returning({ count: signInAttempts.count });
+
+  // Opportunistic cleanup, same pattern as expired sessions in createSession.
+  // Without it this table only ever grows.
+  db.delete(signInAttempts)
+    .where(lt(signInAttempts.window, signInWindow()))
+    .catch(() => {});
+
   return rows.length > 0;
 }
 
@@ -212,10 +282,18 @@ export async function authenticate(
 ): Promise<AuthResult> {
   const email = normalizeEmail(emailRaw);
 
+  const GENERIC_CREDENTIALS = "Email or password is incorrect.";
+  // Rejected before it can reach the database. This value used to be written
+  // straight into the rate-limit table with no validation, so junk of any
+  // length became a permanent row — a cheap way to inflate storage.
+  if (email.length > MAX_EMAIL_LENGTH || !email.includes("@")) {
+    return { ok: false, error: GENERIC_CREDENTIALS };
+  }
+
   // Claimed before the expensive scrypt check runs, not after — scrypt at
   // N=2^15 costs real CPU and ~32MB per call, so the cap has to stop an
   // attempt from being *made*, not just stop it from succeeding.
-  if (!(await claimSignInAttempt(email))) {
+  if (!(await claimSignInAttempt(await requestSource()))) {
     return {
       ok: false,
       error: "Too many attempts — try again in a few minutes.",
@@ -229,10 +307,9 @@ export async function authenticate(
 
   // Same message either way — distinguishing them tells an attacker which
   // emails have accounts.
-  const GENERIC = "Email or password is incorrect.";
-  if (!user) return { ok: false, error: GENERIC };
+  if (!user) return { ok: false, error: GENERIC_CREDENTIALS };
   if (!(await verifyPassword(password, user.passwordHash))) {
-    return { ok: false, error: GENERIC };
+    return { ok: false, error: GENERIC_CREDENTIALS };
   }
 
   return { ok: true, userId: user.id };

@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { setLogs, workoutSessions } from "@/db/schema";
+import {
+  setLogs,
+  userProgramDays,
+  userProgramWeeks,
+  userPrograms,
+  workoutSessions,
+} from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { activeProgram } from "@/lib/fork";
 import {
@@ -31,6 +37,29 @@ function clampRpe(rpe: number | null): number | null {
   return Math.min(10, Math.max(1, rpe));
 }
 
+/**
+ * Bounds a logged load. Negative weights were being stored and echoed back as
+ * "repeat -50 kg", and anything at or above 100000 overflows the column's
+ * numeric(7,2) and fails the whole session save.
+ *
+ * A bad value is dropped rather than rejecting the submission: someone
+ * standing in a gym who fat-fingers one number should still get the rest of
+ * their session saved, and a dropped weight is visibly blank next session
+ * whereas a clamped one silently lies.
+ */
+function cleanWeight(kg: number | null): number | null {
+  if (kg === null) return null;
+  if (kg <= 0 || kg > 1000) return null;
+  return kg;
+}
+
+/** Same reasoning as cleanWeight — reps are whole and can't be negative. */
+function cleanReps(reps: number | null): number | null {
+  if (reps === null) return null;
+  if (reps <= 0 || reps > 1000) return null;
+  return Math.round(reps);
+}
+
 export const metadata = {
   title: "Train",
   description: "Today's session: prescription, last time's numbers, and set logging.",
@@ -45,6 +74,29 @@ async function logSession(formData: FormData) {
 
   const dayId = Number(formData.get("dayId"));
   if (!Number.isInteger(dayId)) redirect("/train?badDay=1");
+
+  // `dayId` and the per-row `exerciseId`s all arrive from the client, so both
+  // have to be proved to belong to *this* lifter's own fork. Without this a
+  // crafted POST could write a session against someone else's training day.
+  const prescribed = await prescriptionFor(dayId);
+  const [ownsDay] = await db
+    .select({ id: userProgramDays.id })
+    .from(userProgramDays)
+    .innerJoin(
+      userProgramWeeks,
+      eq(userProgramWeeks.id, userProgramDays.weekId),
+    )
+    .innerJoin(
+      userPrograms,
+      eq(userPrograms.id, userProgramWeeks.userProgramId),
+    )
+    .where(and(eq(userProgramDays.id, dayId), eq(userPrograms.userId, user.id)));
+  if (!ownsDay) redirect("/train?badDay=1");
+
+  // Only exercises this day actually prescribes — closes the same hole for
+  // the hidden exerciseId field, which would otherwise accept any row in the
+  // catalogue (or trip a foreign-key error and fail the whole save).
+  const allowedExerciseIds = new Set(prescribed.map((p) => p.exerciseId));
 
   // Parse the flat form into sets. Field names carry their own identity
   // (w-<prescriptionId>-<setIndex>) so the shape survives a form POST.
@@ -62,16 +114,26 @@ async function logSession(formData: FormData) {
     if (!match) continue;
 
     const [, peId, idx] = match;
+
+    // Only rows the lifter explicitly marked done. This used to infer it from
+    // "does the row have any values?", but LogWorkout prefills every row with
+    // the suggested weight, so that condition was always true and one tap on
+    // Finish logged the entire prescription — including sets never performed,
+    // which then fed the training-max maths.
+    if (formData.get(`d-${peId}-${idx}`) !== "1") continue;
+
     const exerciseId = Number(formData.get(`x-${peId}-${idx}`));
+    if (!allowedExerciseIds.has(exerciseId)) continue;
+
     const num = (v: FormDataEntryValue | null) => {
       const n = Number(String(v ?? "").trim());
       return String(v ?? "").trim() === "" || Number.isNaN(n) ? null : n;
     };
 
-    const weight = num(raw);
-    const reps = num(formData.get(`r-${peId}-${idx}`));
+    const weight = cleanWeight(num(raw));
+    const reps = cleanReps(num(formData.get(`r-${peId}-${idx}`)));
 
-    // An untouched row is not a set that happened.
+    // A row marked done but left blank still isn't a set that happened.
     if (weight === null && reps === null) continue;
 
     parsed.push({

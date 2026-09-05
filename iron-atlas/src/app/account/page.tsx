@@ -7,6 +7,7 @@ import {
   createSession,
   destroySession,
   getCurrentUser,
+  isKnownAuthMessage,
   registerUser,
 } from "@/lib/auth";
 
@@ -54,7 +55,16 @@ export default async function AccountPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const error = Array.isArray(params.error) ? params.error[0] : params.error;
+  const rawError = Array.isArray(params.error) ? params.error[0] : params.error;
+  // Only messages this app actually produces get rendered. The value arrives
+  // from the query string, so without this check anyone could craft a link
+  // that shows arbitrary text in an official-looking alert above the real
+  // login form — e.g. "verify your account by emailing your password to …".
+  const error = rawError
+    ? isKnownAuthMessage(rawError)
+      ? rawError
+      : "Something went wrong — try signing in again."
+    : undefined;
   const user = await getCurrentUser();
 
   if (user) {
