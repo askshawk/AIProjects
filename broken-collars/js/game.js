@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - application shell.
+ * Broken Collars - application shell.
  *
  * Owns the live session (state + generated rival list + transient UI flags),
  * wires up the screens, and runs the once-a-second clock that settles

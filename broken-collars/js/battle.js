@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - deploy phase and replay playback.
+ * Broken Collars - deploy phase and replay playback.
  *
  * Note what this file does NOT do: it never decides who wins. By the time the
  * first frame is drawn, simulateBattle() has already produced the entire
@@ -35,7 +35,10 @@
       hpById: {},
       appliedTick: -1,
       eventsByTick: {},
-      blasts: [],
+      effects: [],
+      facing: {},          // unit id -> last screen-space heading, so dogs face where they run
+      unitMeta: {},
+      playTick: 0,
       speed: 1,
       startedAt: 0,
       raf: 0,
@@ -114,7 +117,11 @@
     return st.army.filter(function (a) { return a.breed === breed; }).length;
   }
 
+  // Must be inside the map AND within the edge band. The bounds check matters:
+  // in isometric, clicks land outside the diamond easily, and without it a dog
+  // could be released into empty space off the field.
   function inDeployZone(pos, grid, margin) {
+    if (pos.x < 0 || pos.y < 0 || pos.x > grid || pos.y > grid) return false;
     return pos.x < margin || pos.y < margin || pos.x > grid - margin || pos.y > grid - margin;
   }
 
@@ -163,6 +170,8 @@
       (st.eventsByTick[ev.t] = st.eventsByTick[ev.t] || []).push(ev);
     });
     st.replay.buildings.forEach(function (b) { st.hpById[b.id] = b.maxHp; });
+    st.unitMeta = {};
+    st.replay.units.forEach(function (u) { st.unitMeta[u.id] = u; });
 
     st.phase = 'playing';
     st.startedAt = performance.now();
@@ -222,7 +231,9 @@
       if (evs) {
         evs.forEach(function (ev) {
           if (ev.type === 'buildingDestroyed' || ev.type === 'defendersOut') {
-            st.blasts.push({ x: ev.x, y: ev.y, tick: st.appliedTick });
+            st.effects.push({ type: 'debris', x: ev.x, y: ev.y, tick: st.appliedTick, life: 10 });
+          } else if (ev.type === 'cageBroken') {
+            st.effects.push({ type: 'freed', x: ev.x, y: ev.y, tick: st.appliedTick, life: 18 });
           }
         });
       }
@@ -257,8 +268,8 @@
     $('battle-destroyed').textContent = Math.round(r.percentDestroyed * 100) + '%';
     $('battle-timer').textContent = KW.screens.mmss(KW.BALANCE.battleSeconds - r.secondsUsed);
 
-    var headline = r.stars >= 3 ? 'The kennel is razed'
-      : r.stars === 2 ? 'A good hunt'
+    var headline = r.stars >= 3 ? 'Every cage is open'
+      : r.stars === 2 ? 'Hounds are running free'
         : r.stars === 1 ? 'A raid, of sorts'
           : 'Driven off';
 
@@ -266,7 +277,8 @@
       '<h3>' + headline + '</h3>' +
       '<div class="result-stars">' + KW.screens.starString(r.stars).replace(/☆/g, '<span class="off">☆</span>') + '</div>' +
       '<div class="result-lines">' +
-      '<span>Destroyed</span><span>' + Math.round(r.percentDestroyed * 100) + '% (' + r.destroyed + '/' + r.totalBuildings + ')</span>' +
+      '<span>Razed</span><span>' + Math.round(r.percentDestroyed * 100) + '% (' + r.destroyed + '/' + r.totalBuildings + ')</span>' +
+      '<span>Hounds freed</span><span>🐕 ' + r.freedCount + ' from ' + r.cagesBroken + ' cage' + (r.cagesBroken === 1 ? '' : 's') + '</span>' +
       '<span>Food taken</span><span>🥩 ' + KW.screens.fmt(r.loot.food) + '</span>' +
       '<span>Gold taken</span><span>💰 ' + KW.screens.fmt(r.loot.gold) + '</span>' +
       '<span>Bloodline</span><span>🩸 ' + r.bloodline + '</span>' +
@@ -285,8 +297,12 @@
     KW.playerState.applyRaid(game.state, st.target, st.army, st.replay.result);
     game.save();
     var r = st.replay.result;
+    var freedNote = r.joined
+      ? ' ' + r.joined + ' freed hound' + (r.joined === 1 ? '' : 's') + ' joined the pack' +
+        (r.turnedAway ? ' (' + r.turnedAway + ' turned away, no kennel space)' : '') + '.'
+      : '';
     game.status('Raid on ' + st.target.name + ': ' + r.stars + '★, took ' +
-      KW.screens.fmt(r.loot.food) + ' food and ' + KW.screens.fmt(r.loot.gold) + ' gold.');
+      KW.screens.fmt(r.loot.food) + ' food and ' + KW.screens.fmt(r.loot.gold) + ' gold.' + freedNote);
     close();
     game.refresh();
   }
@@ -297,41 +313,53 @@
     if (!st) return;
     var KW = KWns(), B = KW.BALANCE, M = KW.baseModel, R = KW.render;
     var base = st.target.base;
-    var canvas = $('battleCanvas');
-    var g = R.setup(canvas, base.grid);
-    var ctx = g.ctx, tile = g.tile;
+    var m = R.setup($('battleCanvas'), base.grid);
 
-    R.drawGround(ctx, base.grid, tile);
-    if (st.phase === 'deploy') R.drawDeployZone(ctx, base.grid, tile, B.deployMargin);
+    st.playTick = (frameIndex || 0) + (blend || 0);
 
-    // Buildings, skipping anything already destroyed in the replay.
+    R.drawGround(m);
+    if (st.phase === 'deploy') R.drawDeployZone(m, B.deployMargin);
+
+    // Everything standing on the field goes into one list and is painted back
+    // to front, so dogs pass correctly in front of and behind buildings.
+    var drawables = [];
+
     base.buildings.forEach(function (b) {
-      var d = M.def(b.type);
       var maxHp = M.hpOf(b.type, b.level);
       var hp = st.replay ? (st.hpById[b.id] != null ? st.hpById[b.id] : maxHp) : maxHp;
       if (hp <= 0) return;
-      R.drawBuilding(ctx, b.x, b.y, tile, {
-        size: d.size, role: d.role, icon: d.icon, level: b.level, hp: hp / maxHp
+      drawables.push({
+        depth: R.depthOf(b.x, b.y, M.def(b.type).size),
+        paint: function () {
+          R.drawBuilding(m, b.x, b.y, {
+            type: b.type, size: M.def(b.type).size, level: b.level, hp: hp / maxHp
+          });
+        }
       });
     });
 
     if (st.phase === 'deploy') {
       st.army.forEach(function (a) {
-        R.drawDog(ctx, a.x, a.y, tile, { color: B.breeds[a.breed].color });
+        drawables.push({
+          depth: R.depthOf(a.x, a.y, 0.5),
+          paint: function () {
+            R.drawDog(m, a.x, a.y, {
+              color: B.breeds[a.breed].color, facing: 1, phase: 0, moving: false
+            });
+          }
+        });
       });
     } else if (st.replay) {
-      drawReplayFrame(ctx, tile, frameIndex || 0, blend || 0);
+      collectDogs(m, drawables, frameIndex || 0, blend || 0);
     }
 
-    // Destruction puffs.
-    var nowTick = st.appliedTick;
-    st.blasts = st.blasts.filter(function (bl) { return nowTick - bl.tick < 8; });
-    st.blasts.forEach(function (bl) {
-      R.drawBlast(ctx, bl.x, bl.y, tile, (nowTick - bl.tick) / 8);
-    });
+    drawables.sort(function (a, b) { return a.depth - b.depth; });
+    drawables.forEach(function (d) { d.paint(); });
+
+    drawEffects(m);
   }
 
-  function drawReplayFrame(ctx, tile, i, blend) {
+  function collectDogs(m, out, i, blend) {
     var KW = KWns(), B = KW.BALANCE, R = KW.render;
     var frames = st.replay.frames;
     var cur = frames[Math.min(i, frames.length - 1)];
@@ -341,24 +369,51 @@
     var nextById = {};
     next.u.forEach(function (u) { nextById[u.i] = u; });
 
-    var meta = {};
-    st.replay.units.forEach(function (u) { meta[u.id] = u; });
-
     cur.u.forEach(function (u) {
-      var m = meta[u.i];
-      if (!m) return;
+      var meta = st.unitMeta[u.i];
+      if (!meta) return;
       var n = nextById[u.i];
-      // Interpolate toward the next frame so 10 Hz simulation reads smoothly.
+      // Interpolate toward the next frame so a 10 Hz simulation reads smoothly.
       var x = n ? u.x + (n.x - u.x) * blend : u.x;
       var y = n ? u.y + (n.y - u.y) * blend : u.y;
-      var isDef = m.side === 'def';
-      R.drawDog(ctx, x, y, tile, {
-        color: isDef ? '#d97b5a' : (B.breeds[m.breed] ? B.breeds[m.breed].color : '#ccc'),
-        hp: m.maxHp ? u.h / m.maxHp : 1,
-        attacking: !!u.a,
-        defender: isDef,
-        radius: isDef ? 0.3 : 0.34
+
+      // Screen-space heading: moving +x and -y both read as "rightward" in
+      // isometric, so the sprite flips on the difference of the two.
+      if (n) {
+        var sdx = (n.x - u.x) - (n.y - u.y);
+        if (Math.abs(sdx) > 0.0004) st.facing[u.i] = sdx > 0 ? 1 : -1;
+      }
+
+      var isDef = meta.side === 'def';
+      out.push({
+        depth: R.depthOf(x, y, 0.5),
+        paint: function () {
+          R.drawDog(m, x, y, {
+            color: isDef ? '#d97b5a' : (B.breeds[meta.breed] ? B.breeds[meta.breed].color : '#ccc'),
+            facing: st.facing[u.i] || 1,
+            phase: (i + blend) * 0.62 + u.i * 1.3,
+            moving: !u.a,
+            attacking: !!u.a,
+            defender: isDef,
+            hp: meta.maxHp ? u.h / meta.maxHp : 1
+          });
+        }
       });
+    });
+  }
+
+  function drawEffects(m) {
+    var R = KWns().render;
+    var now = st.playTick;
+    st.effects = st.effects.filter(function (e) { return now - e.tick < e.life; });
+    st.effects.forEach(function (e) {
+      var p = Math.max(0, (now - e.tick) / e.life);
+      if (e.type === 'freed') {
+        R.drawFreedBurst(m, e.x, e.y, p);
+        R.drawFloatText(m, e.x, e.y, 'hounds freed', p, '#9fe08a');
+      } else {
+        R.drawDebris(m, e.x, e.y, p);
+      }
     });
   }
 

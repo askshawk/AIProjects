@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - enemy base generation.
+ * Broken Collars - enemy base generation.
  *
  * Generates rival kennels deterministically from a seed. The output is an
  * ordinary base snapshot, byte-for-byte the same shape as the player's own
@@ -19,7 +19,7 @@
   var HOUSES = ['Blackmoor', 'Harrow', 'Thornfield', 'Ravenscar', 'Dunkeld',
     'Grimsby', 'Ashvale', 'Wolfden', 'Caskmere', 'Bramblewick',
     'Stonepaw', 'Northgate', 'Hollowmere', 'Fenwick', 'Draymoor'];
-  var TITLES = ['Kennels', 'Keep', 'Hold', 'Barrows', 'Court', 'Run', 'Yard', 'Watch'];
+  var TITLES = ['Kennels', 'Pits', 'Chainyard', 'Holdfast', 'Barrows', 'Keep', 'Runs', 'Cages'];
 
   function nameFor(rng) {
     return rng.pick(HOUSES) + ' ' + rng.pick(TITLES);
@@ -84,6 +84,9 @@
 
     // How many of each type this rival bothered to build.
     function countFor(type) {
+      // Cages are enemy-only, so their count comes from its own curve rather
+      // than the player-facing build limits (which are 0 for cages).
+      if (type === 'cage') return M.at(B.cagesByLevel, kl);
       var cap = M.at(B.limits[type], kl);
       if (!cap) return 0;
       var fill = 0.65 + rng() * 0.35;
@@ -95,17 +98,20 @@
     var kx = Math.floor(grid / 2 - kSize / 2);
     place('kennel', kx, kx, kl);
 
-    // Storages hug the core (they hold the loot), production sits further out,
-    // defences ring the whole thing.
+    // Storages and cages hug the core (they hold what you came for),
+    // production sits further out, defences ring the whole thing.
+    // Radii are kept inside the deploy band at the map edge, so a captor never
+    // builds into the strip where raiders are released.
     var plan = [
-      { type: 'foodStore', min: 2.5, max: 5.5 },
-      { type: 'goldVault', min: 2.5, max: 5.5 },
-      { type: 'breedingPen', min: 3, max: 6.5 },
-      { type: 'trainingYard', min: 3.5, max: 7 },
-      { type: 'farm', min: 4.5, max: 9 },
-      { type: 'goldMine', min: 4.5, max: 9 },
-      { type: 'guardPost', min: 3.5, max: 7 },
-      { type: 'watchtower', min: 3, max: 7.5 }
+      { type: 'cage', min: 2, max: 4 },
+      { type: 'foodStore', min: 2, max: 4.5 },
+      { type: 'goldVault', min: 2, max: 4.5 },
+      { type: 'breedingPen', min: 2.5, max: 5 },
+      { type: 'trainingYard', min: 3, max: 5.5 },
+      { type: 'farm', min: 4, max: 7 },
+      { type: 'goldMine', min: 4, max: 7 },
+      { type: 'guardPost', min: 3, max: 5.5 },
+      { type: 'watchtower', min: 2.5, max: 6 }
     ];
 
     plan.forEach(function (entry) {
@@ -134,7 +140,7 @@
   function ringWalls(base, rng, maxWalls, level, grid, free, place) {
     if (!maxWalls) return;
     var KW = G().KW;
-    var CORE = { kennel: 1, foodStore: 1, goldVault: 1, breedingPen: 1, trainingYard: 1, guardPost: 1 };
+    var CORE = { kennel: 1, foodStore: 1, goldVault: 1, breedingPen: 1, trainingYard: 1, guardPost: 1, cage: 1 };
 
     var core = base.buildings.filter(function (b) { return CORE[b.type]; });
     if (!core.length) return;
@@ -160,12 +166,17 @@
 
     var chosen;
     if (usable.length > maxWalls) {
-      // Not enough stone to close the ring: spread what there is evenly rather
-      // than walling one side and leaving the rest open.
-      chosen = [];
-      for (var i = 0; i < maxWalls; i++) {
-        chosen.push(usable[Math.floor(i * usable.length / maxWalls)]);
+      // Not enough stone to close the ring. Build a few solid stretches rather
+      // than scattering single blocks, which reads as a half-finished
+      // fortification instead of rubble dropped at random.
+      var runs = rng.int(2, 3);
+      var runLen = Math.floor(maxWalls / runs);
+      var picked = new Set();
+      for (var rIdx = 0; rIdx < runs; rIdx++) {
+        var start = Math.floor((rIdx / runs) * usable.length) + rng.int(0, 2);
+        for (var k = 0; k < runLen; k++) picked.add((start + k) % usable.length);
       }
+      chosen = usable.filter(function (_, idx) { return picked.has(idx); });
     } else {
       // Enough to close it, so punch a few deliberate gaps to attack through.
       var gaps = new Set();

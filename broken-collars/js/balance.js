@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - balance configuration.
+ * Broken Collars - balance configuration.
  *
  * Every tunable number lives here. Nothing in this file touches the DOM, so it
  * loads unchanged in Node (see tools/verify.js) as well as in the browser.
@@ -18,7 +18,9 @@
     version: 1,
 
     // ---- Battlefield ----
-    grid: 26,             // battlefield and base are both 26x26 tiles
+    // Battlefield and base are both this many tiles square. Kept tight so
+    // buildings render large enough to read in isometric.
+    grid: 22,
     tickRate: 10,         // simulation steps per second (the replay clock)
     battleSeconds: 180,   // hard timer on every raid
     deployMargin: 3,      // dogs must be released within N tiles of the map edge
@@ -101,6 +103,17 @@
         hp: [520, 680, 880, 1150, 1500],
         cost: [320, 950, 2700, 6800, 15500]
       },
+      // Enemy-only. Captors keep stolen hounds here; breaking a cage row frees
+      // them and they join your pack. The player can never build one (their
+      // limit is 0 at every Kennel level), but it lives in the same building
+      // table because enemy and player bases are the same data shape.
+      cage: {
+        label: 'Cage Row', icon: '⛓️', size: 2, role: 'cage',
+        blurb: 'Stolen hounds are kept here. Break it and they run to you.',
+        captives: [2, 3, 4, 5, 6],
+        hp: [340, 450, 590, 770, 1000],
+        cost: [0, 0, 0, 0, 0]
+      },
       wall: {
         label: 'Wall', icon: '🧱', size: 1, role: 'wall',
         blurb: 'Slows anything that cannot slip through a gap.',
@@ -121,6 +134,7 @@
       trainingYard: [1, 1, 1, 2, 2],
       watchtower: [1, 2, 3, 4, 5],
       guardPost: [0, 1, 1, 2, 3],
+      cage: [0, 0, 0, 0, 0],       // enemy-only: you free hounds, you do not cage them
       // Enough stone at every level to actually close a ring around the core,
       // otherwise walls render as a dashed line and stop nothing.
       wall: [24, 36, 46, 58, 72]
@@ -204,6 +218,18 @@
     },
 
     upgradeOrder: ['ironJaws', 'thickCoats', 'packRunners'],
+
+    // ---- Liberation ----
+    // How many cage rows a captor keeps, by their Kennel level.
+    cagesByLevel: [1, 1, 2, 2, 2],
+
+    // What turns up inside them, as [breed, weight]. Freed hounds ignore the
+    // unlock gate on purpose: rescuing a Husky before you can breed one is the
+    // reward, and it teases the breed you have not paid for yet.
+    freedBreeds: [
+      ['jackRussell', 40], ['malinois', 25], ['mastiff', 15],
+      ['bloodhound', 10], ['greyhound', 7], ['husky', 3]
+    ],
 
     // ---- Starting conditions ----
     start: {

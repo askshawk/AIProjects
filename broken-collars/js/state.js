@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - player state and economy.
+ * Broken Collars - player state and economy.
  *
  * The entire save is ONE serializable object. Right now it lives in
  * localStorage; the shape is chosen so that moving it to a database row later
@@ -17,7 +17,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var SAVE_KEY = 'kennelWars.save.v1';
+  var SAVE_KEY = 'brokenCollars.save.v1';
 
   function G() { return typeof globalThis !== 'undefined' ? globalThis : this; }
   function KWns() { return G().KW; }
@@ -39,7 +39,7 @@
       mapSeed: 'map-' + now,
       bestStars: {},          // targetId -> best stars earned
       raided: {},             // targetId -> loot already taken, so bases run dry
-      stats: { raids: 0, stars: 0, foodLooted: 0, goldLooted: 0, dogsLost: 0 }
+      stats: { raids: 0, stars: 0, foodLooted: 0, goldLooted: 0, dogsLost: 0, dogsFreed: 0 }
     };
   }
 
@@ -311,6 +311,25 @@
     state.resources.food = Math.min(capacity(state, 'food'), state.resources.food + result.loot.food);
     state.resources.gold = Math.min(capacity(state, 'gold'), state.resources.gold + result.loot.gold);
     state.resources.bloodline += result.bloodline;
+
+    // Hounds freed from broken cages join the pack, as far as there is room.
+    // Any beyond that are recorded as taken in but not kept for war.
+    var B = KWns().BALANCE;
+    var joined = 0, turnedAway = 0;
+    Object.keys(result.freed || {}).forEach(function (breed) {
+      for (var i = 0; i < result.freed[breed]; i++) {
+        var space = B.breeds[breed].space;
+        if (armyUsed(state) + space <= armyCapacity(state)) {
+          state.roster[breed] = (state.roster[breed] || 0) + 1;
+          joined++;
+        } else {
+          turnedAway++;
+        }
+      }
+    });
+    result.joined = joined;
+    result.turnedAway = turnedAway;
+    state.stats.dogsFreed = (state.stats.dogsFreed || 0) + joined;
 
     var prev = state.bestStars[target.id] || 0;
     if (result.stars > prev) state.bestStars[target.id] = result.stars;

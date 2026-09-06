@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - base layout model.
+ * Broken Collars - base layout model.
  *
  * A base is plain serializable data and nothing else:
  *
@@ -182,13 +182,13 @@
   function createStartingBase() {
     var base = { grid: balance().grid, buildings: [], loot: { food: 0, gold: 0 } };
     var plan = [
-      ['kennel', 12, 12],
-      ['farm', 8, 12],
-      ['goldMine', 12, 8],
-      ['foodStore', 8, 8],
-      ['goldVault', 17, 17],
-      ['breedingPen', 17, 8],
-      ['trainingYard', 16, 12]
+      ['kennel', 10, 10],
+      ['farm', 6, 10],
+      ['goldMine', 10, 6],
+      ['foodStore', 6, 6],
+      ['goldVault', 14, 14],
+      ['breedingPen', 14, 6],
+      ['trainingYard', 14, 10]
     ];
     plan.forEach(function (p) { addBuilding(base, p[0], p[1], p[2], 1); });
     return base;

@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - battle simulation.
+ * Broken Collars - battle simulation.
  *
  * THIS FILE MUST NEVER TOUCH THE DOM.
  *
@@ -139,7 +139,9 @@
       if (kind === 'defense') {
         pick = alive.filter(function (b) { return b.role === 'defense'; });
       } else if (kind === 'storage') {
-        pick = alive.filter(function (b) { return b.role === 'storage' || b.role === 'production'; });
+        pick = alive.filter(function (b) {
+          return b.role === 'storage' || b.role === 'production' || b.role === 'cage';
+        });
       } else {
         pick = [];
       }
@@ -186,6 +188,7 @@
     var events = [];
     var destroyedCount = 0;
     var kennelDestroyed = false;
+    var brokenCages = [];
 
     function killBuilding(b, tick) {
       b.alive = false;
@@ -193,6 +196,10 @@
       clearCells(b);
       if (b.role !== 'wall') destroyedCount++;
       if (b.type === 'kennel') kennelDestroyed = true;
+      if (b.type === 'cage') {
+        brokenCages.push(b);
+        events.push({ t: tick, type: 'cageBroken', id: b.id, x: b.cx, y: b.cy });
+      }
       events.push({ t: tick, type: 'buildingDestroyed', id: b.id, x: b.cx, y: b.cy });
     }
 
@@ -372,6 +379,27 @@
 
     var survivors = units.filter(function (u) { return u.alive && u.side === 'atk'; }).length;
 
+    // Every cage row broken open sends its hounds home with you. Drawn from the
+    // same seeded stream as the battle, so the rescue replays identically too.
+    var freed = {};
+    var freedCount = 0;
+    var table = B.freedBreeds;
+    var totalWeight = table.reduce(function (sum, e) { return sum + e[1]; }, 0);
+    brokenCages.forEach(function (cage) {
+      var captives = M.at(M.def('cage').captives, cage.level);
+      for (var i = 0; i < captives; i++) {
+        var roll = rng() * totalWeight;
+        for (var j = 0; j < table.length; j++) {
+          roll -= table[j][1];
+          if (roll <= 0) {
+            freed[table[j][0]] = (freed[table[j][0]] || 0) + 1;
+            freedCount++;
+            break;
+          }
+        }
+      }
+    });
+
     return {
       seed: opts.seed >>> 0,
       tickRate: B.tickRate,
@@ -397,6 +425,9 @@
         kennelDestroyed: kennelDestroyed,
         stars: stars,
         loot: loot,
+        freed: freed,
+        freedCount: freedCount,
+        cagesBroken: brokenCages.length,
         bloodline: B.bloodlineByStars[stars],
         survivors: survivors,
         attackers: opts.army.length,

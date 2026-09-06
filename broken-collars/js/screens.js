@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - screen rendering and input.
+ * Broken Collars - screen rendering and input.
  *
  * Everything here reads from the player state object and writes back through
  * playerState.*; no game rules are decided in this file.
@@ -46,39 +46,58 @@
   function drawBase(game) {
     var KW = KWns(), M = KW.baseModel, R = KW.render;
     var s = game.state, base = s.base;
-    var canvas = $('baseCanvas');
-    var g = R.setup(canvas, base.grid);
-    var ctx = g.ctx, tile = g.tile;
+    var m = R.setup($('baseCanvas'), base.grid);
 
-    R.drawGround(ctx, base.grid, tile);
+    R.drawGround(m);
 
-    base.buildings.forEach(function (b) {
-      var d = M.def(b.type);
-      R.drawBuilding(ctx, b.x, b.y, tile, {
-        size: d.size, role: d.role, icon: d.icon, level: b.level,
-        selected: b.id === game.ui.selectedId,
-        dim: game.ui.moveMode && b.id === game.ui.selectedId
-      });
-    });
-
-    // Range ring for a selected watchtower.
     var sel = base.buildings.find(function (b) { return b.id === game.ui.selectedId; });
+
+    // Watchtower coverage, painted on the ground before anything stands on it.
     if (sel && sel.type === 'watchtower') {
       var c = M.centerOf(sel);
-      R.drawRange(ctx, c.x, c.y, M.at(M.def('watchtower').range, sel.level), tile);
+      var range = M.at(M.def('watchtower').range, sel.level);
+      for (var ty = 0; ty < base.grid; ty++) {
+        for (var tx = 0; tx < base.grid; tx++) {
+          if (Math.hypot(tx + 0.5 - c.x, ty + 0.5 - c.y) <= range) {
+            R.fillTile(m, tx, ty, 'rgba(240,210,100,0.12)');
+          }
+        }
+      }
     }
 
+    if (sel) R.outlineFootprint(m, sel.x, sel.y, M.def(sel.type).size, 'rgba(240,210,100,0.9)');
+
     // Ghost preview while placing or moving.
+    var ghost = null;
     var mode = game.ui.buildMode || (game.ui.moveMode && sel ? sel.type : null);
     if (mode && game.ui.hover) {
-      var size = M.def(mode).size;
       var pos = ghostPosition(base, mode, game.ui.hover);
-      var ok = M.canPlace(base, mode, pos.x, pos.y, game.ui.moveMode ? game.ui.selectedId : undefined);
-      R.drawBuilding(ctx, pos.x, pos.y, tile, {
-        size: size, role: M.def(mode).role, icon: M.def(mode).icon, level: 1,
-        ghost: true, invalid: !ok
-      });
+      ghost = {
+        type: mode, x: pos.x, y: pos.y, size: M.def(mode).size,
+        ok: M.canPlace(base, mode, pos.x, pos.y, game.ui.moveMode ? game.ui.selectedId : undefined)
+      };
     }
+
+    // Isometric boxes must be painted back to front or they overlap wrongly.
+    var items = base.buildings.map(function (b) {
+      return { b: b, depth: R.depthOf(b.x, b.y, M.def(b.type).size) };
+    });
+    if (ghost) items.push({ ghost: ghost, depth: R.depthOf(ghost.x, ghost.y, ghost.size) });
+    items.sort(function (a, b) { return a.depth - b.depth; });
+
+    items.forEach(function (it) {
+      if (it.ghost) {
+        R.drawBuilding(m, it.ghost.x, it.ghost.y, {
+          type: it.ghost.type, size: it.ghost.size, level: 1,
+          ghost: true, invalid: !it.ghost.ok
+        });
+      } else {
+        R.drawBuilding(m, it.b.x, it.b.y, {
+          type: it.b.type, size: M.def(it.b.type).size, level: it.b.level,
+          selected: it.b.id === game.ui.selectedId
+        });
+      }
+    });
   }
 
   // Centre the footprint on the cursor and keep it inside the grid.
@@ -200,8 +219,16 @@
     var canvas = $('baseCanvas');
     var KW = KWns(), M = KW.baseModel, P = KW.playerState;
 
+    // In isometric the canvas is a rectangle but the field is a diamond, so a
+    // lot of the canvas is off-map. Ignore those points rather than clamping
+    // them onto the nearest edge tile.
+    function onMap(pos, grid) {
+      return pos && pos.x >= 0 && pos.y >= 0 && pos.x <= grid && pos.y <= grid;
+    }
+
     canvas.addEventListener('mousemove', function (e) {
-      game.ui.hover = KW.render.eventToTile(canvas, e, game.state.base.grid);
+      var pos = KW.render.eventToTile(canvas, e, game.state.base.grid);
+      game.ui.hover = onMap(pos, game.state.base.grid) ? pos : null;
       if (game.ui.buildMode || game.ui.moveMode) drawBase(game);
     });
     canvas.addEventListener('mouseleave', function () {
@@ -212,6 +239,7 @@
     canvas.addEventListener('click', function (e) {
       var s = game.state;
       var pos = KW.render.eventToTile(canvas, e, s.base.grid);
+      if (!onMap(pos, s.base.grid)) return;
       game.ui.hover = pos;
 
       // Placing a new building.

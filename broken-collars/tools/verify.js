@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Kennel Wars - determinism check.
+ * Broken Collars - determinism check.
  *
  *   node tools/verify.js [runs]
  *
@@ -72,11 +72,11 @@ function buildArmy(seed, level) {
 const runs = Number(process.argv[2] || 12);
 let failures = 0;
 
-console.log('Kennel Wars determinism check');
+console.log('Broken Collars determinism check');
 console.log('-'.repeat(74));
 console.log(
   'seed'.padEnd(12) + 'lvl'.padEnd(5) + 'dogs'.padEnd(6) +
-  'destroyed'.padEnd(11) + 'stars'.padEnd(7) + 'loot'.padEnd(16) + 'fingerprint'
+  'destroyed'.padEnd(11) + 'stars'.padEnd(7) + 'loot'.padEnd(16) + 'freed'.padEnd(7) + 'fingerprint'
 );
 console.log('-'.repeat(74));
 
@@ -102,6 +102,7 @@ for (let i = 0; i < runs; i++) {
     (Math.round(r.percentDestroyed * 100) + '%').padEnd(11) +
     String(r.stars).padEnd(7) +
     (r.loot.food + 'f / ' + r.loot.gold + 'g').padEnd(16) +
+    (r.freedCount + '/' + r.cagesBroken + 'c').padEnd(7) +
     fa + (same ? '' : '  MISMATCH -> ' + fb)
   );
 }

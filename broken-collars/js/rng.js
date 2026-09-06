@@ -1,5 +1,5 @@
 /*
- * Kennel Wars - seeded random numbers.
+ * Broken Collars - seeded random numbers.
  *
  * The battle simulation must never call Math.random(). Every random decision
  * comes from one of these generators, seeded by a number that is stored with
