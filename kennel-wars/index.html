@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kennel Wars — Raise the Pack, Take the Land</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <header id="hud">
+    <div class="brand">
+      <span class="crest">🐕‍🦺</span>
+      <span class="brand-text">Kennel Wars</span>
+    </div>
+    <div class="resources">
+      <div class="res" title="Food breeds and trains dogs">
+        <span class="res-icon">🥩</span>
+        <span class="res-body"><b id="res-food">0</b><small id="cap-food">/0</small></span>
+      </div>
+      <div class="res" title="Gold builds and upgrades">
+        <span class="res-icon">💰</span>
+        <span class="res-body"><b id="res-gold">0</b><small id="cap-gold">/0</small></span>
+      </div>
+      <div class="res" title="Bloodline points unlock breeds and permanent buffs">
+        <span class="res-icon">🩸</span>
+        <span class="res-body"><b id="res-bloodline">0</b></span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <span id="kennel-badge" class="badge">Kennel 1</span>
+      <button id="btn-reset" class="ghost-btn" title="Wipe your save and start over">Reset</button>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button class="tab active" data-screen="base">🏰 Base</button>
+    <button class="tab" data-screen="army">🐾 Army</button>
+    <button class="tab" data-screen="raid">⚔️ Raid</button>
+  </nav>
+
+  <main>
+    <!-- ---------------- BASE ---------------- -->
+    <section id="screen-base" class="screen active">
+      <div class="stage">
+        <canvas id="baseCanvas"></canvas>
+        <div id="base-hint" class="stage-hint">Click a building to inspect it, or pick something to build.</div>
+      </div>
+      <aside class="panel">
+        <h2>Build</h2>
+        <div id="palette" class="palette"></div>
+        <div id="selection" class="selection">
+          <p class="muted">Nothing selected.</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ---------------- ARMY ---------------- -->
+    <section id="screen-army" class="screen">
+      <div class="army-main">
+        <div class="capacity-head">
+          <h2>War Pack</h2>
+          <span id="army-capacity" class="badge">0 / 0</span>
+        </div>
+        <div class="capacity-bar"><div id="army-bar"></div></div>
+        <div id="breed-list" class="breed-list"></div>
+      </div>
+      <aside class="panel">
+        <h2>Training Yard</h2>
+        <div id="queue" class="queue"><p class="muted">Nothing in training.</p></div>
+        <h2>Bloodline</h2>
+        <p class="muted small">Earned by raiding. Spent on permanent pack-wide buffs.</p>
+        <div id="upgrade-list" class="upgrade-list"></div>
+      </aside>
+    </section>
+
+    <!-- ---------------- RAID ---------------- -->
+    <section id="screen-raid" class="screen">
+      <div class="raid-main">
+        <div class="capacity-head">
+          <h2>Rival Kennels</h2>
+          <button id="btn-refresh-map" class="ghost-btn">Find new rivals</button>
+        </div>
+        <p class="muted small">Deployed dogs are spent whether you win or lose. Bring enough Mastiffs to open the walls.</p>
+        <div id="target-list" class="target-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="statusbar"><span id="status">Welcome, lord. Your kennel awaits.</span></footer>
+</div>
+
+<!-- ---------------- BATTLE ---------------- -->
+<div id="battleOverlay" class="overlay hidden">
+  <div class="battle-box">
+    <header class="battle-head">
+      <div>
+        <h2 id="battle-title">Raid</h2>
+        <span id="battle-sub" class="muted small">Release your dogs along the highlighted edge.</span>
+      </div>
+      <div class="battle-stats">
+        <span id="battle-timer" class="badge">3:00</span>
+        <span id="battle-destroyed" class="badge">0%</span>
+        <button id="btn-leave" class="ghost-btn">Leave</button>
+      </div>
+    </header>
+
+    <div class="battle-stage">
+      <canvas id="battleCanvas"></canvas>
+      <div id="result-card" class="result-card hidden"></div>
+    </div>
+
+    <div id="deploy-bar" class="deploy-bar"></div>
+
+    <div class="battle-controls">
+      <button id="btn-start" class="primary-btn">Release the pack</button>
+      <button id="btn-speed" class="ghost-btn hidden">Speed ×1</button>
+      <button id="btn-collect" class="primary-btn hidden">Collect loot</button>
+      <span id="deploy-hint" class="muted small">Pick a breed, then click inside the glowing band.</span>
+    </div>
+  </div>
+</div>
+
+<script src="js/balance.js"></script>
+<script src="js/rng.js"></script>
+<script src="js/baseModel.js"></script>
+<script src="js/simulate.js"></script>
+<script src="js/aiBases.js"></script>
+<script src="js/state.js"></script>
+<script src="js/render.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
