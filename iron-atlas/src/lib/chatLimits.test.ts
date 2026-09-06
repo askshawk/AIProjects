@@ -18,7 +18,7 @@ vi.mock("next/headers", () => ({
   headers: async () => ({
     get: (name: string) =>
       name.toLowerCase() === "x-forwarded-for"
-        ? `198.18.1.${sourceCounter++ % 250}`
+        ? `test-${process.pid}-${sourceCounter++}-${Math.random().toString(36).slice(2)}`
         : null,
   }),
 }));

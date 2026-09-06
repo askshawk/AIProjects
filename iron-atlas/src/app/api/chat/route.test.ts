@@ -33,7 +33,7 @@ vi.mock("next/headers", () => ({
   headers: async () => ({
     get: (name: string) =>
       name.toLowerCase() === "x-forwarded-for"
-        ? `198.18.2.${sourceCounter++ % 250}`
+        ? `test-${process.pid}-${sourceCounter++}-${Math.random().toString(36).slice(2)}`
         : null,
   }),
 }));
@@ -47,6 +47,7 @@ vi.mock("@ai-sdk/anthropic", () => ({
 const streamState = { consumed: false };
 
 vi.mock("ai", () => ({
+  consumeStream: async () => {},
   convertToModelMessages: async (messages: unknown) => messages,
   stepCountIs: (n: number) => n,
   tool: (config: unknown) => config,
@@ -57,11 +58,30 @@ vi.mock("ai", () => ({
     consumeStream: async () => {
       streamState.consumed = true;
     },
-    toUIMessageStreamResponse: () => {
+    toUIMessageStreamResponse: (streamOpts?: {
+      originalMessages?: unknown[];
+      onEnd?: (e: { messages: unknown[] }) => unknown;
+      consumeSseStream?: (o: { stream: unknown }) => unknown;
+    }) => {
       // Mirrors the real SDK's contract closely enough for chatLimits'
       // recordSpend to actually run — onFinish fires once the stream (here,
       // immediately) completes, with the token usage the cost estimate reads.
       opts.onFinish?.({ usage: { inputTokens: 100, outputTokens: 50 } });
+
+      if (streamOpts?.consumeSseStream) {
+        streamState.consumed = true;
+        void streamOpts.consumeSseStream({ stream: null });
+      }
+
+      // The SDK appends the assistant reply to the messages it was given and
+      // hands the whole list to onEnd. Persistence hangs off this, so the
+      // mock has to actually do it or the wiring goes untested.
+      const final = [
+        ...(streamOpts?.originalMessages ?? []),
+        { id: "assistant-1", role: "assistant", parts: [{ type: "text", text: "reply" }] },
+      ];
+      void streamOpts?.onEnd?.({ messages: final });
+
       return new Response("ok", { status: 200 });
     },
   }),
@@ -71,6 +91,7 @@ process.env.COACH_DAILY_MESSAGE_CAP = "2";
 
 const { POST } = await import("@/app/api/chat/route");
 const { createSession, registerUser } = await import("@/lib/auth");
+const { loadThreadMessages } = await import("@/lib/chatThreads");
 
 afterAll(async () => {
   await client.end();
@@ -190,6 +211,75 @@ describe("POST /api/chat — happy path", () => {
       .from(chatUsage)
       .where(eq(chatUsage.userId, result.userId));
     expect(Number(row.cost)).toBeGreaterThan(0);
+  });
+});
+
+describe("POST /api/chat — conversation persistence", () => {
+  it("stores the new turn so the conversation survives a page load", async () => {
+    const email = `test-chatroute-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
+    const result = await registerUser(email, "correct-horse-battery");
+    if (!result.ok) throw new Error(result.error);
+    createdUserIds.push(result.userId);
+    await createSession(result.userId);
+    const cookie = store.get("iron-atlas-session")!;
+
+    const res = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `iron-atlas-session=${cookie.value}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", parts: [{ type: "text", text: "hello coach" }] },
+          ],
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const stored = await loadThreadMessages(result.userId);
+    // The user's message and the assistant's reply, in order.
+    expect(stored.map((m) => m.role)).toEqual(["user", "assistant"]);
+    expect(JSON.stringify(stored[0].parts)).toContain("hello coach");
+  });
+
+  it("does not duplicate history the client re-sends each turn", async () => {
+    const email = `test-chatroute-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
+    const result = await registerUser(email, "correct-horse-battery");
+    if (!result.ok) throw new Error(result.error);
+    createdUserIds.push(result.userId);
+    await createSession(result.userId);
+    const cookie = store.get("iron-atlas-session")!;
+
+    const send = (messages: unknown[]) =>
+      POST(
+        new Request("http://localhost/api/chat", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: `iron-atlas-session=${cookie.value}`,
+          },
+          body: JSON.stringify({ messages }),
+        }),
+      );
+
+    const first = [{ role: "user", parts: [{ type: "text", text: "one" }] }];
+    await send(first);
+
+    // Second turn: the client re-sends everything it has plus the new message,
+    // exactly as useChat does. Only the tail is new.
+    await send([
+      ...first,
+      { role: "assistant", parts: [{ type: "text", text: "reply" }] },
+      { role: "user", parts: [{ type: "text", text: "two" }] },
+    ]);
+
+    const stored = await loadThreadMessages(result.userId);
+    const texts = stored.map((m) => JSON.stringify(m.parts));
+    expect(texts.filter((t) => t.includes('"one"'))).toHaveLength(1);
+    expect(texts.filter((t) => t.includes('"two"'))).toHaveLength(1);
   });
 });
 

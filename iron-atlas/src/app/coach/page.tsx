@@ -1,6 +1,27 @@
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { Chat } from "@/components/Chat";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  hasThreadHistory,
+  latestThreadId,
+  loadThreadMessages,
+  startNewThread,
+} from "@/lib/chatThreads";
+
+// The conversation is per-user and loaded per request, so this can't be
+// cached across visitors or frozen at build.
+export const dynamic = "force-dynamic";
+
+async function newConversation() {
+  "use server";
+  const user = await getCurrentUser();
+  if (!user) redirect("/account");
+  await startNewThread(user.id);
+  revalidatePath("/coach");
+  redirect("/coach");
+}
 
 export const metadata = {
   title: "Coach",
@@ -33,5 +54,28 @@ export default async function CoachPage() {
     );
   }
 
-  return <Chat />;
+  const [messages, hasHistory, threadId] = await Promise.all([
+    loadThreadMessages(user.id),
+    hasThreadHistory(user.id),
+    latestThreadId(user.id),
+  ]);
+
+  return (
+    <div className="space-y-2">
+      {hasHistory && (
+        <form action={newConversation} className="flex justify-end">
+          <button
+            type="submit"
+            className="rounded-md border px-3 py-1.5 text-xs text-muted transition-colors hover:border-accent/60 hover:text-foreground"
+          >
+            Start a new conversation
+          </button>
+        </form>
+      )}
+      {/* Keyed on the thread so starting a new conversation genuinely
+          remounts the chat — useChat seeds its messages on mount only, so
+          without this the old conversation stays on screen after the reset. */}
+      <Chat key={threadId ?? "new"} initialMessages={messages} />
+    </div>
+  );
 }

@@ -1,5 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import {
+  consumeStream,
   convertToModelMessages,
   stepCountIs,
   streamText,
@@ -13,6 +14,7 @@ import {
   goal as goalEnum,
 } from "@/db/schema";
 import { recommendPrograms } from "@/lib/recommend";
+import { appendThreadMessages, currentThreadId } from "@/lib/chatThreads";
 import { getCurrentUser } from "@/lib/auth";
 import { activeProgram } from "@/lib/fork";
 import { readGymProfile } from "@/lib/gymProfile";
@@ -217,6 +219,8 @@ export async function POST(req: Request) {
   // Same reason — captured for the onFinish closure, where only non-admin
   // spend settles back against the shared budget row.
   const isAdmin = user.isAdmin;
+  // Resolved before streaming starts so the persistence callback has it.
+  const threadId = await currentThreadId(userId);
   const gym = await readGymProfile();
 
   /**
@@ -387,10 +391,28 @@ export async function POST(req: Request) {
     },
   });
 
-  // Runs the stream to completion server-side even if the browser goes away
-  // mid-response, so onFinish (and the spend reconciliation in it) still
-  // fires. Deliberately not awaited — the response must start streaming now.
-  void result.consumeStream();
-
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    // Drains a tee'd copy of the stream server-side, so the generation runs to
+    // completion — and onEnd/onFinish still fire — even if the browser goes
+    // away mid-response. Doing this via the SDK's own hook rather than
+    // `result.consumeStream()` keeps it on the same stream the UI response is
+    // built from, instead of racing a second consumer against it.
+    consumeSseStream: consumeStream,
+    // Passing the incoming messages puts the stream in persistence mode, so
+    // onEnd receives the full conversation including the assistant's reply.
+    originalMessages: messages,
+    onEnd: async ({ messages: final }) => {
+      // Everything from the new user message onward. The client re-sends the
+      // history it already has, and all of that is already stored, so only
+      // the tail of this turn is new.
+      const added = final.slice(Math.max(0, messages.length - 1));
+      if (added.length === 0) return;
+      try {
+        await appendThreadMessages(threadId, added);
+      } catch (err) {
+        // A failed save shouldn't break a reply the lifter already read.
+        console.error("failed to persist coach messages:", err);
+      }
+    },
+  });
 }

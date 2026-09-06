@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, isToolUIPart } from "ai";
+import { DefaultChatTransport, isToolUIPart, type UIMessage } from "ai";
 import type { Recommendation } from "@/lib/recommend";
 import { ProgramRecommendation } from "@/components/ProgramRecommendation";
 
@@ -49,9 +49,15 @@ function Formatted({ text }: { text: string }) {
   );
 }
 
-export function Chat() {
+export function Chat({
+  initialMessages = [],
+}: {
+  /** The stored tail of this lifter's conversation, oldest first. */
+  initialMessages?: UIMessage[];
+}) {
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    messages: initialMessages,
   });
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);

@@ -167,7 +167,11 @@ describe("swapExercise", () => {
 
   it("records what it replaced, so the fork can show the change", async () => {
     await swapExercise(forkId, ownerId, "Back Squat", "Front Squat");
-    const [row] = await db
+    // Every substituted row in the fork, rather than "whichever row came back
+    // first" — the fork holds untouched exercises too, and a LIMIT with no
+    // ORDER BY is free to return one of those, which made this test fail
+    // intermittently on a substitution that had actually been recorded.
+    const rows = await db
       .select({ from: userProgramExercises.substitutedFromExerciseId })
       .from(userProgramExercises)
       .innerJoin(
@@ -178,9 +182,11 @@ describe("swapExercise", () => {
         userProgramWeeks,
         eq(userProgramWeeks.id, userProgramDays.weekId),
       )
-      .where(eq(userProgramWeeks.userProgramId, forkId))
-      .limit(1);
-    expect(row.from).toBe(squatId);
+      .where(eq(userProgramWeeks.userProgramId, forkId));
+
+    const substituted = rows.filter((r) => r.from !== null);
+    expect(substituted.length).toBeGreaterThan(0);
+    expect(substituted.every((r) => r.from === squatId)).toBe(true);
   });
 
   it("refuses an exercise the program doesn't contain", async () => {

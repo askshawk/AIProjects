@@ -37,6 +37,17 @@ vi.mock("next/headers", () => ({
 const asSource = (ip: string) =>
   requestHeaders.set("x-forwarded-for", ip);
 
+/**
+ * A source nothing else will reuse, including a previous run of this suite.
+ *
+ * Rate-limit buckets live in the database for a 15-minute window, so fixed
+ * per-test addresses accumulate claims across repeated runs and eventually
+ * trip the cap on a test that wasn't testing the cap. The bucket key is just
+ * text, so it doesn't have to look like an address.
+ */
+const uniqueSource = () =>
+  `test-${process.pid}-${Math.random().toString(36).slice(2)}`;
+
 const {
   SESSION_COOKIE,
   SIGN_IN_ATTEMPT_CAP,
@@ -54,14 +65,12 @@ afterAll(async () => {
   await client.end();
 });
 
-let sourceCounter = 0;
-
 beforeEach(() => {
   store.clear();
-  // A distinct source per test. The limiter now buckets on the caller, so
-  // without this one test's burst would exhaust the next test's allowance.
+  // A distinct source per test. The limiter buckets on the caller, so without
+  // this one test's burst would exhaust the next test's allowance.
   requestHeaders.clear();
-  asSource(`198.18.${Math.floor(sourceCounter / 250) % 250}.${sourceCounter++ % 250}`);
+  asSource(uniqueSource());
 });
 
 async function makeUser(emailOverride?: string) {
@@ -186,7 +195,7 @@ describe("authenticate", () => {
     // attempt itself, not just failed ones — otherwise it isn't a brute-force
     // guard, since the attacker's whole point is trying many passwords.
     const { email } = await makeUser();
-    asSource("203.0.113.10");
+    asSource(uniqueSource());
     for (let i = 0; i < SIGN_IN_ATTEMPT_CAP; i++) {
       await authenticate(email, "wrong-password");
     }
@@ -197,11 +206,12 @@ describe("authenticate", () => {
 
   it("does not let one source's rate limit affect another", async () => {
     const { email } = await makeUser();
-    asSource("203.0.113.20");
+    const burned = uniqueSource();
+    asSource(burned);
     for (let i = 0; i < SIGN_IN_ATTEMPT_CAP; i++) {
       await authenticate(email, "wrong-password");
     }
-    asSource("203.0.113.21");
+    asSource(uniqueSource());
     expect((await authenticate(email, "correct-horse-battery")).ok).toBe(true);
   });
 
@@ -211,19 +221,19 @@ describe("authenticate", () => {
     // window — including the admin, whose address is public in git history.
     const victim = await makeUser();
 
-    asSource("198.51.100.66"); // attacker
+    asSource(uniqueSource()); // attacker
     for (let i = 0; i < SIGN_IN_ATTEMPT_CAP * 2; i++) {
       await authenticate(victim.email, "guess");
     }
 
-    asSource("192.0.2.5"); // the owner, from their own machine
+    asSource(uniqueSource()); // the owner, from their own machine
     expect(
       (await authenticate(victim.email, "correct-horse-battery")).ok,
     ).toBe(true);
   });
 
   it("rejects an over-long email without writing it to the rate-limit table", async () => {
-    asSource("203.0.113.30");
+    asSource(uniqueSource());
     const huge = `${"a".repeat(500)}@test.local`;
     const result = await authenticate(huge, "whatever");
     expect(result).toMatchObject({ ok: false });
