@@ -6,6 +6,8 @@ import type { Suggestion } from "@/lib/progression";
 import { RestTimer } from "@/components/RestTimer";
 import { WarmupHint } from "@/components/WarmupHint";
 import { HowToHint } from "@/components/HowToHint";
+import { formatPlates, platesPerSide } from "@/lib/plates";
+import { BAR_KG } from "@/lib/warmup";
 
 export type PrescribedExercise = {
   id: number;
@@ -43,6 +45,28 @@ type Props = {
 // bad data (a stale fork, a hand-edited program) shouldn't be able to make
 // this component try to render thousands of inputs and lock up the page.
 const MAX_RENDERED_SETS = 20;
+
+/** A plate list only makes sense for something you load a bar for. */
+const isBarbell = (equipment: string) =>
+  equipment === "barbell" || equipment === "smith";
+
+/**
+ * What to put on each side of the bar for the suggested weight.
+ *
+ * Silent when the weight can't be made from standard plates rather than
+ * showing an approximation — a lifter would load what this says over what the
+ * prescription says, so a "close enough" list would quietly change the weight.
+ */
+function PlateHint({ totalKg }: { totalKg: number }) {
+  const load = platesPerSide(totalKg, BAR_KG);
+  if (!load || !load.exact) return null;
+  return (
+    <p className="mt-1 font-mono text-xs text-muted">
+      {formatPlates(load.perSide)}
+      {load.perSide.length > 0 && " per side"}
+    </p>
+  );
+}
 
 /**
  * These inputs sit in the same form as "Finish session", so a browser's
@@ -173,10 +197,15 @@ export function LogWorkout({
                     {suggestion.reason}
                   </p>
                 )}
+                {/* Only for a loaded barbell — a plate list is meaningless for
+                    dumbbells, machines or bodyweight work. */}
+                {isBarbell(e.equipment) && suggestion?.weightKg != null && (
+                  <PlateHint totalKg={suggestion.weightKg} />
+                )}
                 {/* Ramp to whatever the first working set is actually loaded to. */}
                 <WarmupHint
                   workingKg={suggestion?.weightKg ?? last?.sets[0]?.weightKg}
-                  barbell={e.equipment === "barbell" || e.equipment === "smith"}
+                  barbell={isBarbell(e.equipment)}
                 />
                 <HowToHint
                   exerciseSlug={e.exerciseSlug}

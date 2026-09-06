@@ -5,8 +5,11 @@ import { equipment as equipmentEnum, exercises } from "@/db/schema";
 import {
   GYM_COOKIE,
   GYM_COOKIE_OPTIONS,
-  readGymProfile,
+  parseGymProfile,
+  readActiveGym,
   serializeGymProfile,
+  TRAVEL_GYM_COOKIE,
+  TRAVEL_GYM_COOKIE_OPTIONS,
 } from "@/lib/gymProfile";
 import { FULL_GYM, type Equipment } from "@/lib/substitute";
 import { BannedExercisePicker } from "@/components/BannedExercisePicker";
@@ -76,8 +79,39 @@ async function clearGym() {
   store.delete(GYM_COOKIE);
 }
 
+async function saveTravelGym(formData: FormData) {
+  "use server";
+
+  const equipment = equipmentEnum.enumValues.filter(
+    (e) => formData.get(`tg-${e}`) === "on",
+  );
+  const store = await cookies();
+
+  // Nothing ticked means "I'm back home", not "I have no equipment" — the
+  // latter would silently strip every movement from every program.
+  if (equipment.length === 0) {
+    store.delete(TRAVEL_GYM_COOKIE);
+    return;
+  }
+
+  store.set(
+    TRAVEL_GYM_COOKIE,
+    serializeGymProfile({ equipment, bannedExerciseIds: [] }),
+    TRAVEL_GYM_COOKIE_OPTIONS,
+  );
+}
+
+async function clearTravelGym() {
+  "use server";
+  const store = await cookies();
+  store.delete(TRAVEL_GYM_COOKIE);
+}
+
 export default async function GymPage() {
-  const gym = await readGymProfile();
+  const active = await readActiveGym();
+  // The saved profile, not whatever a travel override is standing in with —
+  // this page has to show the real gym so it's obvious what's underneath.
+  const gym = parseGymProfile((await cookies()).get(GYM_COOKIE)?.value);
   const configured = gym.equipment.length > 0;
 
   // Small enough (235 rows, name + id only) to send whole and search
@@ -171,6 +205,59 @@ export default async function GymPage() {
           equipment types.
         </p>
       )}
+
+      <section
+        className={`space-y-3 rounded-lg border p-4 ${
+          active.isTravel ? "border-accent/60 bg-accent-soft/10" : ""
+        }`}
+      >
+        <div>
+          <h2 className="text-sm font-medium">Training somewhere else?</h2>
+          <p className="mt-1 text-xs text-muted">
+            {active.isTravel
+              ? "Programs are being adapted to this equipment instead of your saved gym. Your gym above is untouched."
+              : "A hotel gym, a friend's garage, a week away. Tick what you'll have and programs adapt to it — your saved gym above stays exactly as it is, and this expires on its own after a few days."}
+          </p>
+        </div>
+
+        <form action={saveTravelGym} className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {equipmentEnum.enumValues.map((e) => (
+              <label
+                key={e}
+                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border bg-surface px-3 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name={`tg-${e}`}
+                  defaultChecked={
+                    active.isTravel && active.equipment.includes(e)
+                  }
+                  className="size-4 accent-[var(--accent)]"
+                />
+                {LABELS[e]}
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded-md border border-accent/60 px-4 py-2 text-sm font-medium"
+            >
+              {active.isTravel ? "Update" : "Use this for now"}
+            </button>
+            {active.isTravel && (
+              <button
+                type="submit"
+                formAction={clearTravelGym}
+                className="rounded-md border px-4 py-2 text-sm font-medium"
+              >
+                Back to my gym
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
     </div>
   );
 }

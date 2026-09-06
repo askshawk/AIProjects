@@ -8,6 +8,7 @@ import { applySwaps, groupByWeek, loadProgram } from "@/lib/programQuery";
 import { readGymProfile } from "@/lib/gymProfile";
 import { planSwaps } from "@/lib/substitute";
 import { SwapNotice } from "@/components/SwapNotice";
+import { TravelGymNotice } from "@/components/TravelGymNotice";
 import { StartProgram } from "@/components/StartProgram";
 import { VerifyToggle } from "@/components/VerifyToggle";
 import { authorSlug } from "@/lib/authors";
@@ -266,6 +267,7 @@ export default async function ProgramPage({
         </div>
       )}
 
+      <TravelGymNotice />
       <SwapNotice swaps={[...swaps.values()]} />
 
       {program.description && (

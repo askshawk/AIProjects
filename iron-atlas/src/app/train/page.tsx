@@ -21,6 +21,7 @@ import {
   trainingMaxBasis,
 } from "@/lib/logbook";
 import { LogWorkout } from "@/components/LogWorkout";
+import { TravelGymNotice } from "@/components/TravelGymNotice";
 import {
   isLowerBodyMuscle,
   suggestNext,
@@ -303,6 +304,7 @@ export default async function TrainPage({
 
   return (
     <div className="space-y-5">
+      <TravelGymNotice />
       <div>
         <p className="text-sm text-muted">{program.title}</p>
         <h1 className="text-2xl font-semibold tracking-tight">{day.dayName}</h1>

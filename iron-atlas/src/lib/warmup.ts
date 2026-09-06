@@ -12,7 +12,9 @@ import { roundToPlate } from "@/lib/progression";
 export type WarmupSet = { weightKg: number; reps: number; isBar: boolean };
 
 /** An empty barbell. Warm-ups below this aren't loadable on a bar. */
-const BAR_KG = 20;
+/** Standard Olympic bar. Exported so the plate hint loads the same bar the
+ *  warm-up ramp assumes. */
+export const BAR_KG = 20;
 
 const RAMP: { pct: number; reps: number }[] = [
   { pct: 0.4, reps: 5 },

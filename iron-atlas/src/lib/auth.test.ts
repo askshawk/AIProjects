@@ -65,19 +65,45 @@ afterAll(async () => {
   await client.end();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   store.clear();
   // A distinct source per test. The limiter buckets on the caller, so without
   // this one test's burst would exhaust the next test's allowance.
   requestHeaders.clear();
   asSource(uniqueSource());
+
+  // Rate-limit counters are rows in a shared table that outlive both the test
+  // and the run — they persist for a 15-minute window. Unique sources alone
+  // left the outcome dependent on what had already accumulated there, which
+  // showed up as the suite failing on the throttle every so often in a test
+  // that wasn't about the throttle. Starting from an empty table makes every
+  // test here deterministic.
+  await db.delete(signInAttempts);
 });
 
+/**
+ * Creates a test account from a source of its own.
+ *
+ * Registration is throttled per caller, and most tests here create an account
+ * only as setup for testing something else. Sharing the test's own bucket
+ * meant those incidental signups competed with whatever the test was actually
+ * exercising, and the suite failed intermittently on the throttle rather than
+ * on the behaviour under test. The caller's source is restored afterwards so
+ * tests that care about it still control it.
+ */
 async function makeUser(emailOverride?: string) {
-  const email = emailOverride ?? `test-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
-  const result = await registerUser(email, "correct-horse-battery");
-  if (!result.ok) throw new Error(result.error);
-  return { email, userId: result.userId };
+  const callerSource = requestHeaders.get("x-forwarded-for");
+  asSource(uniqueSource());
+  try {
+    const email =
+      emailOverride ??
+      `test-${process.pid}-${Math.random().toString(36).slice(2)}@test.local`;
+    const result = await registerUser(email, "correct-horse-battery");
+    if (!result.ok) throw new Error(result.error);
+    return { email, userId: result.userId };
+  } finally {
+    if (callerSource) asSource(callerSource);
+  }
 }
 
 describe("hashPassword / verifyPassword", () => {

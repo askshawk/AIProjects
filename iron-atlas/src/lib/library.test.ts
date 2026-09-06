@@ -16,6 +16,16 @@ afterAll(async () => {
   await client.end();
 });
 
+/**
+ * Anything that misses both the exact-name and alias paths embeds the query
+ * through Voyage, so those tests are a live network call and their runtime is
+ * the provider's latency, not ours. The global 60s covers a normal response
+ * and a cold start; this raises it further for the two that always go out to
+ * the network, which occasionally take longer than that and failed the suite
+ * for reasons that had nothing to do with the code.
+ */
+const EMBEDDING_CALL_TIMEOUT_MS = 180_000;
+
 describe.skipIf(!hasEmbeddings)("exercise resolver", () => {
   it("matches an exact catalogue name", async () => {
     const match = await resolveExerciseName("Barbell Bench Press");
@@ -43,12 +53,12 @@ describe.skipIf(!hasEmbeddings)("exercise resolver", () => {
     const match = await resolveExerciseName("barbell back squat");
     expect(match?.via).toBe("similarity");
     expect(match?.name).toMatch(/Back Squat/);
-  });
+  }, EMBEDDING_CALL_TIMEOUT_MS);
 
   it("returns null instead of guessing at nonsense", async () => {
     expect(await resolveExerciseName("interpretive dance for lats")).toBeNull();
     expect(await resolveExerciseName("qwertyuiop asdfgh")).toBeNull();
-  });
+  }, EMBEDDING_CALL_TIMEOUT_MS);
 });
 
 describe("library integrity", () => {

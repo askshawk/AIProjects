@@ -8,6 +8,8 @@ import {
   programs,
 } from "@/db/schema";
 import { ProgramCard } from "@/components/ProgramCard";
+import { readGymProfile } from "@/lib/gymProfile";
+import { fitsGymClause, gymFit } from "@/lib/gymFit";
 
 export const metadata = {
   title: "Programs",
@@ -86,6 +88,11 @@ export default async function ProgramsPage({
     );
   }
 
+  // The saved gym drives both the per-card badge and the "fits my gym" filter.
+  const gym = await readGymProfile();
+  const fitsOnly = one("fit") === "mine" && gym.equipment.length > 0;
+  if (fitsOnly) filters.push(fitsGymClause(gym.equipment));
+
   // Paginated: the full library is now large enough that rendering every card
   // was a ~half-megabyte response, which is the wrong thing to send a phone on
   // gym wifi.
@@ -114,6 +121,7 @@ export default async function ProgramsPage({
       verified: programs.verified,
       confidence: programs.confidence,
       firstParty: programs.firstParty,
+      equipmentRequired: programs.equipmentRequired,
     })
     .from(programs)
     .where(filters.length ? and(...filters) : undefined)
@@ -187,6 +195,18 @@ export default async function ProgramsPage({
             </option>
           ))}
         </select>
+        {gym.equipment.length > 0 && (
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border bg-surface px-3 text-sm">
+            <input
+              type="checkbox"
+              name="fit"
+              value="mine"
+              defaultChecked={fitsOnly}
+              className="size-4 accent-[var(--accent)]"
+            />
+            Fits my gym
+          </label>
+        )}
         <button
           type="submit"
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
@@ -195,17 +215,51 @@ export default async function ProgramsPage({
         </button>
       </form>
 
-      {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted">
-          {total === 0
-            ? "The library is still being filled — check back soon."
-            : "No programs match those filters. Try loosening one — fewer days, a different goal, or any equipment."}
+      {gym.equipment.length === 0 && (
+        <p className="rounded-lg border border-dashed p-3 text-xs text-muted">
+          <Link href="/gym" className="text-accent hover:underline">
+            Tell us what your gym has
+          </Link>{" "}
+          and every program here will show whether it runs as written or which
+          movements get swapped.
         </p>
+      )}
+
+      {rows.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted">
+          {total === 0 ? (
+            "The library is still being filled — check back soon."
+          ) : fitsOnly ? (
+            // Worth explaining rather than just saying "no matches": a strength
+            // library is mostly barbell work, so a minimal gym filters it to
+            // nothing — and adapting those programs is the whole point of the
+            // app, so an empty result here is misleading without context.
+            <>
+              <p>
+                No program in the library runs on your equipment exactly as
+                written.
+              </p>
+              <p className="mt-2">
+                That&apos;s normal, and not a dead end —{" "}
+                <Link href={pageHref({ ...params, fit: undefined }, 1)} className="text-accent hover:underline">
+                  browse without this filter
+                </Link>{" "}
+                and each program will swap the movements you can&apos;t do for
+                ones you can.
+              </p>
+            </>
+          ) : (
+            "No programs match those filters. Try loosening one — fewer days, a different goal, or any equipment."
+          )}
+        </div>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {rows.map((p) => (
             <li key={p.id}>
-              <ProgramCard program={p} />
+              <ProgramCard
+                program={p}
+                fit={gymFit(p.equipmentRequired, gym.equipment)}
+              />
             </li>
           ))}
         </ul>

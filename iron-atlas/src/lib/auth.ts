@@ -269,9 +269,14 @@ async function claimSignInAttempt(subject: string): Promise<boolean> {
 
   // Opportunistic cleanup, same pattern as expired sessions in createSession.
   // Without it this table only ever grows.
-  db.delete(signInAttempts)
-    .where(lt(signInAttempts.window, signInWindow()))
-    .catch(() => {});
+  //
+  // Awaited rather than fired and forgotten: an unawaited write outlives the
+  // call that started it, which on a single-connection database means it
+  // interleaves with whatever runs next. It's one indexed delete on a tiny
+  // table, so the latency is not worth the class of bug.
+  await db
+    .delete(signInAttempts)
+    .where(lt(signInAttempts.window, signInWindow()));
 
   return rows.length > 0;
 }
