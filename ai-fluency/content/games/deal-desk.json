@@ -1,0 +1,267 @@
+[
+  {
+    "id": "security-review",
+    "title": "The security review",
+    "buyer": { "name": "Priya", "role": "CISO" },
+    "setup": "Priya's team has to sign off before any AI tool touches company data. She's polite, precise, and allergic to vague answers.",
+    "steps": [
+      {
+        "question": "First question, and it decides whether we keep talking: does your AI train on our data?",
+        "termIds": ["training-data-usage", "training-vs-inference"],
+        "options": [
+          { "text": "There are two layers: our policy and our model provider's. Neither trains on customer data under our business terms, and I'll send you the exact contract language for both.", "quality": "strong", "feedback": "Specific, covers both layers, and offers proof instead of asking for trust." },
+          { "text": "No, we take privacy very seriously.", "quality": "okay", "feedback": "Probably true, but it's a slogan. A CISO wants to know which contract says so, for which layer." },
+          { "text": "Only a little, and it's anonymized, so it doesn't really count.", "quality": "weak", "feedback": "Hand-waving about anonymization is a red flag in a security review. If you don't know, say you'll confirm." }
+        ]
+      },
+      {
+        "question": "How long do you keep our prompts and the AI's responses?",
+        "termIds": ["data-retention"],
+        "options": [
+          { "text": "It depends on the feature, so here's a list: which ones store data, for how long, and which can run with zero retention.", "quality": "strong", "feedback": "Retention really is set feature by feature. Showing that builds trust." },
+          { "text": "We delete everything immediately.", "quality": "weak", "feedback": "Almost never fully true (history, logs, billing). An absolute claim like this tends to get caught later in the review." },
+          { "text": "Our standard retention policy is in the trust center.", "quality": "okay", "feedback": "Fine as a pointer, but it pushes the work onto her. Better to map it to the features her team will use." }
+        ]
+      },
+      {
+        "question": "We have EU employees. Where does the data actually go?",
+        "termIds": ["data-residency"],
+        "options": [
+          { "text": "Our data centers are in the EU, so you're covered.", "quality": "okay", "feedback": "Storage is only half of it. Where the model processes the data can be a different region." },
+          { "text": "There are two questions: where data is stored and where the model processes it. Let me confirm both for your EU users with our solutions team.", "quality": "strong", "feedback": "Separating storage from processing shows you understand the actual risk." },
+          { "text": "The cloud handles that automatically.", "quality": "weak", "feedback": "That dodges the question, and it suggests no one on your side knows the answer." }
+        ]
+      },
+      {
+        "question": "What stops someone from hiding instructions in a document to make your AI leak data?",
+        "termIds": ["prompt-injection", "guardrails"],
+        "options": [
+          { "text": "Our system prompt tells the AI never to do that.", "quality": "weak", "feedback": "Instructions can be bypassed. That's the whole problem with prompt injection." },
+          { "text": "Nothing can stop it fully today. We limit the damage: the AI only reaches data the user can already see, and risky actions need a person to approve them.", "quality": "strong", "feedback": "Honest about the limits, and points to real controls outside the model." },
+          { "text": "We use the latest model, which is resistant to that.", "quality": "okay", "feedback": "Newer models help, but 'resistant' isn't a control. She'll ask what happens when it fails." }
+        ]
+      },
+      {
+        "question": "Last one. Do you have SOC 2, and does it cover the AI?",
+        "termIds": ["soc2-ai", "iso-42001"],
+        "options": [
+          { "text": "Yes, SOC 2 Type II. It covers our security controls; it isn't an AI accuracy audit. For the AI side I can share our testing approach and the model provider's reports.", "quality": "strong", "feedback": "Accurate about what SOC 2 does and doesn't prove, and fills the gap with evidence." },
+          { "text": "Yes, our SOC 2 proves the AI is safe.", "quality": "weak", "feedback": "SOC 2 tests security and operational controls, not whether AI output is safe or accurate. A CISO knows that." },
+          { "text": "We're SOC 2 compliant.", "quality": "okay", "feedback": "True but incomplete. She asked about the AI specifically." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "roi-pushback",
+    "title": "The budget conversation",
+    "buyer": { "name": "Marcus", "role": "CFO" },
+    "setup": "Marcus has seen a dozen AI pitches this quarter. He wants numbers he can defend to the board, not adjectives.",
+    "steps": [
+      {
+        "question": "Every vendor promises 40% productivity gains. Why should I believe yours?",
+        "termIds": ["ai-roi", "ai-washing"],
+        "options": [
+          { "text": "Our customers see huge gains. Industry studies back it up.", "quality": "weak", "feedback": "Exactly what he's tired of hearing. Generic claims raise skepticism now." },
+          { "text": "You shouldn't take my word for it. Let's measure one workflow today, run a 30-day pilot, and measure it again. Then it's your number.", "quality": "strong", "feedback": "Turns the claim into a test he controls. That's the strongest ROI move." },
+          { "text": "I can share a case study from a similar company.", "quality": "okay", "feedback": "Helpful supporting evidence, but he still has to trust someone else's numbers." }
+        ]
+      },
+      {
+        "question": "How does pricing work? I hate surprise bills.",
+        "termIds": ["token-pricing"],
+        "options": [
+          { "text": "It's per seat, with a usage allowance. You get admin dashboards, usage alerts, and a hard cap, so the budget is predictable.", "quality": "strong", "feedback": "Answers the real worry, predictability, with specific controls." },
+          { "text": "It's usage-based, so you only pay for what you use.", "quality": "okay", "feedback": "Accurate, but 'pay for what you use' is exactly what makes CFOs nervous without caps." },
+          { "text": "Don't worry about it, AI is cheap now.", "quality": "weak", "feedback": "Dismissive, and wrong: every AI request has a real cost." }
+        ]
+      },
+      {
+        "question": "My engineers say they can build this themselves on an API in a month.",
+        "termIds": ["build-vs-buy", "foundation-model"],
+        "options": [
+          { "text": "They're wrong. It's much harder than it looks.", "quality": "weak", "feedback": "Insulting his team rarely wins. And they probably can build a prototype." },
+          { "text": "They probably can build a prototype. The question is the next three years: security reviews, integrations, model upgrades, monitoring, support. That's what you'd be buying.", "quality": "strong", "feedback": "Concedes the true part and reframes the decision around total cost." },
+          { "text": "We have features they couldn't build.", "quality": "okay", "feedback": "Maybe, but it invites a feature-by-feature fight instead of the cost-of-ownership conversation." }
+        ]
+      },
+      {
+        "question": "Hours saved don't show up on my P&L. How does this pay for itself?",
+        "termIds": ["ai-roi"],
+        "options": [
+          { "text": "You're right that hours alone aren't savings. It pays off if the time goes somewhere: more accounts per rep, faster response times, or work you'd otherwise hire for. Let's pick which one we'll measure.", "quality": "strong", "feedback": "Agrees with a sharp point and ties value to something he can see." },
+          { "text": "Time is money, so the savings are real.", "quality": "weak", "feedback": "That's the exact reasoning he just rejected." },
+          { "text": "Most customers see it in employee satisfaction.", "quality": "okay", "feedback": "A real benefit, but a soft one. He asked about the P&L." }
+        ]
+      },
+      {
+        "question": "What happens if the pilot doesn't hit the number?",
+        "termIds": ["pilot-to-production", "evals"],
+        "options": [
+          { "text": "We'll extend the pilot until it works.", "quality": "weak", "feedback": "Open-ended pilots are where deals and budgets go to die." },
+          { "text": "Then you don't buy, and you'll know exactly why. We agree on the success criteria and the decision date before we start.", "quality": "strong", "feedback": "A pilot that leads to a clean decision either way is what a CFO wants." },
+          { "text": "That rarely happens with our product.", "quality": "okay", "feedback": "Confident, but it doesn't answer the question he asked." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "just-chatgpt",
+    "title": "\"Isn't this just ChatGPT?\"",
+    "buyer": { "name": "Dana", "role": "IT Director" },
+    "setup": "Dana's team already pays for a general AI chat tool. She suspects your product is a thin wrapper around one.",
+    "steps": [
+      {
+        "question": "Be honest. Isn't this just ChatGPT with your logo on it?",
+        "termIds": ["foundation-model", "llm"],
+        "options": [
+          { "text": "No, we built our own AI from scratch.", "quality": "weak", "feedback": "Very few companies train their own models, and if it isn't true, it destroys trust when she finds out." },
+          { "text": "We're built on a foundation model, like almost every AI product. What we add is the part that's hard: your data, the workflow, and the controls around it.", "quality": "strong", "feedback": "Honest about the foundation and clear about the value layer." },
+          { "text": "It's much more advanced than ChatGPT.", "quality": "okay", "feedback": "Vague. She'll ask 'how?' and you're back where you started." }
+        ]
+      },
+      {
+        "question": "Our chat tool makes things up. Why would yours be any different?",
+        "termIds": ["hallucination", "rag"],
+        "options": [
+          { "text": "Ours doesn't hallucinate.", "quality": "weak", "feedback": "No AI is hallucination-free. Claiming otherwise is overselling, and she'll test it." },
+          { "text": "It still can, so we reduce it: answers come from your own documents, every answer shows its source so you can check it, and important actions get a human review.", "quality": "strong", "feedback": "Honest, specific, and gives her a way to verify." },
+          { "text": "We use a newer model that's more accurate.", "quality": "okay", "feedback": "Newer models help, but grounding and citations matter more for accuracy." }
+        ]
+      },
+      {
+        "question": "Which model do you use, and what happens when a better one comes out?",
+        "termIds": ["model-choice"],
+        "options": [
+          { "text": "That's proprietary.", "quality": "weak", "feedback": "Hiding the model provider looks like there's something to hide, and it blocks her security review." },
+          { "text": "Name the provider, explain why you chose it, and say the product can switch models as better ones arrive, so she gets improvements without migrating.", "quality": "strong", "feedback": "Transparent, and it answers the lock-in worry behind the question." },
+          { "text": "We always use the newest, biggest model.", "quality": "okay", "feedback": "Bigger isn't automatically better. Fit, speed, and cost matter too." }
+        ]
+      },
+      {
+        "question": "Can it actually do anything in our systems, or does it just chat?",
+        "termIds": ["tool-use", "mcp"],
+        "options": [
+          { "text": "It can use tools: look up records, create tickets, update fields. You choose exactly which ones, and anything that changes data can require approval.", "quality": "strong", "feedback": "Concrete about what it does and about who's in control." },
+          { "text": "It can do anything you want.", "quality": "weak", "feedback": "An IT director hears 'anything' as 'uncontrolled access'." },
+          { "text": "It integrates with most popular apps.", "quality": "okay", "feedback": "Fine, but it doesn't address control, which is her real concern." }
+        ]
+      },
+      {
+        "question": "How would I know it's working well after we roll it out?",
+        "termIds": ["evals"],
+        "options": [
+          { "text": "Users will tell you.", "quality": "weak", "feedback": "Anecdotes aren't measurement, and complaints arrive after the damage." },
+          { "text": "We test every change against a set of real examples before it ships, and we can build a test set from your own cases during the pilot.", "quality": "strong", "feedback": "Evals on her own data are the most convincing quality answer." },
+          { "text": "We have a dashboard with usage stats.", "quality": "okay", "feedback": "Usage shows adoption, not quality." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "governance-committee",
+    "title": "The AI governance committee",
+    "buyer": { "name": "Elena", "role": "Head of Risk" },
+    "setup": "Elena chairs the committee that approves every AI tool. She cares about accountability, regulation, and what happens when things go wrong.",
+    "steps": [
+      {
+        "question": "We map vendors to the NIST AI Risk Management Framework. Can you work with that?",
+        "termIds": ["nist-ai-rmf", "ai-governance"],
+        "options": [
+          { "text": "Yes, we're NIST certified.", "quality": "weak", "feedback": "There's no NIST AI RMF certification. It's voluntary guidance, and she'll know." },
+          { "text": "Yes. We can map our controls to its four functions (govern, map, measure, manage) so your review is faster.", "quality": "strong", "feedback": "Speaks her framework accurately and offers to do the work." },
+          { "text": "We follow industry best practices.", "quality": "okay", "feedback": "Too generic for a governance committee." }
+        ]
+      },
+      {
+        "question": "Does the EU AI Act apply to how we'd use your product?",
+        "termIds": ["eu-ai-act"],
+        "options": [
+          { "text": "It depends on the use. Most productivity uses fall in the lower-risk tiers, but uses like hiring decisions can be high-risk. Your legal team should confirm for your case.", "quality": "strong", "feedback": "Accurate about the risk tiers, and doesn't give legal advice it can't back up." },
+          { "text": "No, that's only for European companies.", "quality": "weak", "feedback": "It can apply to companies outside the EU whose AI is used there." },
+          { "text": "We're fully EU AI Act compliant.", "quality": "okay", "feedback": "Compliance depends on how the customer uses the product, so a blanket claim is shaky." }
+        ]
+      },
+      {
+        "question": "If the AI gets something wrong and a customer is affected, who's accountable?",
+        "termIds": ["human-in-the-loop", "responsible-ai"],
+        "options": [
+          { "text": "The AI is very accurate, so that's unlikely.", "quality": "weak", "feedback": "Dodges accountability, which is exactly what she asked about." },
+          { "text": "You decide where a person signs off. We recommend human review on anything customer-facing or irreversible, and every action is logged so you can trace what happened.", "quality": "strong", "feedback": "Clear ownership, sensible defaults, and an audit trail." },
+          { "text": "That's covered in our terms of service.", "quality": "okay", "feedback": "Legally relevant, but she's asking about operational controls." }
+        ]
+      },
+      {
+        "question": "How do you test for bias or unfair outcomes?",
+        "termIds": ["responsible-ai", "evals"],
+        "options": [
+          { "text": "Our model is unbiased.", "quality": "weak", "feedback": "No model is unbiased. This claim fails instantly." },
+          { "text": "Describe the actual testing your product team does. If there isn't a formal process, say what exists and offer to follow up rather than inventing one.", "quality": "strong", "feedback": "Honesty here protects the deal later. Made-up processes get found out." },
+          { "text": "Our model provider handles that.", "quality": "okay", "feedback": "Partly true, but it shifts responsibility instead of showing your own controls." }
+        ]
+      },
+      {
+        "question": "Are you certified for AI management, or just SOC 2?",
+        "termIds": ["iso-42001", "soc2-ai"],
+        "options": [
+          { "text": "Give your company's real ISO/IEC 42001 status (certified, in progress, or not planned) and explain which existing controls cover similar ground.", "quality": "strong", "feedback": "She's asking about the AI-specific standard. A straight answer wins." },
+          { "text": "SOC 2 covers AI too.", "quality": "weak", "feedback": "SOC 2 wasn't designed for AI governance. That's why ISO 42001 exists." },
+          { "text": "We're looking into it.", "quality": "okay", "feedback": "Honest, but thin. Add what you do today." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "agent-hype",
+    "title": "The excited executive",
+    "buyer": { "name": "Sam", "role": "VP of Operations" },
+    "setup": "Sam has read every headline about AI agents and wants to automate half the department by next quarter. Your job is to keep the deal real.",
+    "steps": [
+      {
+        "question": "I want agents that run our whole onboarding process on their own. Can you do that?",
+        "termIds": ["ai-agent", "copilot-vs-agent"],
+        "options": [
+          { "text": "Absolutely, fully autonomous, starting day one.", "quality": "weak", "feedback": "Overpromising to an excited buyer sets up a failed rollout and a churned customer." },
+          { "text": "We can get there in steps. Start with a copilot on the highest-volume tasks, measure it, then hand whole steps to an agent once the process and the results are solid.", "quality": "strong", "feedback": "Keeps the enthusiasm and makes the path realistic." },
+          { "text": "Agents aren't ready yet.", "quality": "okay", "feedback": "Too negative. Some agent use is realistic today with the right controls." }
+        ]
+      },
+      {
+        "question": "What's the difference between your workflows and your agents anyway?",
+        "termIds": ["agentic-workflow"],
+        "options": [
+          { "text": "A workflow follows steps we design in advance, so it's predictable. An agent decides its own steps, which is more flexible but needs stronger guardrails. We use each where it fits.", "quality": "strong", "feedback": "A clear, accurate distinction he can repeat to his team." },
+          { "text": "They're basically the same thing.", "quality": "weak", "feedback": "They're meaningfully different for risk and reliability." },
+          { "text": "Agents are the more advanced version.", "quality": "okay", "feedback": "Partly true, but 'more advanced' isn't always better for predictable tasks." }
+        ]
+      },
+      {
+        "question": "Can the agent update records and email customers without anyone checking?",
+        "termIds": ["guardrails", "human-in-the-loop", "tool-use"],
+        "options": [
+          { "text": "Yes, it's fully hands-off.", "quality": "weak", "feedback": "Unchecked customer emails on day one is how an AI project ends up in the news." },
+          { "text": "It can, but I'd recommend approval on anything customer-facing at first. As trust builds on low-risk tasks, you can loosen that. You control the setting.", "quality": "strong", "feedback": "Gives him the capability with a sensible rollout." },
+          { "text": "Only admins can turn that on.", "quality": "okay", "feedback": "Accurate about permissions, but misses the advice he needs." }
+        ]
+      },
+      {
+        "question": "How fast will we see results?",
+        "termIds": ["pilot-to-production"],
+        "options": [
+          { "text": "Immediately.", "quality": "weak", "feedback": "Sets an expectation real rollouts rarely meet." },
+          { "text": "Let's agree on two or three metrics and a 30 to 60 day pilot with real users. You'll have a real answer, and a rollout plan, by the end of it.", "quality": "strong", "feedback": "Specific, time-boxed, and measurable." },
+          { "text": "It depends on your team.", "quality": "okay", "feedback": "True but unhelpful without a plan attached." }
+        ]
+      },
+      {
+        "question": "Last thing. Our data's a bit messy. Does that matter?",
+        "termIds": ["rag", "hallucination"],
+        "options": [
+          { "text": "Not at all, the AI figures it out.", "quality": "weak", "feedback": "AI grounded in messy, outdated content gives messy, outdated answers." },
+          { "text": "It matters a lot. The AI answers from your content, so outdated documents lead to outdated answers. A short cleanup of the most-used content before launch pays off fast.", "quality": "strong", "feedback": "Honest, and it heads off the most common reason AI rollouts disappoint." },
+          { "text": "A little, but we can work around it.", "quality": "okay", "feedback": "Downplays a real risk. Better to name it and plan for it." }
+        ]
+      }
+    ]
+  }
+]

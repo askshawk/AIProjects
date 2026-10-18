@@ -2,6 +2,7 @@
   {
     "id": "machine-learning",
     "term": "Machine learning",
+    "short": "Software that learns patterns from examples instead of hand-written rules",
     "aka": [
       "ML"
     ],
@@ -39,6 +40,7 @@
   {
     "id": "generative-ai",
     "term": "Generative AI",
+    "short": "AI that creates new text, images, or code",
     "aka": [
       "GenAI"
     ],
@@ -75,6 +77,7 @@
   {
     "id": "llm",
     "term": "Large language model",
+    "short": "A huge text-trained model that writes and follows instructions",
     "aka": [
       "LLM"
     ],
@@ -107,6 +110,7 @@
   {
     "id": "foundation-model",
     "term": "Foundation model",
+    "short": "A big general model that many products build on",
     "track": "fundamentals",
     "topic": "Core concepts",
     "plain": "A big general-purpose model that lots of different products are built on top of, like a base layer. Claude, GPT, and Gemini are foundation models.",
@@ -137,6 +141,7 @@
   {
     "id": "model-parameters",
     "term": "Parameters",
+    "short": "The internal settings a model tunes while learning",
     "aka": [
       "weights"
     ],
@@ -169,6 +174,7 @@
   {
     "id": "training-vs-inference",
     "term": "Training vs inference",
+    "short": "Learning happens once; inference is each time you use it",
     "track": "fundamentals",
     "topic": "Core concepts",
     "plain": "Training is when the model learns, which happens once, up front, and is expensive. Inference is when you use it: every time you ask a question and get an answer.",
@@ -202,6 +208,7 @@
   {
     "id": "pretraining",
     "term": "Pretraining",
+    "short": "The first huge phase where a model reads lots of text",
     "track": "fundamentals",
     "topic": "How models are made",
     "plain": "The first, huge phase of building an LLM, where it reads an enormous amount of text and learns to predict the next word. That's where it picks up language, facts, and reasoning patterns.",
@@ -231,6 +238,7 @@
   {
     "id": "fine-tuning",
     "term": "Fine-tuning",
+    "short": "Extra training on specific examples to specialize a model",
     "track": "fundamentals",
     "topic": "How models are made",
     "plain": "Taking a model that's already trained and training it a bit more on a specific set of examples, so it gets better at one domain, task, or style.",
@@ -260,6 +268,7 @@
   {
     "id": "rlhf",
     "term": "RLHF (Reinforcement learning from human feedback)",
+    "short": "People rank answers so the model learns what good looks like",
     "aka": [
       "RLHF"
     ],
@@ -292,6 +301,7 @@
   {
     "id": "token",
     "term": "Token",
+    "short": "The word-chunks models read, write, and bill by",
     "track": "fundamentals",
     "topic": "How models read and write",
     "plain": "The chunks models read and write in: a whole word, part of a word, or punctuation. Models count, limit, and charge by tokens, not words.",
@@ -321,6 +331,7 @@
   {
     "id": "context-window",
     "term": "Context window",
+    "short": "How much text the model can see at once",
     "track": "fundamentals",
     "topic": "How models read and write",
     "plain": "How much text the model can 'see' at once: your question, the conversation so far, and any documents you give it. Think of it as the model's working memory, not its long-term knowledge.",
@@ -350,6 +361,7 @@
   {
     "id": "prompt",
     "term": "Prompt",
+    "short": "The instructions and content you give the model",
     "track": "fundamentals",
     "topic": "Working with models",
     "plain": "Whatever you give the model to respond to: your question, your instructions, examples, or pasted documents.",
@@ -379,6 +391,7 @@
   {
     "id": "system-prompt",
     "term": "System prompt",
+    "short": "Standing instructions the product gives the AI behind the scenes",
     "track": "fundamentals",
     "topic": "Working with models",
     "plain": "Background instructions that the product gives the AI before you type anything, like a job description: who it is, what it should and shouldn't do, and how to respond.",
@@ -412,6 +425,7 @@
   {
     "id": "prompt-engineering",
     "term": "Prompt engineering",
+    "short": "Writing and testing prompts to get reliable output",
     "track": "fundamentals",
     "topic": "Working with models",
     "plain": "The skill of writing and testing prompts to get reliable, high-quality output from a model.",
@@ -441,6 +455,7 @@
   {
     "id": "few-shot-prompting",
     "term": "Few-shot prompting",
+    "short": "Showing the model a few examples before the task",
     "aka": [
       "multishot prompting",
       "examples in the prompt"
@@ -474,6 +489,7 @@
   {
     "id": "temperature",
     "term": "Temperature",
+    "short": "A dial for how creative or predictable answers are",
     "track": "fundamentals",
     "topic": "Working with models",
     "plain": "A setting for how creative or predictable the model's answers are. Low temperature means safer and more consistent, and high means more varied and creative.",
@@ -502,6 +518,7 @@
   {
     "id": "hallucination",
     "term": "Hallucination",
+    "short": "When AI states something false as if it were true",
     "track": "fundamentals",
     "topic": "Risks and quality",
     "plain": "When an AI states something false or made up as if it were true, like a fake statistic or a citation that doesn't exist.",
@@ -531,6 +548,7 @@
   {
     "id": "embeddings",
     "term": "Embeddings",
+    "short": "Numbers that capture meaning so similar text can be found",
     "track": "fundamentals",
     "topic": "Search and retrieval",
     "plain": "A way of turning text into a list of numbers that captures its meaning, so a computer can tell that 'car' and 'automobile' are close even though the words are different.",
@@ -559,6 +577,7 @@
   {
     "id": "vector-database",
     "term": "Vector database",
+    "short": "A database that finds text closest in meaning",
     "track": "fundamentals",
     "topic": "Search and retrieval",
     "plain": "A database built to store embeddings and quickly find the ones closest in meaning to a question.",
@@ -587,6 +606,7 @@
   {
     "id": "rag",
     "term": "RAG (Retrieval-augmented generation)",
+    "short": "Looking up your documents first so answers are grounded in them",
     "aka": [
       "RAG",
       "grounding"
@@ -625,6 +645,7 @@
   {
     "id": "tool-use",
     "term": "Tool use",
+    "short": "Letting the AI call other software, like search or a CRM",
     "aka": [
       "function calling"
     ],
@@ -657,6 +678,7 @@
   {
     "id": "ai-agent",
     "term": "AI agent",
+    "short": "AI that works toward a goal over multiple self-chosen steps",
     "track": "fundamentals",
     "topic": "Agents",
     "plain": "An AI that works toward a goal across multiple steps, deciding for itself which tools to use and what to do next, instead of just answering one question.",
@@ -686,6 +708,7 @@
   {
     "id": "agentic-workflow",
     "term": "Workflow vs agent",
+    "short": "Fixed steps set by a developer versus steps the AI picks",
     "track": "fundamentals",
     "topic": "Agents",
     "plain": "In a workflow, a developer decides the steps in advance and the AI fills in each one. In an agent, the AI decides the steps itself.",
@@ -715,6 +738,7 @@
   {
     "id": "mcp",
     "term": "MCP (Model Context Protocol)",
+    "short": "An open standard for plugging AI into apps and data",
     "aka": [
       "MCP"
     ],
@@ -750,6 +774,7 @@
   {
     "id": "multimodal",
     "term": "Multimodal",
+    "short": "AI that handles images, audio, or files as well as text",
     "track": "fundamentals",
     "topic": "Core concepts",
     "plain": "AI that works with more than one kind of input or output: text plus images, audio, video, or documents like PDFs.",
@@ -779,6 +804,7 @@
   {
     "id": "reasoning-models",
     "term": "Reasoning (thinking) models",
+    "short": "Models that think step by step before answering",
     "aka": [
       "extended thinking",
       "chain of thought"
@@ -812,6 +838,7 @@
   {
     "id": "latency",
     "term": "Latency (and time to first token)",
+    "short": "How long you wait for the AI to respond",
     "aka": [
       "TTFT"
     ],
@@ -844,6 +871,7 @@
   {
     "id": "evals",
     "term": "Evals (evaluations)",
+    "short": "Tests that measure AI quality on realistic examples",
     "track": "fundamentals",
     "topic": "Risks and quality",
     "plain": "Tests that measure how well an AI system performs on realistic examples, so you're judging it on evidence, not vibes.",
@@ -873,6 +901,7 @@
   {
     "id": "prompt-injection",
     "term": "Prompt injection",
+    "short": "Hidden instructions that trick the AI into breaking its rules",
     "track": "fundamentals",
     "topic": "Risks and quality",
     "plain": "An attack where someone hides instructions in text the AI reads, like an email or webpage, to trick it into ignoring its rules or leaking information.",
@@ -902,6 +931,7 @@
   {
     "id": "open-weight-models",
     "term": "Open-weight vs closed models",
+    "short": "Models you can download and run yourself",
     "aka": [
       "open source models"
     ],

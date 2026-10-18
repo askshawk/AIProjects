@@ -1,0 +1,730 @@
+[
+  {
+    "id": "dpa",
+    "term": "Data processing agreement",
+    "short": "The contract governing how a vendor handles your data",
+    "aka": ["DPA"],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "A contract that spells out how a vendor may use, store, protect, and delete a customer's personal data. Legal and privacy teams usually require one before signing.",
+    "technical": "Under GDPR, a controller must have a contract with any processor that handles personal data on its behalf (Article 28). DPAs cover purpose limits, security measures, subprocessors, breach notification, and deletion. For AI products, buyers increasingly check whether the DPA addresses model training.",
+    "customerLine": "Our DPA covers exactly how your data is used and protected, including our AI providers. Happy to send it to your privacy team now.",
+    "followUp": { "q": "Does your DPA cover the AI model provider too?", "a": "Usually the provider is listed as a subprocessor with its own terms flowing down. Confirm and share the subprocessor list." },
+    "misconception": { "claim": "A DPA is just boilerplate nobody reads.", "truth": "Privacy and legal teams read it closely, and gaps around AI can stall a deal." },
+    "related": ["subprocessors", "gdpr", "training-data-usage"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2016/679 (GDPR)", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "subprocessors",
+    "term": "Subprocessors",
+    "short": "Other companies a vendor uses to handle your data",
+    "aka": ["subprocessor list"],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "The third parties a vendor relies on to process customer data, like its cloud host and, for AI products, its model provider. Vendors usually publish the list.",
+    "technical": "Subprocessors are bound by terms at least as protective as the vendor's own DPA. Buyers review the list, and many contracts require advance notice of new subprocessors. An AI feature often adds a model provider to the list, which can trigger review.",
+    "customerLine": "Here's our subprocessor list. Our AI model provider is on it, with the same data protections flowing down.",
+    "followUp": { "q": "Will you tell us if you add a new AI provider?", "a": "Most DPAs commit to advance notice of new subprocessors. Point to the exact clause." },
+    "misconception": { "claim": "Adding an AI feature doesn't change who touches your data.", "truth": "It often adds a model provider as a new subprocessor." },
+    "related": ["dpa", "vendor-dependency", "data-residency"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2016/679 (GDPR)", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "encryption",
+    "term": "Encryption in transit and at rest",
+    "short": "Scrambling data while it moves and while it's stored",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Protecting data by scrambling it so only authorized systems can read it, both while it travels over the internet (in transit) and while it sits in storage (at rest).",
+    "technical": "In transit is typically TLS; at rest is typically AES-256 on disks and databases. Some enterprises also ask about customer-managed encryption keys. For AI, buyers ask whether prompts and responses are encrypted on the way to and inside the model provider.",
+    "customerLine": "Your data is encrypted in transit and at rest, including between us and our AI provider.",
+    "followUp": { "q": "Can we manage our own encryption keys?", "a": "Some vendors offer customer-managed keys on enterprise plans. Check before promising it." },
+    "misconception": { "claim": "Encryption means nobody at the vendor can ever see your data.", "truth": "Encryption protects data from outsiders; access by the vendor's systems is governed by its controls and contracts." },
+    "related": ["soc2-ai", "data-retention", "rbac"],
+    "sources": [
+      { "title": "AICPA: SOC 2 reporting guide (Trust Services Criteria)", "url": "https://www.aicpa-cima.com/cpe-learning/publication/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security-availability-processing-integrity-confidentiality-or-privacy" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "sso",
+    "term": "SSO and SCIM",
+    "short": "Company login and automatic user provisioning",
+    "aka": ["single sign-on", "SAML"],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Single sign-on lets employees log in with their company account (like Okta or Microsoft Entra), and SCIM automatically adds and removes users when people join or leave.",
+    "technical": "SSO usually uses SAML or OIDC. SCIM syncs user accounts from the identity provider. IT teams often require both for any tool touching company data, AI tools included, so access is cut off the day someone leaves.",
+    "customerLine": "It plugs into your existing login, and access is removed automatically when someone leaves the company.",
+    "followUp": { "q": "Is SSO on every plan?", "a": "Often it's an enterprise feature. Know your pricing tiers before the IT review." },
+    "misconception": { "claim": "SSO is just a convenience feature.", "truth": "For IT, it's a security control: central login and instant offboarding." },
+    "related": ["rbac", "audit-logs", "shadow-ai"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "rbac",
+    "term": "Role-based access control",
+    "short": "Permissions based on each person's role",
+    "aka": ["RBAC", "permissions"],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Giving people access based on their role, so a support agent sees support data and a manager sees reports. For AI, the key question is whether the AI respects the same permissions.",
+    "technical": "Good AI products enforce the user's permissions on everything the AI retrieves or does, so the assistant can't surface documents the user couldn't open themselves. This 'permission-aware retrieval' is a common enterprise requirement and a key defense against data leaks.",
+    "customerLine": "The AI only sees what each user is already allowed to see, so it can't become a back door to restricted data.",
+    "followUp": { "q": "Could the AI show someone a document they shouldn't see?", "a": "Not if retrieval is permission-aware. Confirm how your product enforces it before answering." },
+    "misconception": { "claim": "An AI assistant needs access to everything to be useful.", "truth": "It should only reach what the user can already access; anything more is a data-leak risk." },
+    "related": ["sso", "guardrails", "prompt-injection"],
+    "sources": [
+      { "title": "Anthropic: Mitigate jailbreaks and prompt injections (least privilege)", "url": "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "audit-logs",
+    "term": "Audit logs",
+    "short": "A record of who did what, and when",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "A tamper-resistant record of actions in a system: who logged in, what they asked the AI, and what the AI did. Security and compliance teams rely on it to investigate issues.",
+    "technical": "For AI, audit logs may capture prompts, responses, tool calls, and admin changes, which supports investigations, compliance, and accountability. There's a tension with data retention: logging more helps audits but means storing more sensitive data.",
+    "customerLine": "Admins can see a full record of what the AI did and who asked, which is what your compliance team will want.",
+    "followUp": { "q": "Do logs store our prompts too?", "a": "It depends on the product and settings. Know whether logging is configurable and how long logs are kept." },
+    "misconception": { "claim": "Audit logs are only needed after something goes wrong.", "truth": "Compliance teams often require them up front as a condition of approval." },
+    "related": ["data-retention", "explainability", "ai-governance"],
+    "sources": [
+      { "title": "Anthropic: API and data retention", "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "data-minimization",
+    "term": "Data minimization",
+    "short": "Only collecting and sending the data you actually need",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "The principle of collecting, sending, and keeping only the personal data a task truly needs. For AI, it means not feeding the model more customer data than the job requires.",
+    "technical": "Data minimization is a core GDPR principle. In AI systems it shows up as sending only relevant fields to the model, redacting identifiers, and limiting retention. It reduces both privacy risk and token costs.",
+    "customerLine": "We only send the AI what it needs for the task, which protects privacy and keeps costs down.",
+    "followUp": { "q": "Doesn't more data make the AI better?", "a": "More relevant data helps; unnecessary personal data just adds risk." },
+    "misconception": { "claim": "Giving AI all your data always improves results.", "truth": "Irrelevant data adds risk and cost without improving answers." },
+    "related": ["pii", "redaction", "gdpr"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2016/679 (GDPR)", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "redaction",
+    "term": "Redaction and masking",
+    "short": "Hiding sensitive details before the AI sees them",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Automatically removing or replacing sensitive details, like names, card numbers, or health information, before data reaches the AI or gets stored.",
+    "technical": "Redaction deletes values; masking swaps them for placeholders (for example 'CUSTOMER_1') that can sometimes be restored afterward. Detection isn't perfect, so accuracy on your data types matters, and it should be tested.",
+    "customerLine": "Sensitive details can be masked before the AI ever sees them, and we can test how well that works on your real data.",
+    "followUp": { "q": "Does redaction catch everything?", "a": "No tool is perfect. Ask for accuracy on your data types and decide what level of risk is acceptable." },
+    "misconception": { "claim": "Turning on redaction makes any data safe to send.", "truth": "Detection misses some cases, so it reduces risk rather than eliminating it." },
+    "related": ["pii", "data-minimization", "hipaa-baa"],
+    "sources": [
+      { "title": "Anthropic: API and data retention (PHI handling)", "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "private-deployment",
+    "term": "Private deployment",
+    "short": "Running the AI in an isolated environment you control",
+    "aka": ["VPC deployment", "single-tenant"],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Running an AI product, or the model behind it, inside a dedicated environment such as the customer's own cloud account, instead of the vendor's shared setup.",
+    "technical": "Options include single-tenant hosting, deployment in the customer's cloud (VPC), or using a model through the customer's existing cloud provider (for example Amazon Bedrock, Google Cloud, or Microsoft Foundry for Claude). It offers more control and residency options, usually at higher cost and complexity.",
+    "customerLine": "If you need the AI to run inside your own cloud, there are options for that. Let's check whether your requirements actually call for it.",
+    "followUp": { "q": "Is private deployment more secure?", "a": "It gives you more control, but a well-run multi-tenant service with strong contracts and certifications can also meet strict requirements." },
+    "misconception": { "claim": "Only a private deployment can be secure enough for an enterprise.", "truth": "Many enterprises approve shared cloud services with the right controls, contracts, and certifications." },
+    "related": ["data-residency", "open-weight-models", "vendor-dependency"],
+    "sources": [
+      { "title": "Anthropic: API and data retention (platforms)", "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "shadow-ai",
+    "term": "Shadow AI",
+    "short": "Employees using AI tools IT hasn't approved",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "When employees use AI tools on their own, like pasting customer data into a free chatbot, without IT or security knowing or approving.",
+    "technical": "Shadow AI creates data-leak, compliance, and quality risks because consumer tools may have different data terms and no admin controls. Many companies respond with an approved tool list, an AI acceptable use policy, and an enterprise option good enough that people don't need workarounds.",
+    "customerLine": "Your team is probably already using AI. An approved tool with admin controls is safer than pretending they aren't.",
+    "followUp": { "q": "How would we even know about shadow AI?", "a": "Surveys and network monitoring help, but the most effective fix is giving people a sanctioned tool that's actually good." },
+    "misconception": { "claim": "Banning AI tools stops employees from using them.", "truth": "Bans often push usage underground. A good approved option works better." },
+    "related": ["ai-acceptable-use-policy", "ai-governance", "sso"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "hipaa-baa",
+    "term": "HIPAA and the BAA",
+    "short": "US health-data rules and the contract vendors sign",
+    "aka": ["BAA", "PHI"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "HIPAA is the US law protecting health information. Any vendor that handles protected health information for a healthcare organization must sign a business associate agreement (BAA).",
+    "technical": "A BAA commits the vendor to HIPAA safeguards. For AI, the BAA has to cover the specific features and model providers involved. Anthropic, for example, offers HIPAA-ready API access with a signed BAA, and only for eligible features.",
+    "customerLine": "If any health information is involved, we need a BAA in place, and we'll confirm which AI features it covers.",
+    "followUp": { "q": "Can we use every AI feature under the BAA?", "a": "Often not. BAAs usually cover specific features, so check the list before rollout." },
+    "misconception": { "claim": "Any vendor with SOC 2 can handle health data.", "truth": "Handling protected health information requires a BAA and HIPAA-specific safeguards." },
+    "related": ["pii", "redaction", "soc2-ai"],
+    "sources": [
+      { "title": "HHS: HIPAA for professionals", "url": "https://www.hhs.gov/hipaa/index.html" },
+      { "title": "Anthropic: API and data retention (HIPAA readiness)", "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-acceptable-use-policy",
+    "term": "AI acceptable use policy",
+    "short": "A company's rules for how employees may use AI",
+    "aka": ["AI policy"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "An internal policy that says which AI tools employees can use, what data they can put in them, and what needs human review.",
+    "technical": "Typical policies list approved tools, prohibited data (like customer PII in consumer tools), review requirements for customer-facing output, and disclosure rules. A buyer's policy often determines which product features they can turn on.",
+    "customerLine": "Let's look at your AI policy together. If our admin controls map to it, approval goes much faster.",
+    "followUp": { "q": "We don't have an AI policy yet. Does that block us?", "a": "It might slow things down. Some vendors share a starter template, which can speed up the process." },
+    "misconception": { "claim": "An AI policy is only for companies building AI.", "truth": "Most AI risk comes from employees using AI tools, so buyers need policies too." },
+    "related": ["shadow-ai", "ai-governance", "ai-literacy"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "gdpr",
+    "term": "GDPR",
+    "short": "The EU's law protecting personal data",
+    "aka": ["General Data Protection Regulation"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "The European Union's data protection law. It governs how organizations collect and use personal data about people in the EU, with heavy fines for violations.",
+    "technical": "GDPR has applied since May 2018 and reaches companies outside the EU that handle EU residents' data. Key ideas: a lawful basis for processing, data minimization, individual rights (access, deletion), DPAs with processors, and limits on international transfers. AI features must fit within all of it.",
+    "customerLine": "Anything the AI touches is covered by the same GDPR commitments as the rest of the product, including our DPA and subprocessor terms.",
+    "followUp": { "q": "Can people ask to have their data deleted from the AI?", "a": "Deletion rights apply to stored data. Explain how deletion works for prompts, logs, and anything the AI saved." },
+    "misconception": { "claim": "GDPR only applies to European companies.", "truth": "It applies to anyone processing personal data of people in the EU." },
+    "related": ["dpa", "data-residency", "eu-ai-act"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2016/679 (GDPR)", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ccpa",
+    "term": "CCPA / CPRA",
+    "short": "California's consumer privacy law",
+    "aka": ["CPRA"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "California's privacy law, which gives California residents rights over their personal information, like knowing what's collected and asking for deletion.",
+    "technical": "The CCPA took effect in 2020 and was expanded by the CPRA. It covers businesses above certain size or data thresholds and includes service-provider contract requirements similar in spirit to DPAs. California regulators have also issued rules on automated decision-making technology.",
+    "customerLine": "We support the same privacy rights under California law as under GDPR, including for anything the AI processes.",
+    "followUp": { "q": "Do other US states have similar laws?", "a": "Yes, a growing number. Your legal team will have the current list for your customers." },
+    "misconception": { "claim": "The US has no consumer privacy laws that affect AI.", "truth": "State laws like California's apply, and more states are adding them." },
+    "related": ["gdpr", "dpa", "pii"],
+    "sources": [
+      { "title": "California Attorney General: CCPA", "url": "https://oag.ca.gov/privacy/ccpa" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "iso-27001",
+    "term": "ISO/IEC 27001",
+    "short": "The international standard for information security management",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "A widely recognized international certification showing a company runs a proper information security program. It's common in security reviews, especially outside the US.",
+    "technical": "ISO 27001 certifies an information security management system: risk assessment, controls, and continual improvement, audited by an accredited body. ISO/IEC 42001 uses the same structure for AI management, so companies with 27001 can extend into 42001 more easily.",
+    "customerLine": "We're ISO 27001 certified for security. For AI-specific governance, ISO 42001 is the matching standard.",
+    "followUp": { "q": "Is ISO 27001 the same as SOC 2?", "a": "They overlap but differ: ISO 27001 certifies a management system; SOC 2 is an auditor's report on controls. Many buyers accept either." },
+    "misconception": { "claim": "ISO 27001 covers AI risks.", "truth": "It covers information security broadly; ISO 42001 addresses AI management specifically." },
+    "related": ["iso-42001", "soc2-ai", "ai-governance"],
+    "sources": [
+      { "title": "ISO: ISO/IEC 27001 Information security management", "url": "https://www.iso.org/standard/27001" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "fedramp",
+    "term": "FedRAMP",
+    "short": "US government security authorization for cloud services",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "The US federal program that sets security requirements for cloud services used by federal agencies. Selling cloud AI to most federal customers requires it.",
+    "technical": "FedRAMP standardizes security assessment and authorization at different impact levels (such as Moderate and High). It's lengthy and expensive to achieve. AI vendors often reach government customers through cloud platforms that already hold authorizations.",
+    "customerLine": "For federal work, FedRAMP status matters. Let me confirm exactly where we stand and which deployment options qualify.",
+    "followUp": { "q": "Does using a FedRAMP-authorized cloud make the app authorized?", "a": "Not automatically. The application itself needs authorization at the required level, though building on authorized infrastructure helps." },
+    "misconception": { "claim": "Any vendor on a government-approved cloud is FedRAMP authorized.", "truth": "Authorization applies to the specific service, not just the infrastructure under it." },
+    "related": ["private-deployment", "soc2-ai", "data-residency"],
+    "sources": [
+      { "title": "FedRAMP", "url": "https://www.fedramp.gov/" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-literacy",
+    "term": "AI literacy",
+    "short": "Staff knowing enough about AI to use it responsibly",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "Having enough understanding of AI to use it well and safely: what it's good at, where it fails, and when to check its work. It's now a regulatory expectation in the EU.",
+    "technical": "Article 4 of the EU AI Act requires providers and deployers of AI systems to take measures to ensure a sufficient level of AI literacy among their staff, and it has applied since February 2025. Training programs, usage guidelines, and onboarding all count toward it.",
+    "customerLine": "Rolling out AI includes training people to use it well. We can help with enablement, which also supports your AI literacy obligations.",
+    "followUp": { "q": "What does AI literacy training actually involve?", "a": "Practical basics: what the tool does, where it can be wrong, what data not to share, and when a person must review." },
+    "misconception": { "claim": "AI literacy is only for technical staff.", "truth": "It applies to everyone who uses or oversees AI systems, including business users." },
+    "related": ["eu-ai-act", "ai-adoption", "change-management-ai"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2024/1689 (AI Act)", "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-transparency",
+    "term": "AI disclosure and transparency",
+    "short": "Telling people when they're dealing with AI",
+    "aka": ["AI labeling"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "Being upfront when people are talking to an AI or reading AI-generated content, so they aren't misled.",
+    "technical": "The EU AI Act's transparency rules expect people to be told when they're interacting with an AI system like a chatbot, and certain AI-generated content (such as deepfakes) to be labeled. Many companies adopt disclosure as policy regardless, because customers react badly to finding out later.",
+    "customerLine": "Customers should know when they're talking to AI. It's increasingly a legal expectation, and it protects trust.",
+    "followUp": { "q": "Won't telling customers it's AI make them trust it less?", "a": "Being found out later damages trust far more. Clear disclosure plus an easy route to a person works best." },
+    "misconception": { "claim": "Disclosing AI use is optional good manners.", "truth": "In some jurisdictions and uses it's a legal requirement." },
+    "related": ["eu-ai-act", "deepfake", "responsible-ai"],
+    "sources": [
+      { "title": "EUR-Lex: Regulation (EU) 2024/1689 (AI Act)", "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "model-card",
+    "term": "Model card",
+    "short": "A model's documented strengths, limits, and testing",
+    "aka": ["system card"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "A document published with a model describing what it's for, how it was tested, its known limitations, and safety evaluations, like a spec sheet and warning label in one.",
+    "technical": "Model and system cards typically cover intended use, evaluation results, safety testing, and limitations. Governance teams use them for vendor assessments, and regulations increasingly expect this kind of documentation for AI systems.",
+    "customerLine": "Our model provider publishes a system card covering testing and limitations. I can share it with your governance team.",
+    "followUp": { "q": "Does the model card cover your product?", "a": "No, it covers the underlying model. Your product's own documentation covers how you use it." },
+    "misconception": { "claim": "A model card tells you how a specific product will behave.", "truth": "It describes the base model; product behavior depends on how it's built on top." },
+    "related": ["ai-governance", "responsible-ai", "foundation-model"],
+    "sources": [
+      { "title": "Anthropic: Models overview", "url": "https://platform.claude.com/docs/en/models/overview" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "ai-impact-assessment",
+    "term": "AI impact assessment",
+    "short": "A structured review of an AI use case's risks before launch",
+    "aka": ["AI risk assessment"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "A review a company does before deploying an AI use case: who it affects, what could go wrong, and what controls are in place.",
+    "technical": "Impact assessments appear in frameworks like the NIST AI RMF (the Map function), ISO/IEC 42005, and, for certain high-risk uses, the EU AI Act. They often borrow from privacy impact assessments. Vendors that provide clear documentation make them much faster.",
+    "customerLine": "If your team needs an AI impact assessment, we can supply the documentation for it: data flows, controls, and testing.",
+    "followUp": { "q": "How long do these usually take?", "a": "It varies a lot. Supplying documentation up front is the best way to keep it from stalling the deal." },
+    "misconception": { "claim": "Impact assessments are only for government AI.", "truth": "Many companies run them for any AI that affects customers or employees." },
+    "related": ["ai-governance", "nist-ai-rmf", "iso-42001"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ip-indemnity",
+    "term": "IP indemnity for AI output",
+    "short": "Vendor protection if AI output infringes someone's rights",
+    "aka": ["copyright indemnity"],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "A contract promise that the vendor will defend the customer if AI-generated output is accused of infringing someone's copyright or other intellectual property.",
+    "technical": "Several AI providers offer IP indemnities for commercial customers, typically with conditions (for example, not disabling safety features and using the product as intended). Legal teams increasingly ask whether this protection flows through to them from an AI product's model provider.",
+    "customerLine": "Your legal team will ask about IP protection for AI output. Let me get you our exact terms rather than summarize them.",
+    "followUp": { "q": "Does the model provider's indemnity cover us?", "a": "Not automatically. It usually covers the provider's direct customer. What you get depends on your vendor's own contract." },
+    "misconception": { "claim": "AI-generated content can never raise copyright issues.", "truth": "Ownership and infringement questions are still being worked out, which is why indemnities exist." },
+    "related": ["dpa", "ai-governance", "generative-ai"],
+    "sources": [
+      { "title": "Anthropic: Commercial Terms of Service", "url": "https://www.anthropic.com/legal/commercial-terms" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "ai-security-questionnaire",
+    "term": "AI security questionnaire",
+    "short": "The buyer's checklist of AI risk questions for vendors",
+    "aka": ["AI vendor assessment"],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "A set of questions a buyer's security or risk team sends about how a vendor's AI works: data use, training, retention, model providers, testing, and controls.",
+    "technical": "These questionnaires extend standard security reviews with AI sections, often drawing on NIST AI RMF, ISO/IEC 42001, OWASP's LLM risks, and the EU AI Act. A prepared answer pack (data flow diagram, subprocessor list, testing summary) shortens them dramatically.",
+    "customerLine": "We have a ready-made AI answer pack, so your questionnaire should take days, not weeks.",
+    "followUp": { "q": "Can you just fill in our spreadsheet?", "a": "Usually yes, with your security or solutions team. Get it moving early, since it's often the longest step." },
+    "misconception": { "claim": "The security review starts after the business says yes.", "truth": "Starting it early prevents a late-stage stall." },
+    "related": ["soc2-ai", "ai-governance", "pilot-to-production"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" },
+      { "title": "OWASP Top 10 for LLM Applications", "url": "https://owasp.org/www-project-top-10-for-large-language-model-applications/" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-use-case-discovery",
+    "term": "AI use case discovery",
+    "short": "Finding where AI will actually help a customer",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Working with a customer to find the specific, high-value tasks where AI fits, instead of starting from 'we should use AI somewhere'.",
+    "technical": "Good AI use cases are frequent, time-consuming, tolerant of a draft that a person checks, and measurable. Ask about volume, current time per task, error cost, and available data. DeepLearning.AI's generative AI course frames this as breaking jobs into tasks and scoring each.",
+    "customerLine": "Let's skip 'where could AI go?' and find the one task your team does a hundred times a week that AI could draft first.",
+    "followUp": { "q": "What makes a good first use case?", "a": "High volume, a clear before-and-after metric, and low harm if a draft needs fixing." },
+    "misconception": { "claim": "The best AI use case is the most impressive one.", "truth": "The best first use case is frequent, measurable, and low-risk." },
+    "related": ["ai-roi", "pilot-to-production", "success-criteria"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI projects)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-native-vs-bolt-on",
+    "term": "AI-native vs bolt-on AI",
+    "short": "Built around AI from the start versus AI added later",
+    "aka": ["AI-first"],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "An AI-native product was designed around AI from day one; a bolt-on adds AI features to an existing product. Buyers use the distinction to judge how central and mature the AI is.",
+    "technical": "AI-native products often rethink the workflow (AI drafts, people approve). Bolt-on features usually sit inside existing screens. Neither is automatically better: established products bring data, integrations, and trust, while AI-native ones may move faster.",
+    "customerLine": "What matters isn't the label. It's whether the AI fits into your team's real workflow and makes it measurably better.",
+    "followUp": { "q": "Aren't AI-native startups more advanced?", "a": "Sometimes, but established platforms often have the data, integrations, and security posture that make AI useful at scale." },
+    "misconception": { "claim": "AI-native products are always better than AI features in established tools.", "truth": "It depends on fit, data, and maturity, not the label." },
+    "related": ["thin-wrapper", "build-vs-buy", "ai-washing"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "thin-wrapper",
+    "term": "Thin wrapper",
+    "short": "A product that adds little beyond a model's own chat",
+    "aka": ["GPT wrapper"],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "A dismissive term for an AI product that's mostly a nicer interface on top of someone else's model, with little real value added.",
+    "technical": "Durable value usually comes from what wraps the model: proprietary data, integrations, workflow design, evaluation, security, and support. Buyers ask 'isn't this just a wrapper?' to test whether those layers exist.",
+    "customerLine": "Every AI product sits on a model. The question is what's around it, and for us that's your data, your workflow, and the controls.",
+    "followUp": { "q": "What would we lose by using the base model directly?", "a": "Name the specifics: integrations, admin controls, workflow, evaluations. If you can't, that's a real gap." },
+    "misconception": { "claim": "Building on another company's model means the product has no value.", "truth": "Most valuable AI products build on foundation models; the value is in what they add." },
+    "related": ["foundation-model", "build-vs-buy", "ai-native-vs-bolt-on"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "success-criteria",
+    "term": "Success criteria",
+    "short": "The agreed, measurable definition of a working pilot",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "The specific, measurable targets agreed before a pilot starts, like 'cut ticket handling time 20% with no drop in quality', so everyone knows what 'it worked' means.",
+    "technical": "Anthropic's own guidance says to define success criteria and tests before tuning anything. In a deal, written criteria with a baseline, a target, a measurement method, and a decision date turn a pilot into a clean buying decision.",
+    "customerLine": "Before we start, let's write down what success looks like and how we'll measure it. Then the pilot answers a real question.",
+    "followUp": { "q": "What if we pick the wrong metric?", "a": "Pick one primary metric tied to a business outcome and a quality guardrail. Imperfect but agreed beats perfect but vague." },
+    "misconception": { "claim": "You'll know a good pilot when you see it.", "truth": "Without agreed criteria, pilots drift and rarely convert." },
+    "related": ["pilot-to-production", "evals", "ai-roi"],
+    "sources": [
+      { "title": "Anthropic: Define success criteria and build evaluations", "url": "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "time-to-value",
+    "term": "Time to value",
+    "short": "How quickly a customer sees real results",
+    "aka": ["TTV"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "How long it takes after signing for a customer to get meaningful results. For AI products, a quick first win builds the trust needed for wider rollout.",
+    "technical": "AI time to value depends on integrations, data readiness, security approval, and user training. Starting with one high-volume use case and a measured baseline usually gets a provable win fastest, which then funds expansion.",
+    "customerLine": "Let's aim for one measurable win in the first 30 days. That's what earns the wider rollout.",
+    "followUp": { "q": "What usually slows time to value?", "a": "Security reviews, messy data, and unclear ownership. Starting each early helps most." },
+    "misconception": { "claim": "AI shows value the moment it's switched on.", "truth": "Integration, data, and adoption work determine how fast value shows up." },
+    "related": ["ai-adoption", "pilot-to-production", "success-criteria"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "ai-adoption",
+    "term": "AI adoption",
+    "short": "Whether people actually use the AI in their daily work",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "How many people use the AI features, how often, and for what. Low adoption is the most common reason AI investments disappoint and renewals get harder.",
+    "technical": "Useful adoption signals go beyond logins: share of eligible tasks using AI, repeat usage, and the rate at which AI output is kept rather than discarded. Adoption grows with workflow fit, training, champions, and trust built through accuracy.",
+    "customerLine": "The license only pays off if people use it. Let's track adoption from week one and fix friction early.",
+    "followUp": { "q": "What if adoption is low after a month?", "a": "Find out why with users: workflow fit, trust, or training. Each has a different fix." },
+    "misconception": { "claim": "If the AI is good, people will adopt it on their own.", "truth": "Adoption takes enablement, workflow fit, and visible support from leaders." },
+    "related": ["change-management-ai", "ai-champion", "usage-analytics"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "change-management-ai",
+    "term": "Change management for AI",
+    "short": "Helping people adjust how they work with AI",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "The people side of rolling out AI: explaining why, training teams, addressing job worries, and redesigning workflows so AI becomes part of normal work.",
+    "technical": "AI rollouts change who does what, so they trigger real concerns about job security and quality. Effective change management involves leadership messaging, role-specific training, champions, feedback loops, and clear human-review rules.",
+    "customerLine": "The technology is the easy part. We'll help with the rollout plan so your team sees AI as a tool, not a threat.",
+    "followUp": { "q": "People are worried AI will replace them. What do we say?", "a": "Be honest: it changes tasks, mostly removing busywork, and people stay accountable for the work. Then show it in practice." },
+    "misconception": { "claim": "An AI rollout is mainly a technical project.", "truth": "Most AI rollouts succeed or fail on people and process." },
+    "related": ["ai-adoption", "ai-literacy", "ai-champion"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI and society)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "ai-champion",
+    "term": "AI champion",
+    "short": "An internal advocate who drives AI adoption",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "A person inside the customer who's enthusiastic about the AI tool, helps teammates use it, and advocates for it internally. Champions are often the difference between a pilot and a rollout.",
+    "technical": "Strong champions have credibility with peers, see the value firsthand, and have a path to decision-makers. Equipping them with results, training materials, and answers to security questions makes them far more effective, and losing one is a renewal risk.",
+    "customerLine": "Who on your team is most excited about this? Let's make them the go-to person and give them what they need to bring others along.",
+    "followUp": { "q": "What if our champion leaves?", "a": "That's why it pays to build several champions and document results, so momentum doesn't depend on one person." },
+    "misconception": { "claim": "The executive sponsor and the champion are the same person.", "truth": "Sponsors approve; champions drive daily adoption. Most rollouts need both." },
+    "related": ["ai-adoption", "change-management-ai", "pilot-to-production"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "model-deprecation",
+    "term": "Model deprecation",
+    "short": "Providers retiring older models on a schedule",
+    "aka": ["model retirement"],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "AI providers regularly retire older models. Products built on them have to move to newer models, which usually improves quality but can change behavior.",
+    "technical": "Providers like Anthropic publish deprecation and retirement schedules for their models. Well-run products plan migrations, re-run their evals on the new model, and communicate any behavior changes, so customers aren't surprised.",
+    "customerLine": "Models get upgraded regularly. We test every change against our quality checks before it reaches you.",
+    "followUp": { "q": "Will an upgrade change how the product behaves?", "a": "It can, slightly. Ask how changes are tested and announced, and whether you can preview them." },
+    "misconception": { "claim": "Once a product picks a model, it uses that model forever.", "truth": "Providers retire models, so products migrate regularly." },
+    "related": ["model-choice", "vendor-dependency", "model-drift"],
+    "sources": [
+      { "title": "Anthropic: Model deprecations", "url": "https://platform.claude.com/docs/en/about-claude/model-deprecations" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "vendor-dependency",
+    "term": "AI vendor dependency",
+    "short": "Relying on an outside model provider's uptime and terms",
+    "aka": ["provider risk", "concentration risk"],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "The risk that comes from an AI product depending on a third-party model provider: outages, price changes, policy changes, or model retirements upstream affect the product.",
+    "technical": "Mitigations include multi-provider or multi-platform setups, fallback models, caching, graceful degradation (non-AI features keep working), and contracts that cover the provider relationship. Risk teams often ask about this explicitly.",
+    "customerLine": "If our AI provider has an outage, the rest of the product keeps working, and we have fallbacks for the AI features.",
+    "followUp": { "q": "What happens if your model provider changes its terms?", "a": "Explain your contractual protections and how quickly you could switch providers or models." },
+    "misconception": { "claim": "If the AI vendor is reliable, the model provider doesn't matter.", "truth": "The product's AI is only as reliable as the provider beneath it, plus whatever fallbacks exist." },
+    "related": ["model-choice", "subprocessors", "uptime-sla"],
+    "sources": [
+      { "title": "NIST AI Risk Management Framework", "url": "https://www.nist.gov/itl/ai-risk-management-framework" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "outcome-based-pricing",
+    "term": "Outcome-based pricing",
+    "short": "Paying per result, like per resolved ticket",
+    "aka": ["pay per outcome"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "Pricing AI by the results it delivers, such as per conversation resolved or per task completed, instead of per user or per token.",
+    "technical": "Outcome pricing aligns cost with value but needs a clear, agreed definition of the outcome and a way to measure it. Disputes usually come from definitions ('what counts as resolved?'), so contracts define them precisely.",
+    "customerLine": "You only pay when the AI actually resolves something, so cost tracks the value you get.",
+    "followUp": { "q": "Who decides what counts as an outcome?", "a": "It should be defined precisely in the contract and measured the same way on both sides." },
+    "misconception": { "claim": "Outcome-based pricing is always cheaper for the buyer.", "truth": "It ties cost to results, which can cost more if the AI is very successful." },
+    "related": ["token-pricing", "deflection-rate", "ai-roi"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "ai-credits",
+    "term": "AI credits",
+    "short": "Prepaid units that AI features draw down",
+    "aka": ["usage credits"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "A pricing model where customers buy a pool of credits and each AI action uses some of them, which makes AI usage easier to budget than raw token pricing.",
+    "technical": "Credits abstract away tokens: different actions cost different amounts depending on the underlying compute. Buyers want to know burn rates per action, what happens when credits run out, and whether unused credits roll over.",
+    "customerLine": "Credits give you a predictable AI budget. Let's estimate your burn rate from the pilot so you buy the right amount.",
+    "followUp": { "q": "What happens when we run out?", "a": "Know the answer for your product: pause, overage charges, or automatic top-up." },
+    "misconception": { "claim": "One credit always equals one AI request.", "truth": "Credit costs usually vary by feature, depending on how much compute it uses." },
+    "related": ["token-pricing", "overages", "usage-analytics"],
+    "sources": [
+      { "title": "Anthropic: Pricing", "url": "https://platform.claude.com/docs/en/about-claude/pricing" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "overages",
+    "term": "Usage overages",
+    "short": "Charges for going past an included usage amount",
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "Extra charges when a customer uses more AI than their plan includes. Surprise overages are one of the fastest ways to damage a customer relationship.",
+    "technical": "Overage terms define the rate, whether usage is capped or allowed to continue, and what alerts happen first. Proactive usage alerts and right-sizing at renewal prevent most disputes.",
+    "customerLine": "You'll get alerts well before any overage, and we'll review usage together so there are no surprises.",
+    "followUp": { "q": "Can we set a hard cap instead?", "a": "Often yes. Know whether your product supports caps, alerts, or both." },
+    "misconception": { "claim": "Overages are pure upside for the vendor.", "truth": "Surprise overages often cost far more in churn and goodwill than they earn." },
+    "related": ["ai-credits", "token-pricing", "usage-analytics"],
+    "sources": [
+      { "title": "Anthropic: Rate limits (spend limits)", "url": "https://platform.claude.com/docs/en/api/rate-limits" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "tco",
+    "term": "Total cost of ownership",
+    "short": "Everything an AI tool really costs over time",
+    "aka": ["TCO"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "The full cost of an AI solution over its life: license or usage fees, plus implementation, integration, training, security reviews, maintenance, and staff time.",
+    "technical": "For build vs buy, TCO for building includes engineering salaries, model usage, infrastructure, evaluation, monitoring, security, and ongoing upgrades as models change. Buying shifts much of that to the vendor's price. Comparing only sticker prices misleads.",
+    "customerLine": "Let's compare total cost, not just price: what it takes to build, run, secure, and improve this over three years.",
+    "followUp": { "q": "Isn't building cheaper since API costs keep dropping?", "a": "Model costs are only one line. People, maintenance, and opportunity cost usually dominate." },
+    "misconception": { "claim": "The cheapest license is the cheapest option.", "truth": "Implementation, maintenance, and adoption costs can outweigh the license." },
+    "related": ["build-vs-buy", "ai-roi", "token-pricing"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI projects)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "deflection-rate",
+    "term": "Deflection and containment rate",
+    "short": "Share of requests AI resolves without a person",
+    "aka": ["containment rate", "resolution rate"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "In customer support AI, the percentage of questions the AI fully resolves without handing off to a human agent. It's a headline metric for support AI ROI.",
+    "technical": "Definitions vary: 'deflected' might mean the customer left without escalating, which isn't the same as actually solved. Pair it with customer satisfaction, reopen rates, and quality checks, or a high rate can hide frustrated customers.",
+    "customerLine": "Let's agree on what 'resolved' means and track satisfaction alongside it, so a high deflection rate actually means happy customers.",
+    "followUp": { "q": "What's a good deflection rate?", "a": "It depends heavily on the question mix. Compare against your own baseline, not industry claims." },
+    "misconception": { "claim": "A higher deflection rate is always better.", "truth": "If customers give up rather than get answers, a high rate hides a problem." },
+    "related": ["ai-roi", "outcome-based-pricing", "human-in-the-loop"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "usage-analytics",
+    "term": "AI usage analytics",
+    "short": "Dashboards showing how AI features are used",
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "Reports that show who uses the AI, how often, for what, and how much it costs, which is what admins and CSMs use to prove value and catch problems early.",
+    "technical": "Useful analytics cover active users, actions per user, acceptance rates of AI output, spend by team, and trends. They feed adoption plans, QBRs, renewal conversations, and budget forecasting.",
+    "customerLine": "You'll see exactly how your team uses the AI, which we'll bring to every business review.",
+    "followUp": { "q": "Can we see usage by team?", "a": "Know your product's admin reporting. Team-level views are a common enterprise ask." },
+    "misconception": { "claim": "Usage numbers prove the AI is delivering value.", "truth": "Usage shows activity; value needs outcome metrics like time saved or quality." },
+    "related": ["ai-adoption", "ai-roi", "overages"],
+    "sources": [
+      { "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)", "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "accuracy-guarantees",
+    "term": "Accuracy guarantees",
+    "short": "Why AI vendors rarely promise a fixed accuracy",
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "Buyers often ask vendors to guarantee the AI will be right a certain percentage of the time. Most vendors won't, because accuracy depends heavily on the customer's own data and tasks.",
+    "technical": "Instead of contractual accuracy numbers, vendors offer measured results in a pilot, evals on the customer's examples, human-review options, and ongoing quality monitoring. Promising a fixed number usually sets up a dispute.",
+    "customerLine": "I won't promise a number I can't stand behind. Let's measure accuracy on your own examples in the pilot, so you know exactly what to expect.",
+    "followUp": { "q": "Then how do we hold you accountable?", "a": "Agreed success criteria, a measured pilot, and regular quality reviews give real accountability." },
+    "misconception": { "claim": "A vendor that guarantees 99% accuracy is the safer choice.", "truth": "A blanket accuracy promise is usually a red flag, since accuracy depends on your data and tasks." },
+    "related": ["evals", "success-criteria", "hallucination"],
+    "sources": [
+      { "title": "Anthropic: Reduce hallucinations", "url": "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "uptime-sla",
+    "term": "Uptime SLA",
+    "short": "A contractual promise about how often the service is available",
+    "aka": ["SLA", "service level agreement"],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "A service level agreement promises a level of availability, like 99.9% uptime, and usually service credits if the vendor misses it.",
+    "technical": "For AI products, an important detail is whether the SLA covers AI features and whether it depends on the model provider's availability. Some vendors exclude AI features or third-party provider outages, so buyers read the exclusions.",
+    "customerLine": "Our SLA covers availability, and I'll show you exactly how AI features are treated in it, including any provider exclusions.",
+    "followUp": { "q": "Does the SLA cover the AI features?", "a": "Check before answering. Some SLAs cover the core product but treat AI features separately." },
+    "misconception": { "claim": "An uptime SLA guarantees the AI's answers are good.", "truth": "SLAs cover availability, not answer quality." },
+    "related": ["vendor-dependency", "accuracy-guarantees", "rate-limits"],
+    "sources": [
+      { "title": "Anthropic: Rate limits", "url": "https://platform.claude.com/docs/en/api/rate-limits" }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  }
+]

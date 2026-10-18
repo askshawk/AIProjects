@@ -1,0 +1,258 @@
+[
+  {
+    "id": "rag-pitch",
+    "sentence": "We'd use RAG over a vector database with good embeddings, so the bot stops hallucinating about our policies.",
+    "termIds": [
+      "rag",
+      "vector-database",
+      "embeddings",
+      "hallucination"
+    ]
+  },
+  {
+    "id": "model-basics",
+    "sentence": "It's an LLM built on a foundation model, then fine-tuned with RLHF so it follows instructions.",
+    "termIds": [
+      "llm",
+      "foundation-model",
+      "fine-tuning",
+      "rlhf"
+    ]
+  },
+  {
+    "id": "big-context",
+    "sentence": "The new model has a bigger context window, but every extra token in the prompt adds latency.",
+    "termIds": [
+      "context-window",
+      "token",
+      "prompt",
+      "latency"
+    ]
+  },
+  {
+    "id": "agent-roadmap",
+    "sentence": "Next quarter we move from a copilot to an AI agent that uses tools through MCP.",
+    "termIds": [
+      "copilot-vs-agent",
+      "ai-agent",
+      "tool-use",
+      "mcp"
+    ]
+  },
+  {
+    "id": "security-review",
+    "sentence": "Security wants to know about data retention, data residency, and whether you train on our data.",
+    "termIds": [
+      "data-retention",
+      "data-residency",
+      "training-data-usage"
+    ]
+  },
+  {
+    "id": "governance",
+    "sentence": "Our AI governance team maps every vendor to the NIST AI RMF and the EU AI Act.",
+    "termIds": [
+      "ai-governance",
+      "nist-ai-rmf",
+      "eu-ai-act"
+    ]
+  },
+  {
+    "id": "certs",
+    "sentence": "You have SOC 2, but are you working toward ISO 42001, and how do you handle PII?",
+    "termIds": [
+      "soc2-ai",
+      "iso-42001",
+      "pii"
+    ]
+  },
+  {
+    "id": "safe-launch",
+    "sentence": "Before launch we added guardrails, a human in the loop, and defenses against prompt injection.",
+    "termIds": [
+      "guardrails",
+      "human-in-the-loop",
+      "prompt-injection"
+    ]
+  },
+  {
+    "id": "quality",
+    "sentence": "Run evals first, then tune the system prompt with few-shot examples and a lower temperature.",
+    "termIds": [
+      "evals",
+      "system-prompt",
+      "few-shot-prompting",
+      "temperature"
+    ]
+  },
+  {
+    "id": "procurement",
+    "sentence": "Procurement asked about token pricing, AI ROI, and whether we should build vs buy.",
+    "termIds": [
+      "token-pricing",
+      "ai-roi",
+      "build-vs-buy"
+    ]
+  },
+  {
+    "id": "pilot",
+    "sentence": "Our pilot to production plan tracks false positives and checks for AI washing in the vendor's claims.",
+    "termIds": [
+      "pilot-to-production",
+      "false-positives",
+      "ai-washing"
+    ]
+  },
+  {
+    "id": "under-the-hood",
+    "sentence": "Pretraining sets the model's parameters, and after that it's all inference.",
+    "termIds": [
+      "pretraining",
+      "model-parameters",
+      "training-vs-inference"
+    ]
+  },
+  {
+    "id": "model-shopping",
+    "sentence": "We're comparing open-weight models with a multimodal reasoning model before we commit to a model choice.",
+    "termIds": [
+      "open-weight-models",
+      "multimodal",
+      "reasoning-models",
+      "model-choice"
+    ]
+  },
+  {
+    "id": "principles",
+    "sentence": "Our responsible AI policy says the workflow vs agent decision gets reviewed, and every prompt engineering change gets tested.",
+    "termIds": [
+      "responsible-ai",
+      "agentic-workflow",
+      "prompt-engineering"
+    ]
+  },
+  {
+    "id": "ml-intro",
+    "sentence": "It's machine learning, not rules: generative AI drafts the reply instead of picking a canned one.",
+    "termIds": [
+      "machine-learning",
+      "generative-ai"
+    ]
+  },
+  {
+    "id": "search-stack",
+    "sentence": "Our search uses chunking, hybrid search, and a reranker, and every answer comes with citations.",
+    "termIds": [
+      "chunking",
+      "hybrid-search",
+      "reranking",
+      "citations"
+    ]
+  },
+  {
+    "id": "agent-stack",
+    "sentence": "The agent loop hands research to a multi-agent setup with agent memory and computer use for the legacy app.",
+    "termIds": [
+      "agent-loop",
+      "multi-agent",
+      "agent-memory",
+      "computer-use"
+    ]
+  },
+  {
+    "id": "cost-stack",
+    "sentence": "We cut the bill with prompt caching, batch processing, and model routing, and stayed under our rate limits.",
+    "termIds": [
+      "prompt-caching",
+      "batch-processing",
+      "model-routing",
+      "rate-limits"
+    ]
+  },
+  {
+    "id": "risk-review",
+    "sentence": "Before launch we ran red teaming for jailbreaks and data poisoning, and used an LLM as a judge on the evals.",
+    "termIds": [
+      "red-teaming",
+      "jailbreak",
+      "data-poisoning",
+      "llm-as-judge"
+    ]
+  },
+  {
+    "id": "legal-pack",
+    "sentence": "Legal needs the DPA, the subprocessor list, and your IP indemnity terms before we sign.",
+    "termIds": [
+      "dpa",
+      "subprocessors",
+      "ip-indemnity"
+    ]
+  },
+  {
+    "id": "it-checklist",
+    "sentence": "IT requires SSO, role-based access control, audit logs, and encryption at rest.",
+    "termIds": [
+      "sso",
+      "rbac",
+      "audit-logs",
+      "encryption"
+    ]
+  },
+  {
+    "id": "privacy-laws",
+    "sentence": "Our privacy team maps every AI tool to GDPR and the CCPA, and health data needs a BAA.",
+    "termIds": [
+      "gdpr",
+      "ccpa",
+      "hipaa-baa"
+    ]
+  },
+  {
+    "id": "pricing-talk",
+    "sentence": "They offered outcome-based pricing, AI credits, or seats with overages, so we compared total cost of ownership.",
+    "termIds": [
+      "outcome-based-pricing",
+      "ai-credits",
+      "overages",
+      "tco"
+    ]
+  },
+  {
+    "id": "rollout",
+    "sentence": "Rollout depends on AI adoption, real change management, and a strong AI champion on each team.",
+    "termIds": [
+      "ai-adoption",
+      "change-management-ai",
+      "ai-champion"
+    ]
+  },
+  {
+    "id": "model-basics-2",
+    "sentence": "Modern models are transformers using attention, trained on huge training data, and they work by next-token prediction.",
+    "termIds": [
+      "transformer",
+      "attention",
+      "training-data",
+      "next-token-prediction"
+    ]
+  },
+  {
+    "id": "model-size",
+    "sentence": "A small language model made with distillation and quantization can run as on-device AI.",
+    "termIds": [
+      "small-language-model",
+      "distillation",
+      "quantization",
+      "on-device-ai"
+    ]
+  },
+  {
+    "id": "learning-types",
+    "sentence": "Fraud scores use supervised learning, segments come from unsupervised learning, and chat models also use reinforcement learning.",
+    "termIds": [
+      "supervised-learning",
+      "unsupervised-learning",
+      "reinforcement-learning"
+    ]
+  }
+]
