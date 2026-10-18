@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { signInAttempts } from "@/db/schema";
-import { verifyPasscode } from "./passcode";
-import { SESSION_COOKIE, createSessionToken, isValidSessionToken } from "./session";
+import { checkPasscode, passcodeConfigured } from "./passcode";
+import { SESSION_COOKIE, createSessionToken, isValidSessionToken, sessionSecret } from "./session";
 
 /** Five tries per client every 15 minutes is plenty for a person, useless for a script. */
 const MAX_ATTEMPTS = 5;
@@ -12,7 +12,7 @@ const WINDOW_MINUTES = 15;
 
 export async function isSignedIn(): Promise<boolean> {
   const store = await cookies();
-  return isValidSessionToken(store.get(SESSION_COOKIE)?.value, process.env.SESSION_SECRET);
+  return isValidSessionToken(store.get(SESSION_COOKIE)?.value, sessionSecret());
 }
 
 /**
@@ -57,17 +57,16 @@ async function claimAttempt(key: string): Promise<boolean> {
 export type SignInResult = { error: string } | undefined;
 
 export async function signIn(passcode: string): Promise<SignInResult> {
-  const stored = process.env.APP_PASSCODE_HASH;
-  const secret = process.env.SESSION_SECRET;
-  if (!stored || !secret) {
-    return { error: "Sign-in isn't set up yet. Add APP_PASSCODE_HASH and SESSION_SECRET to the environment." };
+  const secret = sessionSecret();
+  if (!passcodeConfigured() || !secret) {
+    return { error: "Sign-in isn't set up yet. Add APP_PASSCODE to the environment." };
   }
 
   const key = await clientKey();
   if (!(await claimAttempt(key))) {
     return { error: `Too many attempts. Try again in ${WINDOW_MINUTES} minutes.` };
   }
-  if (!(await verifyPasscode(passcode, stored))) {
+  if (!(await checkPasscode(passcode))) {
     return { error: "That passcode isn't right." };
   }
   // A successful sign-in clears earlier typos, so they don't count toward a lockout later.

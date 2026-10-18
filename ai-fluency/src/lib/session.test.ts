@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SESSION_DAYS, createSessionToken, isValidSessionToken } from "./session";
-import { hashPasscode, verifyPasscode } from "./passcode";
+import { SESSION_DAYS, createSessionToken, isValidSessionToken, sessionSecret } from "./session";
+import { checkPasscode, hashPasscode, verifyPasscode } from "./passcode";
 
 const SECRET = "a".repeat(48);
 const NOW = Date.parse("2026-10-18T12:00:00Z");
@@ -45,5 +45,25 @@ describe("passcode hashing", () => {
 
   it("rejects a malformed stored hash instead of throwing", async () => {
     expect(await verifyPasscode("anything", "not-a-hash")).toBe(false);
+  });
+});
+
+describe("simple passcode setup", () => {
+  it("derives a session secret from APP_PASSCODE when SESSION_SECRET isn't set", () => {
+    const a = sessionSecret({ APP_PASSCODE: "correct horse battery" });
+    expect(a).toBeTruthy();
+    expect(a).toBe(sessionSecret({ APP_PASSCODE: "correct horse battery" }));
+    // A new passcode means a new secret, which signs old sessions out.
+    expect(a).not.toBe(sessionSecret({ APP_PASSCODE: "a different passcode" }));
+    expect(sessionSecret({ SESSION_SECRET: SECRET, APP_PASSCODE: "x" })).toBe(SECRET);
+    expect(sessionSecret({})).toBeUndefined();
+  });
+
+  it("checks a plain APP_PASSCODE, and falls back to the hash", async () => {
+    expect(await checkPasscode("correct horse battery", { APP_PASSCODE: "correct horse battery" })).toBe(true);
+    expect(await checkPasscode("wrong", { APP_PASSCODE: "correct horse battery" })).toBe(false);
+    const hash = await hashPasscode("hashed passcode");
+    expect(await checkPasscode("hashed passcode", { APP_PASSCODE_HASH: hash })).toBe(true);
+    expect(await checkPasscode("anything", {})).toBe(false);
   });
 });

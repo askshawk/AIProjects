@@ -26,8 +26,9 @@ export default async function PracticePage() {
         <Link href="/practice/explain" className="block rounded-2xl border bg-surface p-5 hover:bg-surface-raised">
           <h2 className="text-lg font-semibold">Explain It Back</h2>
           <p className="mt-1 text-sm text-muted">
-            Explain a term in your own words (type it, or tap the mic on your keyboard to talk). Claude grades accuracy,
-            clarity, and jargon, then shows a stronger version. Passing is the last step to mastering a card.
+            Explain a term in your own words (type it, or tap the mic on your keyboard to talk). With a Claude key, Claude
+            grades it; without one, you compare with the card and grade yourself. Passing is the last step to mastering a
+            card.
           </p>
           {d.readyToExplain.length > 0 && (
             <p className="mt-2 text-sm font-medium text-accent">{d.readyToExplain.length} ready to master</p>
