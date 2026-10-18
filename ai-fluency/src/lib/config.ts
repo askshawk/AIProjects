@@ -7,6 +7,7 @@
 export type Env = {
   NODE_ENV?: string;
   DATABASE_URL?: string;
+  APP_PASSCODE?: string;
   APP_PASSCODE_HASH?: string;
   SESSION_SECRET?: string;
   /** Next sets this to 'phase-production-build' while building. */
@@ -21,11 +22,15 @@ export function checkProductionConfig(env: Env): string[] {
   else if (url.includes("127.0.0.1") || url.includes("localhost"))
     problems.push("DATABASE_URL points at localhost, which doesn't exist on a deployed host.");
 
-  if (!env.APP_PASSCODE_HASH?.includes(":"))
-    problems.push("APP_PASSCODE_HASH is missing or malformed. Generate it with `npm run passcode:hash`.");
+  if (env.APP_PASSCODE) {
+    if (env.APP_PASSCODE.length < 8) problems.push("APP_PASSCODE must be at least 8 characters.");
+  } else if (!env.APP_PASSCODE_HASH?.includes(":")) {
+    problems.push("APP_PASSCODE is not set. Add it in Vercel: it's the passcode you'll type to sign in.");
+  }
 
-  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)
-    problems.push("SESSION_SECRET must be at least 32 characters. Generate one with `openssl rand -base64 48`.");
+  // Optional: without it, the session secret is derived from APP_PASSCODE.
+  if (env.SESSION_SECRET && env.SESSION_SECRET.length < 32)
+    problems.push("SESSION_SECRET is set but shorter than 32 characters. Remove it or make it longer.");
 
   return problems;
 }

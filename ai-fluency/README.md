@@ -15,7 +15,7 @@ A study app for learning AI terms well enough to explain them to customers. It r
 - **Deal Desk:** five scripted customer calls (CISO, CFO, IT director, head of risk, excited VP). Strong answers raise a deal-health meter; finish above 70 to close.
 
 **Practice (uses Claude)**
-- **Explain It Back:** explain a term in your own words (typed, or dictated with the iPhone keyboard mic). Claude grades accuracy, clarity, and jargon, and writes a stronger version.
+- **Explain It Back:** explain a term in your own words (typed, or dictated with the iPhone keyboard mic). Claude grades accuracy, clarity, and jargon, and writes a stronger version. Without a Claude key, you compare with the card and grade yourself.
 - **Live calls:** an unscripted buyer, picked from six personas, reacts to what you actually say, then you get a scorecard.
 - **Boss battles:** a tough executive per topic, unlocked once you've mastered half that topic's cards.
 - **Course notes to cards:** paste notes from Microsoft Learn, Anthropic Academy, DeepLearning.AI, and so on. Claude drafts cards, and you edit and approve each one.
@@ -37,17 +37,15 @@ Next.js 16 + TypeScript + Tailwind, Postgres via Drizzle (Neon in production, PG
 ```bash
 cd ai-fluency
 npm install
-cp .env.example .env.local
-npm run passcode:hash -- "your passcode"   # paste the output into APP_PASSCODE_HASH
-openssl rand -base64 48                     # paste into SESSION_SECRET
-# optional: ANTHROPIC_API_KEY and VOYAGE_API_KEY for the Practice and Ask features
+cp .env.example .env.local    # then set APP_PASSCODE
+# optional: ANTHROPIC_API_KEY and VOYAGE_API_KEY for the Claude features
 
 npm run db            # terminal 1: local Postgres on port 5433
 npm run db:migrate    # once, to create the tables
 npm run dev           # terminal 2: http://localhost:3200
 ```
 
-Without the API keys, everything except Practice, notes to cards, and Ask works, and those pages say what's missing.
+Without the API keys it's completely free: everything works except live calls, boss battles, notes to cards, and Ask, which say AI is off, and Explain It Back switches to a self-graded version that still counts toward mastery.
 
 ## How it's organized
 
@@ -70,7 +68,7 @@ Without the API keys, everything except Practice, notes to cards, and Ask works,
 ## Decisions
 
 - **Built-in cards live in JSON, not the database.** Wording changes show up in a normal code review and never need a migration. Cards you make from notes live in the database in the same shape.
-- **No user accounts.** It's a personal app: one passcode (stored as a scrypt hash) plus a signed cookie. Rotating `SESSION_SECRET` signs every device out. Sign-in attempts are rate-limited per IP.
+- **No user accounts.** It's a personal app: one passcode (`APP_PASSCODE`, or a scrypt hash for the cautious) plus a signed cookie whose key is derived from it, so changing the passcode signs every device out. Sign-in attempts are rate-limited per IP.
 - **One gateway for every Claude call** (`src/lib/ai.ts`), with a daily call cap and a monthly budget claimed *before* each call, an off switch (`AI_DISABLED`), structured output validated with zod, and Anthropic's server-side fallback so a rare safety decline is retried instead of failing.
 - **The server scores everything.** Games send raw answers; the server re-derives scores, so XP can't be inflated from the browser.
 - **Pass/fail on Explain It Back is decided by a fixed rule** (accuracy 4+, clarity and jargon 3+, no factual errors), not by the model's overall impression, so the bar stays steady.

@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { explainAttempts, roleplaySessions } from "@/db/schema";
-import { tryAi } from "@/lib/ai";
+import { aiStatus, tryAi } from "@/lib/ai";
 import { requireSignedIn } from "@/lib/auth";
 import { MAX_EXPLAIN_CHARS, MAX_REP_TURNS, MAX_TURN_CHARS, buyerTurn, gradeExplanation, gradePasses, scoreCall, type Turn } from "@/lib/coach";
 import { BOSSES, getPersona, type Persona } from "@/lib/personas";
@@ -29,6 +29,35 @@ export async function submitExplanation(termId: string, answer: string) {
   const xp = passed ? XP.explainPass : XP.explainAttempt;
   await awardXp("explain", xp, termId);
   return { ok: true as const, grade: result.data, passed, xp };
+}
+
+/**
+ * The free version of Explain It Back, used when Claude isn't configured:
+ * you write your explanation, compare it with the card, and grade yourself.
+ * It counts toward mastery the same way, so ranks and boss battles still work
+ * without an API key. Not available while AI grading is on, so the bar
+ * doesn't quietly drop.
+ */
+export async function selfGradeExplanation(termId: string, answer: string, passed: boolean) {
+  await requireSignedIn();
+  if (aiStatus().available) return { ok: false as const, error: "AI grading is on, so use the graded version." };
+  const term = await findTerm(termId);
+  const text = String(answer ?? "").trim();
+  if (!term) return { ok: false as const, error: "Unknown card." };
+  if (text.length < 15) return { ok: false as const, error: "Say a little more: at least a sentence." };
+
+  const pass = passed === true;
+  await db.insert(explainAttempts).values({
+    termId,
+    answer: text.slice(0, MAX_EXPLAIN_CHARS),
+    passed: pass ? 1 : 0,
+    grade: { selfGraded: true },
+  });
+  if (pass) await markExplained(termId);
+  await recordGameAnswer(termId, pass, "explain");
+  const xp = pass ? XP.explainPass : XP.explainAttempt;
+  await awardXp("explain", xp, termId);
+  return { ok: true as const, passed: pass, xp };
 }
 
 // ---------------------------------------------------------------- live calls and boss battles

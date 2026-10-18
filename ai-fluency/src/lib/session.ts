@@ -1,11 +1,11 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 /**
  * Stateless session tokens for a single-user app.
  *
  * There's only one person who can sign in, so there's no session table: the
- * cookie holds an expiry time plus an HMAC of it, signed with SESSION_SECRET.
- * Nobody can forge or extend one without the secret, and rotating the secret
+ * cookie holds an expiry time plus an HMAC of it, signed with a secret.
+ * Nobody can forge or extend one without the secret, and changing the secret
  * signs every device out at once.
  *
  * No Next.js imports here, so proxy.ts and tests can both use it.
@@ -13,6 +13,19 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "ai-fluency-session";
 export const SESSION_DAYS = 30;
+
+type SecretEnv = { SESSION_SECRET?: string; APP_PASSCODE?: string };
+
+/**
+ * The signing secret: SESSION_SECRET if you set one, otherwise derived from
+ * APP_PASSCODE, so the simplest setup needs only the passcode. With the
+ * derived secret, changing the passcode signs every device out too.
+ */
+export function sessionSecret(env: SecretEnv = process.env as SecretEnv): string | undefined {
+  if (env.SESSION_SECRET && env.SESSION_SECRET.length >= 32) return env.SESSION_SECRET;
+  if (env.APP_PASSCODE) return createHash("sha256").update(`ai-fluency-session:${env.APP_PASSCODE}`).digest("hex");
+  return undefined;
+}
 
 function sign(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");

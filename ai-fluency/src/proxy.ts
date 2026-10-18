@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, isValidSessionToken } from "@/lib/session";
+import { SESSION_COOKIE, isValidSessionToken, sessionSecret } from "@/lib/session";
 
 /**
  * Everything except the sign-in page and static assets needs a session. This
@@ -7,7 +7,7 @@ import { SESSION_COOKIE, isValidSessionToken } from "@/lib/session";
  */
 export function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (isValidSessionToken(token, process.env.SESSION_SECRET)) return NextResponse.next();
+  if (isValidSessionToken(token, sessionSecret())) return NextResponse.next();
 
   const signIn = new URL("/sign-in", request.url);
   if (request.nextUrl.pathname !== "/") signIn.searchParams.set("next", request.nextUrl.pathname);
