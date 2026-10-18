@@ -102,7 +102,7 @@ openssl rand -base64 48
 
 That prints a random string. It's your `SESSION_SECRET`.
 
-To keep your passcode out of Terminal's history, run `history -c` afterwards.
+Your Mac saves Terminal commands in a history file, so your passcode phrase is now in it. To remove it, run `open -e ~/.zsh_history` and delete that line.
 
 ---
 
@@ -120,8 +120,10 @@ To keep your passcode out of Terminal's history, run `history -c` afterwards.
    | `DATABASE_URL` | the Neon connection string from Part 2 |
    | `APP_PASSCODE_HASH` | the hash from Part 4 |
    | `SESSION_SECRET` | the random string from Part 4 |
-   | `ANTHROPIC_API_KEY` | from Part 3 |
-   | `VOYAGE_API_KEY` | from Part 3 |
+   | `ANTHROPIC_API_KEY` | from Part 3 (**optional**: leave it out to keep the app free) |
+   | `VOYAGE_API_KEY` | from Part 3 (**optional**: only used with the Anthropic key) |
+
+   **Running it for free:** add only the first three. Flashcards, the glossary, all three games, and XP, quota, and streaks work without the last two. Explain It Back, live calls, boss battles, notes to cards, and Ask my glossary show that AI is off.
 
    Optional settings. Each has a sensible default if you leave it out:
 
