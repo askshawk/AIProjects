@@ -577,9 +577,9 @@
     ],
     "track": "sales-cs",
     "topic": "Pricing and value",
-    "plain": "A false positive is an alert or flag that turns out to be nothing. A false negative is something real the system missed. Every AI detection system trades one against the other.",
+    "plain": "A false positive is when the AI flags something that turns out to be nothing, like a real email sent to spam. A false negative is something real it missed, like a spam email that lands in your inbox. Every AI system that flags, filters, or scores things trades one against the other.",
     "technical": "Precision is the share of flagged items that are truly relevant (few false positives). Recall is the share of truly relevant items that got flagged (few false negatives). Tuning a threshold usually improves one at the expense of the other. The right balance depends on which mistake costs more.",
-    "customerLine": "Every alerting system balances noise against misses. Let's talk about which costs your team more, alert fatigue or a missed event, and tune for that.",
+    "customerLine": "No AI gets every call right, so the real question is which mistake costs you more: flagging too much, or missing something important. We can tune it toward whichever one matters more to your team.",
     "followUp": {
       "q": "Can't you just get both to zero?",
       "a": "No real system does. Anyone claiming zero false positives and zero misses is overselling. What matters is a balance that fits the cost of each mistake."
