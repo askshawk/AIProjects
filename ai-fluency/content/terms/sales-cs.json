@@ -1,0 +1,637 @@
+[
+  {
+    "id": "training-data-usage",
+    "term": "\"Do you train on our data?\"",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Usually the first AI question security and legal teams ask: will our information be used to improve the vendor's model, or the model provider's?",
+    "technical": "There are two layers to check: the product vendor's policy and the policy of the model provider underneath it (for example, Anthropic, OpenAI, or a cloud platform). Business and API terms commonly say customer data isn't used for training without permission, but that's a contract term, not a law of physics. Get it in writing.",
+    "customerLine": "Fair question, and there are two layers to it: our policy and our model provider's. I'll send you the exact contract language for both rather than paraphrase it.",
+    "followUp": {
+      "q": "What about the AI vendor you use under the hood?",
+      "a": "Name the provider, point to their commercial data terms, and confirm whether your company has a data processing agreement (DPA) with them. If you don't know, say you'll confirm. Guessing here kills trust."
+    },
+    "misconception": {
+      "claim": "If a company uses AI, it must be training on your data.",
+      "truth": "Using a model (inference) is separate from training it. Many business agreements explicitly rule out training on customer data."
+    },
+    "related": [
+      "training-vs-inference",
+      "data-retention",
+      "data-residency"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: API and data retention",
+        "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "data-retention",
+    "term": "Data retention and zero data retention (ZDR)",
+    "aka": [
+      "ZDR"
+    ],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "How long prompts and AI responses are stored after a request, and by whom. Zero data retention means they aren't kept after the response, apart from limited exceptions.",
+    "technical": "Retention can apply at the product layer (chat history, logs) and the model-provider layer. Providers like Anthropic offer ZDR arrangements for eligible features. Some features, like stored files or batch jobs, need storage by design, so eligibility varies feature by feature. Regulated data such as health information needs its own arrangements, like a HIPAA business associate agreement (BAA).",
+    "customerLine": "Retention is set feature by feature, so let's map which features your team will actually use and confirm the retention terms for each one.",
+    "followUp": {
+      "q": "Can we get zero retention on everything?",
+      "a": "Often not every feature, because some, like saved history, need storage to work. The honest answer is a feature list showing what's covered."
+    },
+    "misconception": {
+      "claim": "Zero data retention means nothing is ever logged anywhere.",
+      "truth": "It covers specific data for specific features. Account info, billing, and some safety records may still be kept. Read the scope."
+    },
+    "related": [
+      "training-data-usage",
+      "pii",
+      "soc2-ai"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: API and data retention",
+        "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "data-residency",
+    "term": "Data residency",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Where in the world your data is stored and processed, such as 'EU only' or 'US only.' It often comes up with European, government, or regulated customers.",
+    "technical": "With AI, check two things: where data is stored (databases, logs) and where inference runs (which region's servers the model runs on). Cloud platforms often let you pin a region, and some model providers offer regional processing options. Requirements usually come from regulations like GDPR or from customer contracts.",
+    "customerLine": "With AI there are two residency questions: where your data sits, and where the model runs when it processes it. Let's confirm both for your region.",
+    "followUp": {
+      "q": "Does the AI processing stay in the EU too?",
+      "a": "That's the right question, because storage and processing can be in different places. Confirm with your solutions or security team before answering."
+    },
+    "misconception": {
+      "claim": "If the data is stored in the EU, all AI processing happens in the EU.",
+      "truth": "Storage and model processing can be in different regions unless the setup pins both."
+    },
+    "related": [
+      "data-retention",
+      "training-data-usage",
+      "eu-ai-act"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: API and data retention",
+        "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "pii",
+    "term": "PII and sensitive data",
+    "aka": [
+      "PII",
+      "PHI"
+    ],
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "PII is personally identifiable information: anything that can identify a person, like names, emails, phone numbers, or ID numbers. PHI is protected health information.",
+    "technical": "AI features often process PII without anyone noticing (call transcripts, tickets, emails). Common controls include redacting or masking data before it reaches the model, role-based access, retention limits, and contracts like DPAs (or BAAs for health data in the US).",
+    "customerLine": "Let's map where personal data shows up in the workflow. Then we can show you exactly how it's handled at each step, including what the model sees and what gets redacted.",
+    "followUp": {
+      "q": "Can you strip out personal data before the AI sees it?",
+      "a": "Many products offer redaction or masking. Ask whether it's on by default and how accurate it is on your kind of data."
+    },
+    "misconception": {
+      "claim": "If you don't upload a customer list, the AI never touches PII.",
+      "truth": "Call notes, emails, and support tickets are full of names and contact details."
+    },
+    "related": [
+      "data-retention",
+      "guardrails",
+      "responsible-ai"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: API and data retention (HIPAA readiness)",
+        "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "soc2-ai",
+    "term": "SOC 2 (and what it means for AI)",
+    "aka": [
+      "SOC 2 Type II"
+    ],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "SOC 2 is an independent audit report showing a company's security controls actually work. It's a standard ask in SaaS security reviews.",
+    "technical": "SOC 2 is based on the AICPA Trust Services Criteria: security (always included), plus optional availability, processing integrity, confidentiality, and privacy. A Type II report tests the controls over a period of time. SOC 2 wasn't designed specifically for AI, so buyers now often add AI-specific questions or ask about frameworks like ISO 42001.",
+    "customerLine": "Our SOC 2 covers our security controls. For the AI side, here's how we handle model providers, data flows, and testing, and I'm happy to fill out your AI questionnaire.",
+    "followUp": {
+      "q": "Does your SOC 2 cover your AI model provider too?",
+      "a": "Usually not directly. Third-party providers are typically handled as subprocessors with their own reports. Offer to share the provider's compliance documents."
+    },
+    "misconception": {
+      "claim": "A SOC 2 report proves a company's AI is safe and accurate.",
+      "truth": "SOC 2 tests security and operational controls, not whether AI outputs are accurate or fair."
+    },
+    "related": [
+      "iso-42001",
+      "ai-governance",
+      "data-retention"
+    ],
+    "sources": [
+      {
+        "title": "AICPA: SOC 2 reporting guide (Trust Services Criteria)",
+        "url": "https://www.aicpa-cima.com/cpe-learning/publication/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security-availability-processing-integrity-confidentiality-or-privacy"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-governance",
+    "term": "AI governance",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "The rules, roles, and oversight a company puts around how it uses AI: who approves new tools, what's allowed, and how risks get tracked.",
+    "technical": "Governance usually includes an AI use policy, an inventory of AI systems, risk reviews, vendor assessments, monitoring, and clear accountability. Frameworks like NIST AI RMF and ISO 42001, and laws like the EU AI Act, give it structure.",
+    "customerLine": "Many of our customers have an AI governance committee. We can give you a standard pack (data flows, model provider, testing, controls) so your review moves faster.",
+    "followUp": {
+      "q": "Who on our side should be in this conversation?",
+      "a": "Typically security, legal or privacy, and whoever owns AI governance or IT risk. Getting them in early prevents a late-stage stall."
+    },
+    "misconception": {
+      "claim": "AI governance is only for companies building their own AI models.",
+      "truth": "Companies buying AI tools need governance too, often more, since most of their AI use comes through vendors."
+    },
+    "related": [
+      "nist-ai-rmf",
+      "iso-42001",
+      "eu-ai-act",
+      "responsible-ai"
+    ],
+    "sources": [
+      {
+        "title": "NIST AI Risk Management Framework",
+        "url": "https://www.nist.gov/itl/ai-risk-management-framework"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "responsible-ai",
+    "term": "Responsible AI",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "Building and using AI in ways that are fair, safe, private, transparent, and accountable.",
+    "technical": "Microsoft's six responsible AI principles (part of the AI-900 material) are fairness, reliability and safety, privacy and security, inclusiveness, transparency, and accountability. Other organizations use similar lists. Anthropic's 'helpful, honest, harmless' (HHH) is a related research framing.",
+    "customerLine": "For us, responsible AI shows up in specific features: citing sources, human review for high-stakes actions, admin controls, and clear data terms.",
+    "followUp": {
+      "q": "How do you test for bias?",
+      "a": "Have your product team's real answer ready. If there's no formal process, don't invent one. Say what exists and follow up."
+    },
+    "misconception": {
+      "claim": "Responsible AI is just a marketing page.",
+      "truth": "Buyers increasingly ask for evidence: testing, controls, and documentation. Being able to show it wins deals."
+    },
+    "related": [
+      "ai-governance",
+      "human-in-the-loop",
+      "guardrails"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Identify guiding principles for responsible AI",
+        "url": "https://learn.microsoft.com/training/modules/embrace-responsible-ai-principles-practices/3-identify-guiding-principles-responsible-ai"
+      },
+      {
+        "title": "Anthropic glossary: HHH",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "nist-ai-rmf",
+    "term": "NIST AI Risk Management Framework",
+    "aka": [
+      "AI RMF"
+    ],
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "A free, voluntary US framework from NIST that helps organizations spot and manage the risks of AI. It's widely used as a governance checklist.",
+    "technical": "AI RMF 1.0 was released in January 2023 and has four functions: Govern (policies and accountability), Map (understand the context and risks), Measure (test and monitor), and Manage (prioritize and respond). NIST later added a Generative AI Profile with risks specific to generative AI.",
+    "customerLine": "If your team uses NIST AI RMF, we can map our controls to its four functions (Govern, Map, Measure, Manage) to make your review easier.",
+    "followUp": {
+      "q": "Is it a certification?",
+      "a": "No, it's voluntary guidance, not a certificate you can earn. ISO 42001 is the certifiable standard."
+    },
+    "misconception": {
+      "claim": "The NIST AI RMF is a law companies must follow.",
+      "truth": "It's voluntary guidance, though contracts and some sectors may expect alignment with it."
+    },
+    "related": [
+      "ai-governance",
+      "iso-42001",
+      "eu-ai-act"
+    ],
+    "sources": [
+      {
+        "title": "NIST AI Risk Management Framework",
+        "url": "https://www.nist.gov/itl/ai-risk-management-framework"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "eu-ai-act",
+    "term": "EU AI Act",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "The European Union's AI law. It sorts AI uses by risk level and puts stricter rules on riskier ones.",
+    "technical": "The Act entered into force in August 2024, with obligations phasing in over several years. It defines four tiers: unacceptable risk (banned, like social scoring), high risk (strict requirements, like AI used in hiring or critical infrastructure), limited risk (transparency duties, like telling people they're talking to a chatbot), and minimal risk (most AI, few added duties). Deadlines have been revised, so check current dates before quoting them.",
+    "customerLine": "Most business productivity AI falls in the lower-risk tiers, but uses like hiring decisions can be high-risk. It's worth checking where your planned use fits.",
+    "followUp": {
+      "q": "Does it apply to us if we're a US company?",
+      "a": "It can, if you offer AI systems in the EU or their outputs are used there. That's a question for their legal team, but it's smart to flag it."
+    },
+    "misconception": {
+      "claim": "The EU AI Act bans generative AI.",
+      "truth": "It bans a short list of specific practices and regulates others by risk level. Most generative AI use is allowed."
+    },
+    "related": [
+      "ai-governance",
+      "nist-ai-rmf",
+      "data-residency"
+    ],
+    "sources": [
+      {
+        "title": "EUR-Lex: Regulation (EU) 2024/1689 (AI Act)",
+        "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "iso-42001",
+    "term": "ISO/IEC 42001",
+    "track": "sales-cs",
+    "topic": "Compliance and governance",
+    "plain": "An international standard for running an AI management system, which a company can get certified against. Think of it as ISO 27001, but for AI.",
+    "technical": "ISO/IEC 42001:2023, published in December 2023, sets requirements for establishing, running, and improving an AI management system. It uses the same structure as ISO 27001 and 9001, which makes it easier to add for companies that already hold those certifications.",
+    "customerLine": "If your procurement team asks for AI-specific certification, ISO 42001 is the one to check for, since SOC 2 doesn't cover AI governance directly.",
+    "followUp": {
+      "q": "Do you have it?",
+      "a": "Know your company's real status: certified, in progress, or not planned. If you're not certified, explain which existing controls cover similar ground."
+    },
+    "misconception": {
+      "claim": "ISO 42001 certifies that an AI model is accurate.",
+      "truth": "It certifies the management processes around AI, not the outputs of any specific model."
+    },
+    "related": [
+      "soc2-ai",
+      "nist-ai-rmf",
+      "ai-governance"
+    ],
+    "sources": [
+      {
+        "title": "ISO: ISO/IEC 42001:2023 AI management systems",
+        "url": "https://www.iso.org/standard/42001"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "human-in-the-loop",
+    "term": "Human in the loop",
+    "aka": [
+      "HITL"
+    ],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Designing an AI process so a person reviews or approves the AI's work before it counts, especially for important decisions or actions.",
+    "technical": "Setups range from review before anything is sent, to approval only for risky actions, to spot-checking samples after the fact. The right level depends on the cost of a mistake. It's also a key control for agents that can take actions.",
+    "customerLine": "The AI drafts, your team decides. You choose where a human has to sign off, and that's usually anything customer-facing or irreversible.",
+    "followUp": {
+      "q": "Doesn't human review cancel out the time savings?",
+      "a": "Reviewing a good draft is much faster than starting from scratch, and you can loosen review as trust builds on low-risk tasks."
+    },
+    "misconception": {
+      "claim": "Human in the loop means the AI isn't good enough to use.",
+      "truth": "It's a standard safety design, the same way important documents get a second set of eyes."
+    },
+    "related": [
+      "guardrails",
+      "ai-agent",
+      "hallucination"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Building effective agents",
+        "url": "https://www.anthropic.com/engineering/building-effective-agents"
+      },
+      {
+        "title": "NIST AI Risk Management Framework",
+        "url": "https://www.nist.gov/itl/ai-risk-management-framework"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "copilot-vs-agent",
+    "term": "Copilot vs agent",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "A copilot helps a person do their work: it suggests, drafts, and summarizes, while the person stays in control. An agent works on a task more independently and takes actions on its own.",
+    "technical": "Copilots are usually built into an app the user is already in, like Microsoft 365 Copilot. Agents chain multiple steps and tool calls with less human input. Many products sit on a spectrum, with agents asking for approval at key points.",
+    "customerLine": "Copilots make your people faster. Agents take whole tasks off their plate. Most teams start with copilots and move to agents as trust builds.",
+    "followUp": {
+      "q": "Which should we start with?",
+      "a": "Usually a copilot on a high-volume task, because it's lower risk and easy to measure. Then add agent features where the process is well understood."
+    },
+    "misconception": {
+      "claim": "'Copilot' is just Microsoft's product name.",
+      "truth": "Microsoft uses it as a brand, but it's also a general term for assistive AI built into your workflow."
+    },
+    "related": [
+      "ai-agent",
+      "agentic-workflow",
+      "human-in-the-loop"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      },
+      {
+        "title": "Anthropic: Building effective agents",
+        "url": "https://www.anthropic.com/engineering/building-effective-agents"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "build-vs-buy",
+    "term": "Build vs buy (for AI)",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Should the customer build their own AI tool on a model API, or buy a product that already does the job? Expect this objection now that model APIs are easy to access.",
+    "technical": "Building gives control and customization, but the team then owns integrations, security reviews, evals, model upgrades, monitoring, and support forever. Buying trades some control for speed and someone else maintaining all of it. A common middle path is to buy the platform and customize it.",
+    "customerLine": "The demo is the easy part to build. The hard part is the next three years: integrations, security, model upgrades, and support. That's what you're really buying.",
+    "followUp": {
+      "q": "Our engineers say they can build this in a month.",
+      "a": "They probably can build a prototype. Ask what it costs to run, secure, and improve over time, and what those engineers won't be building instead."
+    },
+    "misconception": {
+      "claim": "Building on a model API is always cheaper than buying.",
+      "truth": "Upfront it can be. Total cost includes engineering time, maintenance, compliance, and opportunity cost."
+    },
+    "related": [
+      "foundation-model",
+      "ai-roi",
+      "model-choice"
+    ],
+    "sources": [
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI projects)",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "token-pricing",
+    "term": "Usage-based (token) pricing vs seat pricing",
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "AI model providers usually charge by usage (tokens in and tokens out). SaaS products have traditionally charged per user (seat). Many AI products now mix the two.",
+    "technical": "Model APIs price input and output tokens separately, and output usually costs more. Costs can be lowered with prompt caching (reusing repeated input at a discount), batch processing (cheaper, not real-time), and choosing smaller models where they're good enough. Vendors may pass this through as credits, usage tiers, or caps on top of seats.",
+    "customerLine": "Seats are predictable. Usage scales with value. We can structure it so you have a predictable budget with room to grow.",
+    "followUp": {
+      "q": "How do we avoid a surprise bill?",
+      "a": "Ask about spending caps, usage alerts, and admin dashboards. A good vendor will help estimate usage from a pilot."
+    },
+    "misconception": {
+      "claim": "AI usage costs are basically zero once you've paid for the license.",
+      "truth": "Every AI request has a real computing cost, which is why AI features often come with usage limits or credits."
+    },
+    "related": [
+      "token",
+      "ai-roi",
+      "training-vs-inference"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt caching",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching"
+      },
+      {
+        "title": "Anthropic: Batch processing",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/batch-processing"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-roi",
+    "term": "AI ROI",
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "Showing that the AI is worth what it costs, in time saved, revenue gained, risk reduced, or quality improved.",
+    "technical": "Strong AI ROI cases measure a baseline first (time per task, error rate, volume), run a pilot on real work, and compare. Time saved only counts if it goes somewhere useful. Adoption rate is often the deciding factor, since unused seats deliver nothing.",
+    "customerLine": "Let's pick one workflow, measure how long it takes today, and measure it again after 30 days. Then the ROI is your number, not my slide.",
+    "followUp": {
+      "q": "Vendors always promise huge productivity gains. Why should I believe yours?",
+      "a": "Don't take anyone's word for it, including mine. Measure it in a pilot with a baseline you agree on up front."
+    },
+    "misconception": {
+      "claim": "Hours saved automatically equals money saved.",
+      "truth": "Only if the time is redirected to valuable work or reduces costs. Otherwise it's a soft benefit."
+    },
+    "related": [
+      "pilot-to-production",
+      "evals",
+      "token-pricing"
+    ],
+    "sources": [
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI in business)",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "pilot-to-production",
+    "term": "Pilot to production",
+    "aka": [
+      "POC",
+      "proof of concept"
+    ],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Moving from a small AI test with a few users to full rollout. Many AI projects get stuck in endless pilots.",
+    "technical": "Pilots stall when there are no success criteria, no executive owner, unresolved security concerns, or messy data. A pilot is more likely to convert when it has defined metrics, a time limit, real users on real work, early security review, and a rollout plan agreed in advance.",
+    "customerLine": "Before we start the pilot, let's agree on what success looks like and what happens if we hit it. That way the pilot leads to a decision, not another pilot.",
+    "followUp": {
+      "q": "Can we just try it for a few months and see?",
+      "a": "You can, but open-ended pilots rarely convert. A 30 to 60 day pilot with clear metrics gives you a real answer faster."
+    },
+    "misconception": {
+      "claim": "A great demo means the rollout will go smoothly.",
+      "truth": "Real data, real users, and security reviews are where most AI projects slow down."
+    },
+    "related": [
+      "ai-roi",
+      "evals",
+      "ai-governance"
+    ],
+    "sources": [
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone (Generative AI projects)",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      },
+      {
+        "title": "Anthropic: Define success criteria and build evaluations",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "guardrails",
+    "term": "Guardrails",
+    "track": "sales-cs",
+    "topic": "Data and security",
+    "plain": "Controls that keep an AI system on track and safe: what it can talk about, what data it can see, what actions it can take, and what gets blocked or flagged.",
+    "technical": "Guardrails include system prompt rules, input and output filters, permission limits on tools and data, requiring citations, human approval steps, rate limits, and monitoring. The strongest ones work outside the model (like permissions), since instructions alone can be bypassed.",
+    "customerLine": "Guardrails are the bumpers on the bowling lane. We set what the AI can see and do, and the riskiest actions always need a human.",
+    "followUp": {
+      "q": "Can admins customize the guardrails?",
+      "a": "Ask your product team what's configurable: data access, allowed actions, blocked topics, and approval rules. That's a strong selling point when it exists."
+    },
+    "misconception": {
+      "claim": "Telling the AI 'never do X' in its instructions is a reliable guardrail.",
+      "truth": "Instructions help but can be bypassed. Hard limits on access and permissions are more reliable."
+    },
+    "related": [
+      "prompt-injection",
+      "human-in-the-loop",
+      "system-prompt"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Reduce hallucinations (Strengthen guardrails)",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations"
+      },
+      {
+        "title": "OWASP Top 10 for LLM Applications",
+        "url": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "model-choice",
+    "term": "Model choice and vendor lock-in",
+    "aka": [
+      "model-agnostic"
+    ],
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Which AI model a product uses, and whether it can switch to another one. 'Model-agnostic' products can swap models as better or cheaper ones come out.",
+    "technical": "Models improve and change price quickly, so tying a product to one model is a risk. Products often route tasks to different models (fast and cheap for simple tasks, most capable for hard ones). Buyers also care about where the model is hosted, for example through their existing cloud provider.",
+    "customerLine": "We pick the right model for each task and can switch as the market moves, so you get the improvements without migrating anything.",
+    "followUp": {
+      "q": "Can we bring our own model or use our cloud provider's?",
+      "a": "Some products support this and some don't. Check with your product team, because it's a common enterprise requirement."
+    },
+    "misconception": {
+      "claim": "The product that uses the newest, biggest model is always the best.",
+      "truth": "Fit matters more: accuracy on your task, speed, cost, and data terms."
+    },
+    "related": [
+      "foundation-model",
+      "open-weight-models",
+      "latency"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt engineering overview (choosing a model)",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "false-positives",
+    "term": "False positives and false negatives",
+    "aka": [
+      "precision and recall"
+    ],
+    "track": "sales-cs",
+    "topic": "Pricing and value",
+    "plain": "A false positive is when the AI flags something that turns out to be nothing, like a real email sent to spam. A false negative is something real it missed, like a spam email that lands in your inbox. Every AI system that flags, filters, or scores things trades one against the other.",
+    "technical": "Precision is the share of flagged items that are truly relevant (few false positives). Recall is the share of truly relevant items that got flagged (few false negatives). Tuning a threshold usually improves one at the expense of the other. The right balance depends on which mistake costs more.",
+    "customerLine": "No AI gets every call right, so the real question is which mistake costs you more: flagging too much, or missing something important. We can tune it toward whichever one matters more to your team.",
+    "followUp": {
+      "q": "Can't you just get both to zero?",
+      "a": "No real system does. Anyone claiming zero false positives and zero misses is overselling. What matters is a balance that fits the cost of each mistake."
+    },
+    "misconception": {
+      "claim": "A higher accuracy percentage always means a better system.",
+      "truth": "If real events are rare, a system can be 99% 'accurate' while missing most of them. Precision and recall tell you more."
+    },
+    "related": [
+      "evals",
+      "ai-roi",
+      "hallucination"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Define success criteria and build evaluations",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-washing",
+    "term": "AI washing",
+    "track": "sales-cs",
+    "topic": "Selling AI",
+    "plain": "Overstating how much AI a product uses, or what it can do, for marketing. Buyers are increasingly skeptical because of it.",
+    "technical": "Regulators have acted on misleading AI claims using existing rules: in March 2024 the SEC settled charges against two investment advisers (Delphia and Global Predictions) for overstating their AI use, and the FTC launched an enforcement sweep called Operation AI Comply in September 2024. Buyers respond by asking for demos on their own data, evals, and specifics about what's actually AI and what's rules or human work.",
+    "customerLine": "I'd rather show you than tell you. Let's run it on your real examples and you can judge what the AI is actually doing.",
+    "followUp": {
+      "q": "How much of your product is actually AI?",
+      "a": "Be specific: which features use a model, which use rules, and where people are involved. Precise answers build credibility fast."
+    },
+    "misconception": {
+      "claim": "Saying 'AI-powered' in every pitch helps you win more deals.",
+      "truth": "Vague claims now raise skepticism. Specific, provable claims win."
+    },
+    "related": [
+      "evals",
+      "ai-roi",
+      "responsible-ai"
+    ],
+    "sources": [
+      {
+        "title": "SEC press release 2024-36 (AI washing charges)",
+        "url": "https://www.sec.gov/newsroom/press-releases/2024-36"
+      },
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone (what generative AI can and cannot do)",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      }
+    ],
+    "status": "draft"
+  }
+]

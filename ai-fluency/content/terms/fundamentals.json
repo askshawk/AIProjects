@@ -1,0 +1,935 @@
+[
+  {
+    "id": "machine-learning",
+    "term": "Machine learning",
+    "aka": [
+      "ML"
+    ],
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "Instead of writing rules by hand, you show a computer lots of examples and it learns the pattern itself. A spam filter learns what spam looks like from millions of emails people marked as spam.",
+    "technical": "A model is a math function with adjustable settings. Training adjusts those settings until the model's outputs match the examples well. Supervised learning uses labeled examples, unsupervised learning finds structure in unlabeled data, and reinforcement learning learns from rewards.",
+    "customerLine": "Machine learning means the system learned from examples rather than following rules someone wrote, so it can handle cases nobody spelled out in advance.",
+    "followUp": {
+      "q": "So is ML the same thing as AI?",
+      "a": "ML is the main way modern AI gets built, but AI is the broader goal of machines doing tasks that normally need human judgment. Today, almost every AI product you hear about is built with machine learning."
+    },
+    "misconception": {
+      "claim": "Machine learning systems keep learning on their own every time you use them.",
+      "truth": "Most deployed models are frozen after training. They only get better when the vendor retrains or updates them."
+    },
+    "related": [
+      "generative-ai",
+      "training-vs-inference",
+      "model-parameters"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      },
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "generative-ai",
+    "term": "Generative AI",
+    "aka": [
+      "GenAI"
+    ],
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "AI that creates new content (text, images, code, audio) instead of only sorting or scoring existing content. ChatGPT and Claude are generative AI.",
+    "technical": "Generative models learn the patterns in their training data well enough to produce new examples that fit those patterns. Traditional or predictive AI classifies or forecasts (spam or not spam, likely to churn or not), while generative AI produces an output like a paragraph or an image.",
+    "customerLine": "Traditional AI answers 'which bucket does this go in?' Generative AI answers 'write me the first draft.'",
+    "followUp": {
+      "q": "Is generative AI accurate enough to trust?",
+      "a": "It's great at drafts, summaries, and first passes, but it can state wrong things confidently. The best setups keep a person reviewing anything important and connect the model to trusted data."
+    },
+    "misconception": {
+      "claim": "Generative AI looks up answers in a database, like a search engine.",
+      "truth": "By default it generates text from patterns it learned in training. It only 'looks things up' if the product connects it to a search tool or your data."
+    },
+    "related": [
+      "llm",
+      "hallucination",
+      "rag"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      },
+      {
+        "title": "DeepLearning.AI: Generative AI for Everyone",
+        "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "llm",
+    "term": "Large language model",
+    "aka": [
+      "LLM"
+    ],
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "The engine behind chat assistants like Claude and ChatGPT. It's a huge model trained on a massive amount of text, so it can write, summarize, answer questions, and follow instructions.",
+    "technical": "An LLM is a neural network with billions of parameters, pretrained to predict the next token in text and then fine-tuned (often with RLHF) to follow instructions and act like a helpful assistant.",
+    "customerLine": "An LLM is the language engine. Our product is the car built around it: your data, your workflows, and the guardrails.",
+    "followUp": {
+      "q": "Which LLM do you use?",
+      "a": "Be ready with the real answer from your product team. It's also worth explaining why that model was chosen (quality, cost, speed, data terms) and whether the product can switch models later."
+    },
+    "misconception": {
+      "claim": "An LLM understands language the way a person does.",
+      "truth": "It's extremely good at predicting useful text from patterns. Whether that counts as 'understanding' is debated, which is why it can sound sure while being wrong."
+    },
+    "related": [
+      "pretraining",
+      "token",
+      "foundation-model"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: LLM",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "foundation-model",
+    "term": "Foundation model",
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "A big general-purpose model that lots of different products are built on top of, like a base layer. Claude, GPT, and Gemini are foundation models.",
+    "technical": "Foundation models are trained once at enormous cost on broad data, then adapted for many tasks through prompting, retrieval, or fine-tuning. Most AI startups don't train their own. They build on a foundation model from a provider like Anthropic, OpenAI, or Google.",
+    "customerLine": "Like most AI products, we build on a foundation model and add what makes it useful for your team: your data, the workflow, and the controls.",
+    "followUp": {
+      "q": "If you're built on someone else's model, what stops me from just using that model directly?",
+      "a": "Nothing stops you from trying. The value is in everything around the model: the integrations, the security and admin controls, the workflow, and the support. That's the honest build vs buy conversation."
+    },
+    "misconception": {
+      "claim": "Every AI company trains its own model from scratch.",
+      "truth": "Very few do. Most build products on top of models from a handful of providers."
+    },
+    "related": [
+      "llm",
+      "build-vs-buy",
+      "model-choice"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "model-parameters",
+    "term": "Parameters",
+    "aka": [
+      "weights"
+    ],
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "The millions or billions of internal settings a model adjusts while it learns. They're where the model's 'knowledge' is stored.",
+    "technical": "Parameters (also called weights) are the numbers inside a neural network that training tunes. Parameter count is a rough measure of model size. More parameters can mean more capability, but also higher cost and slower responses.",
+    "customerLine": "Parameters are the model's internal dials. Bigger isn't automatically better for you. The right model is the one that's accurate enough at a cost and speed that fit the job.",
+    "followUp": {
+      "q": "Should I pick the vendor with the biggest model?",
+      "a": "Not by size alone. Ask how it performs on tasks like yours, how fast it responds, and what it costs at your volume."
+    },
+    "misconception": {
+      "claim": "A model with more parameters is always smarter.",
+      "truth": "Training data, training methods, and fine-tuning matter a lot. Smaller newer models often beat larger older ones."
+    },
+    "related": [
+      "llm",
+      "training-vs-inference",
+      "open-weight-models"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: LLM",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "training-vs-inference",
+    "term": "Training vs inference",
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "Training is when the model learns, which happens once, up front, and is expensive. Inference is when you use it: every time you ask a question and get an answer.",
+    "technical": "Training adjusts the model's parameters using large datasets and lots of computing power. Inference runs the finished, frozen model on new input to produce an output. Usage-based AI pricing is mostly paying for inference.",
+    "customerLine": "Training is building the brain. Inference is the brain answering your question. When you use the product, you're doing inference, and your prompts don't retrain the model.",
+    "followUp": {
+      "q": "So does my data end up training the model when I use it?",
+      "a": "Using the model (inference) doesn't change it by itself. Whether the vendor later uses your data for training is a policy question, so check the contract and data terms."
+    },
+    "misconception": {
+      "claim": "Every question you ask an AI immediately teaches it something new.",
+      "truth": "Inference doesn't change the model. Any learning from your data would happen only if the vendor chooses to retrain on it later."
+    },
+    "related": [
+      "pretraining",
+      "training-data-usage",
+      "token-pricing"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Pretraining",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      },
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "pretraining",
+    "term": "Pretraining",
+    "track": "fundamentals",
+    "topic": "How models are made",
+    "plain": "The first, huge phase of building an LLM, where it reads an enormous amount of text and learns to predict the next word. That's where it picks up language, facts, and reasoning patterns.",
+    "technical": "Pretraining uses a large, mostly unlabeled body of text. The result is good at continuing text but not at following instructions, which is why fine-tuning and RLHF come after it.",
+    "customerLine": "Pretraining is where the model learns general knowledge. Everything after that is about making it helpful, safe, and good at specific jobs.",
+    "followUp": {
+      "q": "Does that mean the model knows about events from last week?",
+      "a": "Not on its own. Its knowledge stops at a training cutoff date. For current information it needs a search tool or access to live data."
+    },
+    "misconception": {
+      "claim": "A pretrained model is ready to be a helpful chatbot.",
+      "truth": "A raw pretrained model just continues text. It takes fine-tuning and RLHF to make it follow instructions."
+    },
+    "related": [
+      "fine-tuning",
+      "rlhf",
+      "llm"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Pretraining",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "fine-tuning",
+    "term": "Fine-tuning",
+    "track": "fundamentals",
+    "topic": "How models are made",
+    "plain": "Taking a model that's already trained and training it a bit more on a specific set of examples, so it gets better at one domain, task, or style.",
+    "technical": "Fine-tuning further trains a pretrained model on additional data, shifting its behavior toward the patterns in that data. It's slower and pricier to change than prompting or RAG, and the quality of the fine-tuning data matters a lot.",
+    "customerLine": "Fine-tuning changes the model itself. For most business use cases, connecting the model to your data (RAG) gets you there faster and is easier to keep up to date.",
+    "followUp": {
+      "q": "Will you fine-tune a model on our data?",
+      "a": "Ask what problem fine-tuning would solve. If it's 'the model needs to know our documents,' retrieval is usually better. Fine-tuning fits better for a specific format, tone, or narrow task."
+    },
+    "misconception": {
+      "claim": "Fine-tuning is the best way to teach a model your company's facts.",
+      "truth": "Facts change, and a fine-tuned model goes stale. RAG pulls in your current documents at question time instead."
+    },
+    "related": [
+      "pretraining",
+      "rag",
+      "prompt-engineering"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Fine-tuning",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "rlhf",
+    "term": "RLHF (Reinforcement learning from human feedback)",
+    "aka": [
+      "RLHF"
+    ],
+    "track": "fundamentals",
+    "topic": "How models are made",
+    "plain": "A training step where people rank the model's answers from better to worse, and the model learns to give more answers like the good ones.",
+    "technical": "Human raters compare two or more model outputs. Reinforcement learning then pushes the model toward outputs like the higher-ranked ones. It's a big part of what turns a raw pretrained model into a helpful assistant.",
+    "customerLine": "RLHF is how models learn manners and judgment: humans grade the answers and the model learns what 'good' looks like.",
+    "followUp": {
+      "q": "Does that make the model unbiased?",
+      "a": "No. It reflects the preferences of the people and guidelines that shaped it. It helps a lot, but it isn't a guarantee."
+    },
+    "misconception": {
+      "claim": "RLHF means humans review every answer the AI gives you.",
+      "truth": "The human feedback happens during training. Your live answers aren't reviewed by a person unless the product adds a human-in-the-loop step."
+    },
+    "related": [
+      "pretraining",
+      "fine-tuning",
+      "human-in-the-loop"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: RLHF",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "token",
+    "term": "Token",
+    "track": "fundamentals",
+    "topic": "How models read and write",
+    "plain": "The chunks models read and write in: a whole word, part of a word, or punctuation. Models count, limit, and charge by tokens, not words.",
+    "technical": "Text is split into tokens before the model processes it. The ratio of characters to tokens varies by model and language. API pricing is usually per million input tokens and per million output tokens.",
+    "customerLine": "Tokens are how AI usage gets metered, like minutes on a phone plan. Longer documents and longer answers use more tokens.",
+    "followUp": {
+      "q": "How many tokens is a typical document?",
+      "a": "It varies by model and language, so the safe answer is to measure it. Most providers offer a token-counting tool, and a quick test on real documents gives you a real number for budgeting."
+    },
+    "misconception": {
+      "claim": "One token equals one word.",
+      "truth": "Tokens are often pieces of words, and the ratio differs by model and language. Never quote a fixed number without checking."
+    },
+    "related": [
+      "context-window",
+      "token-pricing",
+      "latency"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Tokens",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "context-window",
+    "term": "Context window",
+    "track": "fundamentals",
+    "topic": "How models read and write",
+    "plain": "How much text the model can 'see' at once: your question, the conversation so far, and any documents you give it. Think of it as the model's working memory, not its long-term knowledge.",
+    "technical": "The context window is measured in tokens and includes both input and output. Anything outside it is invisible to the model on that request. It's different from the training data, which is baked into the model's parameters.",
+    "customerLine": "The context window is how much the AI can read in one sitting. A bigger window means it can work across longer contracts or more call notes at once.",
+    "followUp": {
+      "q": "So with a huge context window, will it remember our past conversations?",
+      "a": "Not automatically. Each request only sees what's sent in that request. 'Memory' across sessions is a product feature built on top, not part of the context window."
+    },
+    "misconception": {
+      "claim": "Bigger context windows mean the model remembers past conversations.",
+      "truth": "The window only covers what's sent in the current request. Remembering across sessions requires a separate memory feature."
+    },
+    "related": [
+      "token",
+      "rag",
+      "prompt"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Context window",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "prompt",
+    "term": "Prompt",
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "Whatever you give the model to respond to: your question, your instructions, examples, or pasted documents.",
+    "technical": "A prompt is the full input sent to the model on a request, often split into a system prompt (standing instructions) and user messages. The model's output depends heavily on how clear and specific the prompt is.",
+    "customerLine": "The prompt is the brief you hand the AI. A clear brief gets a better result, just like with a new hire.",
+    "followUp": {
+      "q": "Do my users need to learn to write good prompts?",
+      "a": "Good products do most of the prompting behind the scenes. Users still get better results when they're specific about what they want and give context."
+    },
+    "misconception": {
+      "claim": "There's a secret magic phrase that unlocks better AI answers.",
+      "truth": "What works is clarity: say what you want, give context and examples, and describe the output format."
+    },
+    "related": [
+      "system-prompt",
+      "prompt-engineering",
+      "few-shot-prompting"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt engineering overview",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "system-prompt",
+    "term": "System prompt",
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "Background instructions that the product gives the AI before you type anything, like a job description: who it is, what it should and shouldn't do, and how to respond.",
+    "technical": "The system prompt sits ahead of the conversation and shapes every response: role, tone, rules, available tools, and formatting. AI products put much of their behavior and guardrails here.",
+    "customerLine": "The system prompt is the AI's standing orders. It's one of the ways we keep it on-task and on-brand for your team.",
+    "followUp": {
+      "q": "Can a user trick the AI into ignoring those instructions?",
+      "a": "It's a real risk called prompt injection. Good products don't rely on the system prompt alone. They also limit what the AI is allowed to access and do."
+    },
+    "misconception": {
+      "claim": "A system prompt is a security control that users can't get around.",
+      "truth": "System prompts guide behavior but can be manipulated. Real security comes from permissions and limits outside the model."
+    },
+    "related": [
+      "prompt",
+      "prompt-injection",
+      "guardrails"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt engineering overview",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+      },
+      {
+        "title": "OWASP Top 10 for LLM Applications",
+        "url": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "prompt-engineering",
+    "term": "Prompt engineering",
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "The skill of writing and testing prompts to get reliable, high-quality output from a model.",
+    "technical": "It covers techniques like clear instructions, examples (few-shot), structured formatting, assigning a role, letting the model think step by step, and chaining prompts together. It works best when you have success criteria and tests to measure against.",
+    "customerLine": "Prompt engineering is how we tune the AI's behavior without retraining it. It's fast to change and easy to test.",
+    "followUp": {
+      "q": "Isn't prompt engineering just a fad?",
+      "a": "The 'magic words' side is fading as models improve. Writing clear instructions and testing them against real examples is lasting skill."
+    },
+    "misconception": {
+      "claim": "Prompt engineering can fix any AI problem.",
+      "truth": "Some issues, like speed or cost, are better solved by choosing a different model, and some need better data or retrieval."
+    },
+    "related": [
+      "prompt",
+      "few-shot-prompting",
+      "evals"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt engineering overview",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "few-shot-prompting",
+    "term": "Few-shot prompting",
+    "aka": [
+      "multishot prompting",
+      "examples in the prompt"
+    ],
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "Showing the model a few examples of what you want before asking it to do the task. 'Zero-shot' means no examples.",
+    "technical": "Including a few input-and-output examples in the prompt steers the format, tone, and decisions of the response without any retraining. It's one of the most reliable prompting techniques.",
+    "customerLine": "Instead of retraining the AI, we just show it a few good examples, the way you'd train a new rep with sample emails.",
+    "followUp": {
+      "q": "How many examples do you need?",
+      "a": "Often three to five varied examples are enough. The key is that they cover the different cases you care about."
+    },
+    "misconception": {
+      "claim": "To teach an AI a new format, you have to retrain it.",
+      "truth": "A handful of examples in the prompt usually does the job."
+    },
+    "related": [
+      "prompt-engineering",
+      "prompt",
+      "fine-tuning"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Prompt engineering overview",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "temperature",
+    "term": "Temperature",
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "A setting for how creative or predictable the model's answers are. Low temperature means safer and more consistent, and high means more varied and creative.",
+    "technical": "Temperature changes how the model picks among likely next tokens. Low values favor the most probable choice, and high values let less likely choices through. Even at zero, outputs aren't guaranteed to be identical every time.",
+    "customerLine": "For things like summaries and data extraction we keep the AI's 'creativity dial' low so answers are consistent.",
+    "followUp": {
+      "q": "If you set it to zero, will I always get the exact same answer?",
+      "a": "Usually very similar, but not guaranteed identical. That's why important outputs should be checked, not assumed."
+    },
+    "misconception": {
+      "claim": "Temperature zero makes the model's answers fully deterministic and correct.",
+      "truth": "It makes outputs more consistent, not more correct, and even then they can vary slightly."
+    },
+    "related": [
+      "hallucination",
+      "prompt"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Temperature",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "hallucination",
+    "term": "Hallucination",
+    "track": "fundamentals",
+    "topic": "Risks and quality",
+    "plain": "When an AI states something false or made up as if it were true, like a fake statistic or a citation that doesn't exist.",
+    "technical": "Models generate likely-sounding text, not verified facts, so they can produce confident errors. You reduce it by letting the model say 'I don't know,' grounding answers in provided documents, requiring citations, and verifying claims. You can't eliminate it entirely.",
+    "customerLine": "No AI is hallucination-free, and anyone who says otherwise is overselling. What matters is how a product reduces it: grounding in your data, showing sources, and keeping a human on important calls.",
+    "followUp": {
+      "q": "How do I know when it's making something up?",
+      "a": "Look for products that cite their sources so you can click through and check. If an answer can't point to where it came from, treat it as a draft."
+    },
+    "misconception": {
+      "claim": "Hallucinations only happen with cheap or old models.",
+      "truth": "Even the best models still hallucinate sometimes. Techniques like grounding reduce it but don't eliminate it."
+    },
+    "related": [
+      "rag",
+      "guardrails",
+      "human-in-the-loop"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Reduce hallucinations",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "embeddings",
+    "term": "Embeddings",
+    "track": "fundamentals",
+    "topic": "Search and retrieval",
+    "plain": "A way of turning text into a list of numbers that captures its meaning, so a computer can tell that 'car' and 'automobile' are close even though the words are different.",
+    "technical": "An embedding model converts text (or images) into a vector. Texts with similar meaning end up close together, so you can measure similarity with math. This powers semantic search, recommendations, and the retrieval step in RAG.",
+    "customerLine": "Embeddings let the system search by meaning, not just keywords, so asking about 'customers leaving' also finds notes that say 'churn.'",
+    "followUp": {
+      "q": "Is that the same as the chatbot model?",
+      "a": "No, it's usually a separate, smaller model built just for this. For example, Anthropic doesn't make one and points developers to providers like Voyage AI."
+    },
+    "misconception": {
+      "claim": "Embeddings are a compressed copy of your documents that can be read back.",
+      "truth": "They're a numeric fingerprint of meaning, used for comparing and finding things, not for storing the full text."
+    },
+    "related": [
+      "vector-database",
+      "rag"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Embeddings",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/embeddings"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "vector-database",
+    "term": "Vector database",
+    "track": "fundamentals",
+    "topic": "Search and retrieval",
+    "plain": "A database built to store embeddings and quickly find the ones closest in meaning to a question.",
+    "technical": "Vector databases (or vector extensions like pgvector for Postgres) store vectors and run fast nearest-neighbor searches. In a RAG system, documents are embedded and stored, then the most relevant chunks are pulled back for each question.",
+    "customerLine": "The vector database is the library index that lets the AI find the right page of your documentation in a fraction of a second.",
+    "followUp": {
+      "q": "Where is that database hosted, and who can access it?",
+      "a": "That's a fair data-security question. It contains a representation of your content, so it should get the same access controls and hosting terms as the original data."
+    },
+    "misconception": {
+      "claim": "You need a special standalone vector database product to do AI search.",
+      "truth": "Many teams use a vector extension inside a database they already have, like Postgres with pgvector."
+    },
+    "related": [
+      "embeddings",
+      "rag"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Embeddings (RAG and vector search)",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/embeddings"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "rag",
+    "term": "RAG (Retrieval-augmented generation)",
+    "aka": [
+      "RAG",
+      "grounding"
+    ],
+    "track": "fundamentals",
+    "topic": "Search and retrieval",
+    "plain": "Before answering, the system looks up relevant information from your documents and hands it to the AI, so the answer is based on your real content instead of just the model's memory.",
+    "technical": "When a question comes in, relevant passages are retrieved (often with embeddings and a vector database) and placed into the context window alongside the question. This grounds the answer in evidence, supports citations, and keeps answers current without retraining. Quality depends on what gets retrieved.",
+    "customerLine": "RAG means the AI answers from your knowledge base, not from the internet at large, and it can show you which document each answer came from.",
+    "followUp": {
+      "q": "If our documents are wrong or outdated, what happens?",
+      "a": "The answers will be too. RAG is only as good as the content it retrieves, so it's worth cleaning up the knowledge base before launch."
+    },
+    "misconception": {
+      "claim": "RAG retrains the model on your documents.",
+      "truth": "The model doesn't change. Relevant documents are fetched and shown to it at question time."
+    },
+    "related": [
+      "embeddings",
+      "vector-database",
+      "hallucination",
+      "context-window"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: RAG",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      },
+      {
+        "title": "Anthropic: Reduce hallucinations",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "tool-use",
+    "term": "Tool use",
+    "aka": [
+      "function calling"
+    ],
+    "track": "fundamentals",
+    "topic": "Agents",
+    "plain": "Letting the AI use other software, like searching the web, checking a calendar, or looking up a record in a CRM, instead of only writing text.",
+    "technical": "The developer describes available tools to the model. The model decides when a tool would help and returns a structured request (which tool, with what inputs). The application or the provider runs the tool and sends the result back, and the model uses it to answer.",
+    "customerLine": "Tool use is what lets the AI actually do things in your systems, not just talk about them, and you control which tools it's allowed to touch.",
+    "followUp": {
+      "q": "Can it take actions without asking us first?",
+      "a": "Only if it's set up that way. Well-built products let you require approval for actions, especially anything that changes data or contacts customers."
+    },
+    "misconception": {
+      "claim": "When an AI uses a tool, the model itself is running the software.",
+      "truth": "The model only asks for the tool call. Your application or the provider's servers actually run it."
+    },
+    "related": [
+      "ai-agent",
+      "mcp",
+      "human-in-the-loop"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Tool use overview",
+        "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "ai-agent",
+    "term": "AI agent",
+    "track": "fundamentals",
+    "topic": "Agents",
+    "plain": "An AI that works toward a goal across multiple steps, deciding for itself which tools to use and what to do next, instead of just answering one question.",
+    "technical": "Anthropic's definition: agents are systems where the model dynamically directs its own process and tool use. Agents trade higher cost and latency for flexibility, so they suit open-ended tasks. Well-defined tasks are often better served by a simpler fixed workflow.",
+    "customerLine": "A chatbot answers questions. An agent takes a goal, like 'prep me for my renewal call,' and works through the steps to get it done.",
+    "followUp": {
+      "q": "Is every AI product with 'agent' in the name actually an agent?",
+      "a": "No. The term gets stretched. A useful test: does the AI choose its own next steps, or is it following a fixed script someone built?"
+    },
+    "misconception": {
+      "claim": "An agent is always better than a simple AI workflow.",
+      "truth": "Agents are slower and cost more. For predictable tasks, a fixed workflow is often more reliable."
+    },
+    "related": [
+      "agentic-workflow",
+      "tool-use",
+      "copilot-vs-agent"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Building effective agents",
+        "url": "https://www.anthropic.com/engineering/building-effective-agents"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "agentic-workflow",
+    "term": "Workflow vs agent",
+    "track": "fundamentals",
+    "topic": "Agents",
+    "plain": "In a workflow, a developer decides the steps in advance and the AI fills in each one. In an agent, the AI decides the steps itself.",
+    "technical": "Anthropic describes workflows as models and tools orchestrated through predefined code paths, and agents as systems where the model directs its own process. Their advice is to start with the simplest solution and add complexity only when it clearly helps.",
+    "customerLine": "For repeatable tasks, we use fixed workflows because they're predictable. We save agents for messier tasks where flexibility is worth it.",
+    "followUp": {
+      "q": "Which one is more trustworthy?",
+      "a": "Workflows are easier to predict and audit. Agents are more flexible but need stronger guardrails and monitoring."
+    },
+    "misconception": {
+      "claim": "'Agentic' just means the product uses AI.",
+      "truth": "It specifically means the AI chooses its own steps and actions, which is a meaningful difference for risk and reliability."
+    },
+    "related": [
+      "ai-agent",
+      "tool-use",
+      "guardrails"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Building effective agents",
+        "url": "https://www.anthropic.com/engineering/building-effective-agents"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "mcp",
+    "term": "MCP (Model Context Protocol)",
+    "aka": [
+      "MCP"
+    ],
+    "track": "fundamentals",
+    "topic": "Agents",
+    "plain": "An open standard for plugging AI assistants into other apps and data, often described as 'USB-C for AI.' Build a connector once and any MCP-compatible AI can use it.",
+    "technical": "MCP standardizes how applications provide context and tools to models. An MCP server exposes data and actions (for example, a CRM or a file store), and MCP clients (AI apps) connect to it in a consistent way. Anthropic introduced it, and it's open for anyone to use.",
+    "customerLine": "MCP is a common plug format, so connecting AI to your systems doesn't need a custom integration for every tool.",
+    "followUp": {
+      "q": "Does MCP make it secure by default?",
+      "a": "No. It standardizes the connection. You still need to control which servers you trust and what each one is allowed to access."
+    },
+    "misconception": {
+      "claim": "MCP only works with Claude.",
+      "truth": "It's an open protocol meant to work across AI apps and models."
+    },
+    "related": [
+      "tool-use",
+      "ai-agent"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: MCP",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      },
+      {
+        "title": "Model Context Protocol docs",
+        "url": "https://modelcontextprotocol.io/"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "multimodal",
+    "term": "Multimodal",
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "AI that works with more than one kind of input or output: text plus images, audio, video, or documents like PDFs.",
+    "technical": "Multimodal models process several data types in one model. For example, they can read a screenshot or chart and answer questions about it. Support varies: a model might read images but not create them.",
+    "customerLine": "Multimodal means you can hand the AI a screenshot, a PDF, or a photo, not just typed text.",
+    "followUp": {
+      "q": "Can it read our scanned documents and charts?",
+      "a": "Often yes, but accuracy on messy scans and complex charts varies. It's worth testing with a few of your real documents."
+    },
+    "misconception": {
+      "claim": "If a model can read images, it can also generate them.",
+      "truth": "Reading and creating are separate abilities. Many models do one but not the other."
+    },
+    "related": [
+      "llm",
+      "generative-ai"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  },
+  {
+    "id": "reasoning-models",
+    "term": "Reasoning (thinking) models",
+    "aka": [
+      "extended thinking",
+      "chain of thought"
+    ],
+    "track": "fundamentals",
+    "topic": "Working with models",
+    "plain": "Models that work through a problem step by step before giving their final answer, which helps on harder tasks like math, analysis, and multi-step work.",
+    "technical": "With thinking turned on, the model writes out intermediate reasoning (trying approaches, checking work) before answering. That improves quality on complex tasks, but the thinking tokens are billed as output and add time.",
+    "customerLine": "For hard questions the AI can 'show its work' before answering. It's slower and costs a bit more, so we use it where accuracy matters most.",
+    "followUp": {
+      "q": "Why not turn thinking on for everything?",
+      "a": "It adds cost and wait time. Simple tasks like a quick summary don't benefit much."
+    },
+    "misconception": {
+      "claim": "Reasoning models can't make mistakes because they check their work.",
+      "truth": "They make fewer errors on complex tasks, but their reasoning can still be wrong."
+    },
+    "related": [
+      "latency",
+      "token-pricing",
+      "prompt-engineering"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Thinking",
+        "url": "https://platform.claude.com/docs/en/build-with-claude/thinking"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "latency",
+    "term": "Latency (and time to first token)",
+    "aka": [
+      "TTFT"
+    ],
+    "track": "fundamentals",
+    "topic": "Performance and cost",
+    "plain": "How long you wait for the AI to respond. Time to first token (TTFT) is how fast the first words appear, which is what makes it feel quick.",
+    "technical": "Latency depends on model size, prompt length, output length, server load, and network. Streaming shows tokens as they're produced, so a low TTFT feels responsive even if the full answer takes longer.",
+    "customerLine": "Bigger models are usually smarter but slower. For live use like a support chat, speed can matter as much as raw intelligence.",
+    "followUp": {
+      "q": "Why is it fast sometimes and slow other times?",
+      "a": "Longer inputs, longer answers, and busy periods on the provider's side all add time. Products often pick a faster model for real-time features."
+    },
+    "misconception": {
+      "claim": "A slow AI response means the answer will be better.",
+      "truth": "Speed mostly reflects model size, workload, and length, not quality."
+    },
+    "related": [
+      "token",
+      "reasoning-models",
+      "model-choice"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic glossary: Latency and TTFT",
+        "url": "https://platform.claude.com/docs/en/about-claude/glossary"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "evals",
+    "term": "Evals (evaluations)",
+    "track": "fundamentals",
+    "topic": "Risks and quality",
+    "plain": "Tests that measure how well an AI system performs on realistic examples, so you're judging it on evidence, not vibes.",
+    "technical": "An eval set mirrors real tasks, including edge cases, and grades the outputs by code (exact match, similarity), by a separate model acting as grader, or by people. Teams rerun evals whenever they change a prompt or model, to catch regressions.",
+    "customerLine": "Before we change anything in the AI, we run it against a test set of real examples, so improvements are measured, not guessed.",
+    "followUp": {
+      "q": "Can we test it on our own data before buying?",
+      "a": "That's the best way to evaluate. Agree up front on a set of real examples and what 'good' looks like, then score the results."
+    },
+    "misconception": {
+      "claim": "Public benchmark scores tell you how a model will do on your tasks.",
+      "truth": "Benchmarks are a rough guide. Testing on your own examples is far more predictive."
+    },
+    "related": [
+      "prompt-engineering",
+      "pilot-to-production",
+      "ai-roi"
+    ],
+    "sources": [
+      {
+        "title": "Anthropic: Define success criteria and build evaluations",
+        "url": "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "prompt-injection",
+    "term": "Prompt injection",
+    "track": "fundamentals",
+    "topic": "Risks and quality",
+    "plain": "An attack where someone hides instructions in text the AI reads, like an email or webpage, to trick it into ignoring its rules or leaking information.",
+    "technical": "OWASP ranks it as the top risk for LLM applications. Direct injection comes from the user's own message. Indirect injection hides in content the AI processes, like documents, websites, or tool results. It's especially risky for agents that can take actions. Defenses include limiting permissions, separating instructions from data, and requiring approval for sensitive actions.",
+    "customerLine": "Prompt injection is the AI version of phishing. The strongest defense isn't a clever prompt, it's limiting what the AI is allowed to access and do.",
+    "followUp": {
+      "q": "Can it be fully prevented?",
+      "a": "Not completely today. That's why good products limit the damage: least-privilege access, human approval for risky actions, and monitoring."
+    },
+    "misconception": {
+      "claim": "Prompt injection only happens when a user types something malicious.",
+      "truth": "The indirect kind hides in documents, emails, or web pages the AI reads, with no bad user involved."
+    },
+    "related": [
+      "system-prompt",
+      "guardrails",
+      "tool-use"
+    ],
+    "sources": [
+      {
+        "title": "OWASP Top 10 for LLM Applications",
+        "url": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "open-weight-models",
+    "term": "Open-weight vs closed models",
+    "aka": [
+      "open source models"
+    ],
+    "track": "fundamentals",
+    "topic": "Core concepts",
+    "plain": "Open-weight models can be downloaded and run on your own servers. Closed models, like Claude or GPT, are used only through the provider's service.",
+    "technical": "With open weights (for example, Llama or Mistral models), the trained parameters are published, so you can self-host and customize them, but you own the hosting, scaling, and safety work. Closed models are accessed by API, where the provider handles infrastructure and updates. 'Open weight' isn't always 'open source,' since the training data and code may not be released.",
+    "customerLine": "Open-weight gives you maximum control but you run everything. Closed models are managed for you and are often the most capable. It's a classic control vs convenience tradeoff.",
+    "followUp": {
+      "q": "Isn't self-hosting an open model more secure?",
+      "a": "It can keep data fully in-house, but security then depends on your own team. Many enterprises get similar assurance from a provider's data terms, regional hosting, and certifications."
+    },
+    "misconception": {
+      "claim": "Open-weight models are always free to run.",
+      "truth": "The download may be free, but the servers, GPUs, and staff to run them are not."
+    },
+    "related": [
+      "foundation-model",
+      "model-choice",
+      "data-residency"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn: Introduction to generative AI and agents",
+        "url": "https://learn.microsoft.com/en-us/training/modules/fundamentals-generative-ai/"
+      }
+    ],
+    "status": "draft",
+    "needsBetterSource": true
+  }
+]
