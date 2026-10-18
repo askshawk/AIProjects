@@ -26,6 +26,9 @@ const sql =
     // makes postgres.js queue them instead. Hosted Postgres has no such limit.
     max: isLocal ? 1 : 5,
     ssl: isLocal ? false : "require",
+    // Neon's pooled endpoint (PgBouncer in transaction mode) can't keep
+    // prepared statements between queries, so turn them off for it.
+    prepare: !url.includes("-pooler"),
   });
 
 if (process.env.NODE_ENV !== "production") globalForDb.__aiFluencySql = sql;

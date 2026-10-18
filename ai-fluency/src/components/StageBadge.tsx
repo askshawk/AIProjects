@@ -2,8 +2,9 @@ import type { Stage } from "@/lib/srs";
 
 const STYLES: Record<Stage, string> = {
   new: "bg-surface-raised text-muted",
-  learning: "bg-accent-soft text-accent",
-  mastered: "bg-good/15 text-good",
+  // Same hues as the mastery chart: orange for learning, violet for mastered.
+  learning: "bg-viz-2/15 text-foreground",
+  mastered: "bg-viz-1/15 text-foreground",
 };
 
 export function StageBadge({ stage }: { stage: Stage }) {

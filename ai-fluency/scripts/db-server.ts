@@ -8,6 +8,7 @@
  *   npm run db   # leave running in its own terminal
  */
 import { PGlite } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite-pgvector";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 
 const DATA_DIR = process.env.PGLITE_DIR ?? "./.pglite";
@@ -15,7 +16,8 @@ const DATA_DIR = process.env.PGLITE_DIR ?? "./.pglite";
 const PORT = Number(process.env.PGLITE_PORT ?? 5433);
 
 async function main() {
-  const db = await PGlite.create({ dataDir: DATA_DIR });
+  // pgvector powers the "Ask my glossary" search index.
+  const db = await PGlite.create({ dataDir: DATA_DIR, extensions: { vector } });
 
   // PGlite is single-connection; the socket server multiplexes over it.
   const server = new PGLiteSocketServer({ db, port: PORT, host: "127.0.0.1", maxConnections: 20 });

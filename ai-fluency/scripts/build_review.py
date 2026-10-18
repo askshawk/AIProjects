@@ -11,10 +11,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TERMS_DIR = ROOT / "content" / "terms"
+GAMES_DIR = ROOT / "content" / "games"
 REVIEW_PATH = ROOT / "content" / "REVIEW.md"
 
 TRACKS = {"fundamentals": "AI fundamentals", "sales-cs": "AI in SaaS sales and CS"}
-REQUIRED = ["id", "term", "track", "topic", "plain", "technical", "customerLine",
+REQUIRED = ["id", "term", "short", "track", "topic", "plain", "technical", "customerLine",
             "followUp", "misconception", "related", "sources", "status"]
 # House style: no em dashes anywhere in card text.
 BANNED_CHARS = {"—": "em dash"}
@@ -58,6 +59,34 @@ def validate(terms):
         for char, name in BANNED_CHARS.items():
             if char in text:
                 errors.append(f"{tid}: contains an {name}")
+    return errors
+
+
+def validate_games(terms):
+    """Game content must only reference real cards, and every Deal Desk step needs one best answer."""
+    errors = []
+    ids = {t["id"] for t in terms}
+    for s in json.loads((GAMES_DIR / "jargon.json").read_text()):
+        for tid in s["termIds"]:
+            if tid not in ids:
+                errors.append(f"jargon {s['id']}: unknown term {tid!r}")
+        for char, name in BANNED_CHARS.items():
+            if char in s["sentence"]:
+                errors.append(f"jargon {s['id']}: contains an {name}")
+    for call in json.loads((GAMES_DIR / "deal-desk.json").read_text()):
+        for i, step in enumerate(call["steps"]):
+            where = f"deal-desk {call['id']} step {i + 1}"
+            for tid in step["termIds"]:
+                if tid not in ids:
+                    errors.append(f"{where}: unknown term {tid!r}")
+            qualities = [o["quality"] for o in step["options"]]
+            if qualities.count("strong") != 1:
+                errors.append(f"{where}: needs exactly one strong option")
+            if any(q not in {"strong", "okay", "weak"} for q in qualities):
+                errors.append(f"{where}: unknown quality")
+        for char, name in BANNED_CHARS.items():
+            if char in json.dumps(call, ensure_ascii=False):
+                errors.append(f"deal-desk {call['id']}: contains an {name}")
     return errors
 
 
@@ -113,6 +142,8 @@ def render(terms):
                     "",
                     "- [ ] Approved",
                     flag,
+                    f"**In a few words.** {t['short']}",
+                    "",
                     f"**Plain English.** {t['plain']}",
                     "",
                     f"**Under the hood.** {t['technical']}",
@@ -131,7 +162,7 @@ def render(terms):
 
 def main():
     terms = load_terms()
-    errors = validate(terms)
+    errors = validate(terms) + validate_games(terms)
     if errors:
         print("Validation failed:")
         for e in errors:

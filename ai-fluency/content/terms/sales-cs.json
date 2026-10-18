@@ -2,6 +2,7 @@
   {
     "id": "training-data-usage",
     "term": "\"Do you train on our data?\"",
+    "short": "Whether customer data is used to improve the model",
     "track": "sales-cs",
     "topic": "Data and security",
     "plain": "Usually the first AI question security and legal teams ask: will our information be used to improve the vendor's model, or the model provider's?",
@@ -31,6 +32,7 @@
   {
     "id": "data-retention",
     "term": "Data retention and zero data retention (ZDR)",
+    "short": "How long prompts and responses are stored, and by whom",
     "aka": [
       "ZDR"
     ],
@@ -63,6 +65,7 @@
   {
     "id": "data-residency",
     "term": "Data residency",
+    "short": "Where in the world data is stored and processed",
     "track": "sales-cs",
     "topic": "Data and security",
     "plain": "Where in the world your data is stored and processed, such as 'EU only' or 'US only.' It often comes up with European, government, or regulated customers.",
@@ -92,6 +95,7 @@
   {
     "id": "pii",
     "term": "PII and sensitive data",
+    "short": "Information that can identify a specific person",
     "aka": [
       "PII",
       "PHI"
@@ -125,6 +129,7 @@
   {
     "id": "soc2-ai",
     "term": "SOC 2 (and what it means for AI)",
+    "short": "An independent audit showing security controls actually work",
     "aka": [
       "SOC 2 Type II"
     ],
@@ -157,6 +162,7 @@
   {
     "id": "ai-governance",
     "term": "AI governance",
+    "short": "The rules and oversight around how a company uses AI",
     "track": "sales-cs",
     "topic": "Compliance and governance",
     "plain": "The rules, roles, and oversight a company puts around how it uses AI: who approves new tools, what's allowed, and how risks get tracked.",
@@ -187,6 +193,7 @@
   {
     "id": "responsible-ai",
     "term": "Responsible AI",
+    "short": "Building and using AI fairly, safely, and transparently",
     "track": "sales-cs",
     "topic": "Compliance and governance",
     "plain": "Building and using AI in ways that are fair, safe, private, transparent, and accountable.",
@@ -220,6 +227,7 @@
   {
     "id": "nist-ai-rmf",
     "term": "NIST AI Risk Management Framework",
+    "short": "A voluntary US framework for managing AI risk",
     "aka": [
       "AI RMF"
     ],
@@ -252,6 +260,7 @@
   {
     "id": "eu-ai-act",
     "term": "EU AI Act",
+    "short": "The EU law that regulates AI by risk level",
     "track": "sales-cs",
     "topic": "Compliance and governance",
     "plain": "The European Union's AI law. It sorts AI uses by risk level and puts stricter rules on riskier ones.",
@@ -281,6 +290,7 @@
   {
     "id": "iso-42001",
     "term": "ISO/IEC 42001",
+    "short": "A certifiable international standard for managing AI",
     "track": "sales-cs",
     "topic": "Compliance and governance",
     "plain": "An international standard for running an AI management system, which a company can get certified against. Think of it as ISO 27001, but for AI.",
@@ -310,6 +320,7 @@
   {
     "id": "human-in-the-loop",
     "term": "Human in the loop",
+    "short": "A person reviews or approves the AI's work",
     "aka": [
       "HITL"
     ],
@@ -346,6 +357,7 @@
   {
     "id": "copilot-vs-agent",
     "term": "Copilot vs agent",
+    "short": "AI that assists a person versus AI that acts on its own",
     "track": "sales-cs",
     "topic": "Selling AI",
     "plain": "A copilot helps a person do their work: it suggests, drafts, and summarizes, while the person stays in control. An agent works on a task more independently and takes actions on its own.",
@@ -379,6 +391,7 @@
   {
     "id": "build-vs-buy",
     "term": "Build vs buy (for AI)",
+    "short": "Building your own AI tool versus buying a product",
     "track": "sales-cs",
     "topic": "Selling AI",
     "plain": "Should the customer build their own AI tool on a model API, or buy a product that already does the job? Expect this objection now that model APIs are easy to access.",
@@ -408,6 +421,7 @@
   {
     "id": "token-pricing",
     "term": "Usage-based (token) pricing vs seat pricing",
+    "short": "Paying per use of AI versus paying per user",
     "track": "sales-cs",
     "topic": "Pricing and value",
     "plain": "AI model providers usually charge by usage (tokens in and tokens out). SaaS products have traditionally charged per user (seat). Many AI products now mix the two.",
@@ -441,6 +455,7 @@
   {
     "id": "ai-roi",
     "term": "AI ROI",
+    "short": "Proving the AI is worth what it costs",
     "track": "sales-cs",
     "topic": "Pricing and value",
     "plain": "Showing that the AI is worth what it costs, in time saved, revenue gained, risk reduced, or quality improved.",
@@ -470,6 +485,7 @@
   {
     "id": "pilot-to-production",
     "term": "Pilot to production",
+    "short": "Moving from a small AI test to full rollout",
     "aka": [
       "POC",
       "proof of concept"
@@ -507,6 +523,7 @@
   {
     "id": "guardrails",
     "term": "Guardrails",
+    "short": "Controls that keep AI on task and safe",
     "track": "sales-cs",
     "topic": "Data and security",
     "plain": "Controls that keep an AI system on track and safe: what it can talk about, what data it can see, what actions it can take, and what gets blocked or flagged.",
@@ -540,6 +557,7 @@
   {
     "id": "model-choice",
     "term": "Model choice and vendor lock-in",
+    "short": "Which model a product uses, and whether it can switch",
     "aka": [
       "model-agnostic"
     ],
@@ -572,6 +590,7 @@
   {
     "id": "false-positives",
     "term": "False positives and false negatives",
+    "short": "Flagging something harmless versus missing something real",
     "aka": [
       "precision and recall"
     ],
@@ -604,6 +623,7 @@
   {
     "id": "ai-washing",
     "term": "AI washing",
+    "short": "Overstating how much AI a product really uses",
     "track": "sales-cs",
     "topic": "Selling AI",
     "plain": "Overstating how much AI a product uses, or what it can do, for marketing. Buyers are increasingly skeptical because of it.",

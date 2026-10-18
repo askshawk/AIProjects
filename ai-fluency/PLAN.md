@@ -2,7 +2,7 @@
 
 A study app for learning AI terms and concepts well enough to explain them to customers. Built for daily use in Safari on iPhone and Mac, and as a portfolio piece.
 
-**Status:** steps 1 to 3 built. 50 draft terms (waiting on review in [`content/REVIEW.md`](content/REVIEW.md)), the app shell, and flashcards with spaced repetition. See [README.md](README.md) to run it. Next: the v1 games.
+**Status:** built. Every feature in sections 4 to 7 is in the app, with 150 draft cards waiting on review in [`content/REVIEW.md`](content/REVIEW.md). See [README.md](README.md) for what's there and [DEPLOY.md](DEPLOY.md) to put it online. Decisions made while building are in the README's Decisions section.
 
 ---
 
@@ -97,12 +97,12 @@ Content lives in versioned JSON files in the repo (`content/terms/*.json`), so i
 4. **Jargon Buster and Myth or Fact.** The quickest games to build.
 5. **Deal Desk (scripted).** Write 5 scripted calls.
 6. **XP, quota, ranks, dashboard.**
-7. **Deploy to Vercel**, add to the iPhone home screen, and use it daily for 2 weeks before building v2.
+7. **Deploy to Vercel** and add it to the iPhone home screen.
 
-Step 7 is deliberate: actually using the app will show which v2 features are worth building.
+(The original plan was to use v1 for two weeks before building v2. That changed: every version was built up front, with fixes to follow from real use.)
 
 ## 9. Open questions
 
-- Voice input for Explain It Back: is Safari's built-in dictation good enough, or should it use a speech-to-text API? (Decide in v2.)
+- ~~Voice input for Explain It Back~~ Decided: use the iPhone keyboard's built-in dictation. No extra API, no extra cost.
 - Add Microsoft AI-900 exam tags later? It would line up with the Microsoft Learn courses and is a cheap resume line.
 - Name: "AI Fluency" is a working title.

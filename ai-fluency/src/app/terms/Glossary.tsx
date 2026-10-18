@@ -14,6 +14,7 @@ type Entry = {
   topic: string;
   plain: string;
   stage: Stage;
+  custom: boolean;
 };
 
 const FILTERS: { value: Track | "all"; label: string }[] = [
@@ -74,7 +75,10 @@ export function Glossary({ entries }: { entries: Entry[] }) {
           <li key={e.id}>
             <Link href={`/terms/${e.id}`} className="flex items-start gap-3 p-4 hover:bg-surface-raised">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{e.term}</p>
+                <p className="font-medium">
+                  {e.term}
+                  {e.custom && <span className="ml-2 text-xs font-normal text-muted">your card</span>}
+                </p>
                 <p className="mt-0.5 line-clamp-2 text-sm text-muted">{e.plain}</p>
               </div>
               <StageBadge stage={e.stage} />

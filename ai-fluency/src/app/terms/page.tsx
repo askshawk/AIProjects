@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Nav } from "@/components/Nav";
-import { TERMS } from "@/lib/content";
 import { getAllProgress } from "@/lib/progress";
+import { getAllTerms } from "@/lib/terms";
 import { stageOf } from "@/lib/srs";
 import { Glossary } from "./Glossary";
 
@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "Glossary" };
 
 export default async function TermsPage() {
   await connection();
-  const progress = await getAllProgress();
-  const entries = TERMS.map((t) => ({
+  const [terms, progress] = await Promise.all([getAllTerms(), getAllProgress()]);
+  const entries = terms.map((t) => ({
     id: t.id,
     term: t.term,
     aka: t.aka ?? [],
@@ -19,6 +19,7 @@ export default async function TermsPage() {
     topic: t.topic,
     plain: t.plain,
     stage: stageOf(progress.get(t.id)),
+    custom: Boolean(t.custom),
   }));
 
   return (

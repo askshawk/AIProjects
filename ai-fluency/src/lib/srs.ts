@@ -27,7 +27,11 @@ const RELEARN_MINUTES = 10;
 const FIRST_HARD_HOURS = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A card counts as mastered once it has survived a three-week gap. */
+/**
+ * A card counts as mastered once it has survived a three-week gap AND you've
+ * passed Explain It Back on it. Remembering when shown is recognition;
+ * explaining it in your own words is what you'll need on a customer call.
+ */
 export const MASTERED_INTERVAL_DAYS = 21;
 
 export function newCardState(now: Date): CardState {
@@ -82,9 +86,14 @@ export function schedule(state: CardState, rating: Rating, now: Date): CardState
 
 export type Stage = "new" | "learning" | "mastered";
 
-export function stageOf(state: CardState | undefined): Stage {
-  if (!state) return "new";
-  return state.intervalDays >= MASTERED_INTERVAL_DAYS ? "mastered" : "learning";
+export function stageOf(progress: { intervalDays: number; explainedAt?: Date | null } | undefined): Stage {
+  if (!progress) return "new";
+  return progress.intervalDays >= MASTERED_INTERVAL_DAYS && progress.explainedAt ? "mastered" : "learning";
+}
+
+/** Remembered long enough to be mastered, but still needs an Explain It Back pass. */
+export function needsExplaining(progress: { intervalDays: number; explainedAt?: Date | null } | undefined): boolean {
+  return Boolean(progress && progress.intervalDays >= MASTERED_INTERVAL_DAYS && !progress.explainedAt);
 }
 
 /** Short human label for when a rating would bring the card back. */

@@ -15,7 +15,8 @@ async function main() {
   if (!url) throw new Error("DATABASE_URL is not set");
 
   const isLocal = url.includes("127.0.0.1") || url.includes("localhost");
-  const sql = postgres(url, { max: 1, ssl: isLocal ? false : "require" });
+  // onnotice: re-running migrations is safe and prints "already exists" notices; keep logs clean.
+  const sql = postgres(url, { max: 1, ssl: isLocal ? false : "require", prepare: !url.includes("-pooler"), onnotice: () => {} });
 
   console.log(`migrating ${isLocal ? "local PGlite" : new URL(url).host}...`);
   await migrate(drizzle(sql), { migrationsFolder: "./drizzle" });

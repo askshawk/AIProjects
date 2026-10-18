@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3200",
-    "build": "next build",
+    "build": "tsx scripts/deploy-setup.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -14,17 +14,21 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "content:review": "python3 scripts/build_review.py",
-    "passcode:hash": "tsx scripts/hash-passcode.ts"
+    "passcode:hash": "tsx scripts/hash-passcode.ts",
+    "embed:sync": "tsx scripts/embed-sync.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.1",
     "postgres": "^3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.5",
+    "@electric-sql/pglite-pgvector": "^0.0.6",
     "@electric-sql/pglite-socket": "0.2.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

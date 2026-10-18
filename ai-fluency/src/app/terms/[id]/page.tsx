@@ -5,24 +5,25 @@ import { connection } from "next/server";
 import { Nav } from "@/components/Nav";
 import { StageBadge } from "@/components/StageBadge";
 import { TermBody } from "@/components/TermBody";
-import { TRACK_LABELS, getTerm } from "@/lib/content";
+import { TRACK_LABELS } from "@/lib/content";
+import { findTerm, getAllTerms } from "@/lib/terms";
 import { getAllProgress } from "@/lib/progress";
-import { stageOf } from "@/lib/srs";
+import { needsExplaining, stageOf } from "@/lib/srs";
 
 export async function generateMetadata({ params }: PageProps<"/terms/[id]">): Promise<Metadata> {
   const { id } = await params;
-  return { title: getTerm(id)?.term ?? "Term" };
+  return { title: (await findTerm(id))?.term ?? "Term" };
 }
 
 export default async function TermPage({ params }: PageProps<"/terms/[id]">) {
   await connection();
   const { id } = await params;
-  const term = getTerm(id);
+  const [terms, progress] = await Promise.all([getAllTerms(), getAllProgress()]);
+  const term = terms.find((t) => t.id === id);
   if (!term) notFound();
 
-  const progress = await getAllProgress();
   const state = progress.get(term.id);
-  const related = term.related.map(getTerm).filter((t) => t !== undefined);
+  const related = term.related.map((r) => terms.find((t) => t.id === r)).filter((t) => t !== undefined);
 
   return (
     <>
@@ -46,8 +47,17 @@ export default async function TermPage({ params }: PageProps<"/terms/[id]">) {
             <p className="mt-2 text-xs text-muted">
               Next review {state.dueAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               {state.lapses > 0 && ` · forgotten ${state.lapses} time${state.lapses === 1 ? "" : "s"}`}
+              {state.explainedAt && " · explained in your own words"}
             </p>
           )}
+          <Link
+            href={`/practice/explain?term=${term.id}`}
+            className={`mt-3 inline-block rounded-lg px-3 py-1.5 text-sm font-medium ${
+              needsExplaining(state) ? "bg-accent text-white" : "border"
+            }`}
+          >
+            {needsExplaining(state) ? "Explain it to master it" : "Explain it back"}
+          </Link>
 
           <div className="mt-5">
             <TermBody term={term} />
@@ -64,7 +74,8 @@ export default async function TermPage({ params }: PageProps<"/terms/[id]">) {
                 </li>
               ))}
             </ul>
-            {term.status === "draft" && (
+            {term.custom && <p className="mt-3 text-xs text-muted">Your card, from {term.custom.course} notes.</p>}
+            {term.status === "draft" && !term.custom && (
               <p className="mt-3 text-xs text-muted">Draft card: not yet reviewed for accuracy.</p>
             )}
           </section>

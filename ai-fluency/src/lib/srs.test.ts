@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MASTERED_INTERVAL_DAYS,
   describeInterval,
+  needsExplaining,
   newCardState,
   schedule,
   stageOf,
@@ -67,11 +68,17 @@ describe("schedule", () => {
 });
 
 describe("stageOf", () => {
-  it("treats unseen cards as new and long intervals as mastered", () => {
+  it("treats unseen cards as new", () => {
     expect(stageOf(undefined)).toBe("new");
-    const base = { repetitions: 5, ease: 2.5, lapses: 0, dueAt: NOW };
-    expect(stageOf({ ...base, intervalDays: MASTERED_INTERVAL_DAYS - 1 })).toBe("learning");
-    expect(stageOf({ ...base, intervalDays: MASTERED_INTERVAL_DAYS })).toBe("mastered");
+  });
+
+  it("needs both a long interval and an Explain It Back pass to count as mastered", () => {
+    const long = { intervalDays: MASTERED_INTERVAL_DAYS };
+    expect(stageOf({ intervalDays: MASTERED_INTERVAL_DAYS - 1, explainedAt: NOW })).toBe("learning");
+    expect(stageOf(long)).toBe("learning");
+    expect(needsExplaining(long)).toBe(true);
+    expect(stageOf({ ...long, explainedAt: NOW })).toBe("mastered");
+    expect(needsExplaining({ ...long, explainedAt: NOW })).toBe(false);
   });
 });
 

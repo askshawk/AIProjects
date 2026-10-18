@@ -16,6 +16,10 @@
   --good: #15803d;
   --warn: #b45309;
   --bad: #b91c1c;
+  /* Chart series (validated for colorblind separation on both surfaces). */
+  --viz-1: #6250d6;
+  --viz-2: #eb6834;
+  --grid: #e7e7ec;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +35,9 @@
     --good: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
+    --viz-1: #9085e9;
+    --viz-2: #d95926;
+    --grid: #2a2a35;
   }
 }
 
@@ -46,6 +53,9 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-grid: var(--grid);
   --font-sans: var(--font-geist-sans);
 }
 
