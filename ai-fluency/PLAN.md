@@ -2,7 +2,7 @@
 
 A study app for learning AI terms and concepts well enough to explain them to customers. Built for daily use in Safari on iPhone and Mac, and as a portfolio piece.
 
-**Status:** step 1 in progress. 50 draft terms are in `content/terms/`, waiting on review in [`content/REVIEW.md`](content/REVIEW.md).
+**Status:** steps 1 to 3 built. 50 draft terms (waiting on review in [`content/REVIEW.md`](content/REVIEW.md)), the app shell, and flashcards with spaced repetition. See [README.md](README.md) to run it. Next: the v1 games.
 
 ---
 
