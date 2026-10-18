@@ -2,7 +2,7 @@
 
 A study app for learning AI terms and concepts well enough to explain them to customers. Built for daily use in Safari on iPhone and Mac, and as a portfolio piece.
 
-**Status:** planning. No code yet.
+**Status:** step 1 in progress. 50 draft terms are in `content/terms/`, waiting on review in [`content/REVIEW.md`](content/REVIEW.md).
 
 ---
 
